@@ -294,8 +294,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <CardTitle className="text-foreground">Version 1.3.0</CardTitle>
                             <CardDescription className="text-muted-foreground">Previous Release</CardDescription>
                           </CardHeader>
-                          <CardContent className="text-foreground">
-                            <ul className="list-disc list-inside space-y-2 text-sm">
+                          <CardContent className="text-foreground pb-6">
+                            <ul className="list-disc list-inside space-y-2 text-sm mb-6">
                               <li>Fixed login button text display issue</li>
                               <li>Login page now defaults to light mode</li>
                               <li>Dark mode toggle available on all pages</li>
