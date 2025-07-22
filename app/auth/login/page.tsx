@@ -178,14 +178,6 @@ function LoginForm() {
             </Button>
           </form>
 
-          {/* Demo credentials for testing - remove in production */}
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-              <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Demo Credentials</h4>
-              <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                <p><strong>Admin:</strong> admin / admin123</p>
-                <p><strong>Viewer:</strong> viewer / viewer123</p>
-              </div>
             </div>
           </div>
 
