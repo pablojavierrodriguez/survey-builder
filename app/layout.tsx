@@ -40,23 +40,22 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  // Obtener el tema guardado en localStorage
                   const theme = localStorage.getItem('theme');
-                  // Obtener la preferencia del sistema
                   const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+                  // Default to light mode unless explicitly set to dark
                   if (theme === 'dark' || (theme === 'system' && systemPrefersDark)) {
                     document.documentElement.classList.add('dark');
                     document.documentElement.style.setProperty('color-scheme', 'dark');
-                  } else if (theme === 'light' || (theme === 'system' && !systemPrefersDark)) {
+                  } else {
+                    // Explicitly set light mode as default
                     document.documentElement.classList.remove('dark');
                     document.documentElement.style.setProperty('color-scheme', 'light');
                   }
-                  // Si no hay tema guardado o es inválido, no hacemos nada y dejamos que next-themes
-                  // establezca el defaultTheme (system/light) en la hidratación.
-
                 } catch (e) {
-                  // En caso de error (ej. localStorage no disponible), no hace nada.
+                  // Fallback to light mode on error
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.style.setProperty('color-scheme', 'light');
                   console.error("Failed to set theme on initial load:", e);
                 }
               })();
@@ -70,9 +69,9 @@ export default function RootLayout({
         */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="system" // O "light" si quieres que por defecto sea claro
-          enableSystem // Permite que next-themes detecte la preferencia del sistema
-          disableTransitionOnChange // Evita transiciones de tema al cambiar, útil para evitar parpadeos
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
         >
           {children} {/* Aquí se renderiza TODO el contenido de tu aplicación, incluyendo /admin */}
         </ThemeProvider>
