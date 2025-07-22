@@ -257,8 +257,8 @@ export default function ProductSurvey() {
     setSurveyData({ ...surveyData, role })
   }
 
-  const handleCompanySelect = (company_type: string) => {
-    setSurveyData({ ...surveyData, company_type })
+  const handleSenioritySelect = (seniority: string) => {
+    setSurveyData({ ...surveyData, seniority })
   }
 
   const handleChallengeChange = (main_challenge: string) => {
@@ -283,8 +283,8 @@ export default function ProductSurvey() {
     setSurveyData({ ...surveyData, email })
   }
 
-  const handleSenioritySelect = (seniority: string) => {
-    setSurveyData({ ...surveyData, seniority })
+  const handleOtherRoleChange = (other_role: string) => {
+    setSurveyData({ ...surveyData, other_role })
   }
 
   const handleCompanySizeSelect = (company_size: string) => {
@@ -303,22 +303,19 @@ export default function ProductSurvey() {
     setSurveyData({ ...surveyData, customer_segment })
   }
 
-  const handleOtherRoleChange = (other_role: string) => {
-    setSurveyData({ ...surveyData, other_role })
-  }
-
   const handleOtherToolChange = (other_tool: string) => {
     setSurveyData({ ...surveyData, other_tool })
   }
 
   const isValidEmail = (email: string) => {
-    return email === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    if (!email) return true // Email is optional
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
   const canProceed = () => {
     switch (currentStep) {
       case 0:
-        return surveyData.role !== "" && (surveyData.role !== "Other" || surveyData.other_role.trim() !== "")
+        return surveyData.role !== ""
       case 1:
         return surveyData.seniority !== ""
       case 2:
@@ -330,12 +327,9 @@ export default function ProductSurvey() {
       case 5:
         return surveyData.customer_segment !== ""
       case 6:
-        return surveyData.main_challenge.trim() !== ""
+        return surveyData.main_challenge.trim().length > 10
       case 7:
-        return (
-          surveyData.daily_tools.length > 0 &&
-          (!surveyData.daily_tools.includes("Other") || surveyData.other_tool.trim() !== "")
-        )
+        return surveyData.daily_tools.length > 0
       case 8:
         return surveyData.learning_methods.length > 0
       case 9:
@@ -345,81 +339,19 @@ export default function ProductSurvey() {
     }
   }
 
-  /*const submitSurvey = async () => {
-    setIsSubmitting(true)
+  const submitSurvey = () => {
     try {
-      // Process tools array to include custom tool
-      let finalTools = [...surveyData.daily_tools]
-      if (surveyData.daily_tools.includes("Other") && surveyData.other_tool.trim()) {
-        finalTools = finalTools.filter((tool) => tool !== "Other")
-        finalTools.push(surveyData.other_tool.trim())
-      }
+      const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+      const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+      localStorage.setItem("survey", JSON.stringify(updated))
+      console.log("✅ Survey saved to localStorage:", updated)
 
-      const payload = {
-        role: surveyData.role,
-        other_role: surveyData.role === "Other" ? surveyData.other_role : null,
-        seniority: surveyData.seniority,
-        company_type: surveyData.company_size,
-        company_size: surveyData.company_size,
-        industry: surveyData.industry,
-        product_type: surveyData.product_type,
-        customer_segment: surveyData.customer_segment,
-        main_challenge: surveyData.main_challenge,
-        daily_tools: finalTools,
-        learning_methods: surveyData.learning_methods,
-        email: surveyData.email || null,
-        created_at: new Date().toISOString(),
-      }
-
-      console.log("Submitting payload:", payload)
-
-      const response = await fetch(`${env.SUPABASE_URL}/rest/v1/pc_survey_data`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-          apikey: env.SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify(payload),
-      })
-
-      console.log("Response status:", response.status)
-
-      if (response.ok) {
-        console.log("Survey submitted successfully")
-        handleNext()
-      } else {
-        const errorText = await response.text()
-        console.error("Failed to submit survey:", response.status, errorText)
-        alert(`Failed to submit survey: ${response.status} ${errorText}`)
-      }
+      handleNext()
     } catch (error) {
-      console.error("Error submitting survey:", error)
-      alert("Network error. Please check your connection and try again.")
-    } finally {
-      setIsSubmitting(false)
+      console.error("❌ Error saving to localStorage:", error)
+      alert("Error saving survey locally.")
     }
   }
-  */
-  
-  //Submit local
-  const submitSurvey = () => {
-  try {
-    const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-    const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-    localStorage.setItem("survey", JSON.stringify(updated))
-    console.log("✅ Survey saved to localStorage:", updated)
-
-    handleNext()
-  } catch (error) {
-    console.error("❌ Error saving to localStorage:", error)
-    alert("Error saving survey locally.")
-  }
-}
 
   const renderQuestion = () => {
     switch (currentStep) {
@@ -435,7 +367,7 @@ export default function ProductSurvey() {
                 <button
                   key={role}
                   onClick={() => handleRoleSelect(role)}
-                                      className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.role === role
                       ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
                       : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
@@ -446,12 +378,12 @@ export default function ProductSurvey() {
               ))}
             </div>
             {surveyData.role === "Other" && (
-              <div className="max-w-md mx-auto mt-4">
+              <div className="max-w-2xl mx-auto mt-4">
                 <Input
                   value={surveyData.other_role}
                   onChange={(e) => handleOtherRoleChange(e.target.value)}
                   placeholder="Please specify your role..."
-                  className="text-lg p-4 h-14 rounded-2xl border-2 border-gray-200 focus:border-blue-500"
+                  className="text-lg p-4 h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
                 />
               </div>
             )}
@@ -462,18 +394,18 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What's your seniority level?</h2>
-              <p className="text-lg text-gray-600">Help us understand your experience</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your seniority level?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your experience</p>
             </div>
-            <div className="grid gap-3 max-w-md mx-auto">
+            <div className="grid gap-3 max-w-2xl mx-auto">
               {seniorityOptions.map((seniority) => (
                 <button
                   key={seniority}
                   onClick={() => handleSenioritySelect(seniority)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.seniority === seniority
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <span className="font-medium">{seniority}</span>
@@ -487,18 +419,18 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What type of company do you work for?</h2>
-              <p className="text-lg text-gray-600">Tell us about your company size and stage</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What type of company do you work for?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Tell us about your company size and stage</p>
             </div>
-            <div className="grid gap-3 max-w-md mx-auto">
+            <div className="grid gap-3 max-w-2xl mx-auto">
               {companySizeOptions.map((size) => (
                 <button
                   key={size}
                   onClick={() => handleCompanySizeSelect(size)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.company_size === size
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <span className="font-medium">{size}</span>
@@ -512,18 +444,18 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What industry do you work in?</h2>
-              <p className="text-lg text-gray-600">Help us understand your market</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What industry do you work in?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your market</p>
             </div>
-            <div className="grid gap-3 max-w-md mx-auto">
+            <div className="grid gap-3 max-w-2xl mx-auto">
               {industryOptions.map((industry) => (
                 <button
                   key={industry}
                   onClick={() => handleIndustrySelect(industry)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.industry === industry
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <span className="font-medium">{industry}</span>
@@ -537,18 +469,18 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What type of product do you work on?</h2>
-              <p className="text-lg text-gray-600">Tell us about your product category</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What type of product do you work on?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Tell us about your product category</p>
             </div>
-            <div className="grid gap-3 max-w-md mx-auto">
+            <div className="grid gap-3 max-w-2xl mx-auto">
               {productTypeOptions.map((type) => (
                 <button
                   key={type}
                   onClick={() => handleProductTypeSelect(type)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.product_type === type
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <span className="font-medium">{type}</span>
@@ -562,18 +494,18 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What's your customer segment?</h2>
-              <p className="text-lg text-gray-600">Who do you build products for?</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your customer segment?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Who do you build products for?</p>
             </div>
-            <div className="grid gap-3 max-w-md mx-auto">
+            <div className="grid gap-3 max-w-2xl mx-auto">
               {customerSegmentOptions.map((segment) => (
                 <button
                   key={segment}
                   onClick={() => handleCustomerSegmentSelect(segment)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.customer_segment === segment
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <span className="font-medium">{segment}</span>
@@ -587,15 +519,15 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What's your main product-related challenge?</h2>
-              <p className="text-lg text-gray-600">Share what you're struggling with most</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your main product-related challenge?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Share what you're struggling with most</p>
             </div>
-            <div className="max-w-lg mx-auto">
+            <div className="max-w-2xl mx-auto">
               <Textarea
                 value={surveyData.main_challenge}
                 onChange={(e) => handleChallengeChange(e.target.value)}
                 placeholder="Describe your biggest challenge in product management, design, or development..."
-                className="min-h-32 text-lg p-4 rounded-2xl border-2 border-gray-200 focus:border-blue-500 resize-none bg-transparent text-slate-500"
+                className="min-h-32 text-lg p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -605,34 +537,34 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What tools do you use daily?</h2>
-              <p className="text-lg text-gray-600">Select all that apply</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What tools do you use daily?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Select all that apply</p>
             </div>
-            <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-4xl mx-auto">
               {toolOptions.map((tool) => (
                 <button
                   key={tool}
                   onClick={() => handleToolToggle(tool)}
-                  className={`p-3 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.daily_tools.includes(tool)
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{tool}</span>
-                    {surveyData.daily_tools.includes(tool) && <Check className="w-4 h-4 text-blue-600" />}
+                    <span className="font-medium">{tool}</span>
+                    {surveyData.daily_tools.includes(tool) && <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
                   </div>
                 </button>
               ))}
             </div>
             {surveyData.daily_tools.includes("Other") && (
-              <div className="max-w-md mx-auto mt-4">
+              <div className="max-w-2xl mx-auto mt-4">
                 <Input
                   value={surveyData.other_tool}
                   onChange={(e) => handleOtherToolChange(e.target.value)}
                   placeholder="Please specify the tool..."
-                  className="text-lg p-4 h-14 rounded-2xl border-2 border-gray-200 focus:border-blue-500"
+                  className="text-lg p-4 h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
                 />
               </div>
             )}
@@ -643,23 +575,23 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">How do you learn about product?</h2>
-              <p className="text-lg text-gray-600">Select all that apply</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">How do you learn about product?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Select all that apply</p>
             </div>
-            <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
               {learningOptions.map((method) => (
                 <button
                   key={method}
                   onClick={() => handleLearningToggle(method)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.learning_methods.includes(method)
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{method}</span>
-                    {surveyData.learning_methods.includes(method) && <Check className="w-5 h-5 text-blue-600" />}
+                    {surveyData.learning_methods.includes(method) && <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
                   </div>
                 </button>
               ))}
@@ -671,8 +603,8 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">Your email</h2>
-              <p className="text-lg text-gray-600">Optional - only if you'd like us to follow up</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Your email</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Optional - only if you'd like us to follow up</p>
             </div>
             <div className="max-w-md mx-auto">
               <Input
@@ -680,14 +612,14 @@ export default function ProductSurvey() {
                 value={surveyData.email}
                 onChange={(e) => handleEmailChange(e.target.value)}
                 placeholder="your@email.com"
-                className={`text-lg p-4 h-14 rounded-2xl border-2 bg-transparent text-slate-500 ${
+                className={`text-lg p-4 h-14 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400 ${
                   !isValidEmail(surveyData.email)
-                    ? "border-red-300 focus:border-red-500"
-                    : "border-gray-200 focus:border-blue-500"
+                    ? "border-red-300 dark:border-red-600 focus:border-red-500 dark:focus:border-red-400"
+                    : "border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
                 }`}
               />
               {!isValidEmail(surveyData.email) && (
-                <p className="text-red-500 text-sm mt-2">Please enter a valid email address</p>
+                <p className="text-red-500 dark:text-red-400 text-sm mt-2">Please enter a valid email address</p>
               )}
             </div>
           </div>
@@ -696,12 +628,12 @@ export default function ProductSurvey() {
       case 10:
         return (
           <div className="text-center space-y-8">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <Check className="w-10 h-10 text-green-600" />
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+              <Check className="w-10 h-10 text-green-600 dark:text-green-400" />
             </div>
             <div className="space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">Thank you!</h2>
-              <p className="text-lg text-gray-600 max-w-md mx-auto">
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Thank you!</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md mx-auto">
                 Your responses help us build better products and create more valuable content for the product community.
               </p>
             </div>
