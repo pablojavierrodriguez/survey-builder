@@ -96,27 +96,27 @@
 ## 🎨 **Design System Enhancements**
 
 ### **Responsive Typography Scale**
-```
+\`\`\`
 Mobile:    text-3xl (30px)
 Desktop:   text-4xl (36px)  
 XL:        text-5xl (48px)
-```
+\`\`\`
 
 ### **Container Scaling**
-```
+\`\`\`
 Questions:  max-w-3xl (768px)
 Tools:      max-w-6xl (1152px)
 Main:       max-w-5xl (1024px)
 Admin:      max-w-7xl (1280px)
-```
+\`\`\`
 
 ### **Padding Responsive Scale**
-```
+\`\`\`
 Mobile:     p-6 (24px)
 Tablet:     p-8 (32px)
 Desktop:    p-12 (48px)
 XL:         p-16 (64px)
-```
+\`\`\`
 
 ## 🎯 **FINAL RESULT: TRULY PRODUCTION-READY**
 
