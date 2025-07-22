@@ -273,7 +273,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="text-foreground">
-                            <ul className="list-disc list-inside space-y-2 text-sm">
+                            <ul className="list-disc list-inside space-y-2 text-sm mb-4">
                               <li>Enhanced security with session management and rate limiting</li>
                               <li>Fixed login page styling and default light mode</li>
                               <li>Improved admin sidebar layout and z-index issues</li>
@@ -282,6 +282,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                               <li>Unified color palette across all components</li>
                               <li>Enhanced maintenance mode integration</li>
                               <li>Improved survey question visibility controls</li>
+                              <li>Fixed browser tab title display</li>
+                              <li>Enhanced dashboard refresh functionality</li>
+                              <li>Improved database connection status display</li>
+                              <li>Optimized screen scaling for desktop resolutions</li>
                             </ul>
                           </CardContent>
                         </Card>
@@ -441,8 +445,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Page content */}
         <main className="flex-1 overflow-auto bg-background">
-          <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
-            {children}
+          <div className="container mx-auto p-4 lg:p-6 xl:p-8 max-w-8xl">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
           </div>
         </main>
       </div>

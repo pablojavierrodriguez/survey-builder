@@ -13,7 +13,9 @@ const fontSans = FontSans({
 export const metadata: Metadata = {
   title: "Product Community Survey",
   description: "Manage product community surveys and analytics.",
-    generator: 'v0.dev'
+  generator: 'Next.js',
+  authors: [{ name: 'Pablo Javier Rodriguez' }],
+  keywords: ['survey', 'product management', 'community', 'analytics'],
 }
 
 export default function RootLayout({

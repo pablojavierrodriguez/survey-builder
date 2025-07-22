@@ -160,9 +160,9 @@ export default function AdminDashboard() {
             Overview of your survey responses and analytics
           </p>
         </div>
-        <Button onClick={fetchDashboardData} variant="outline" size="sm">
-          <Activity className="w-4 h-4 mr-2" />
-          Refresh
+        <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading}>
+          <Activity className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 
