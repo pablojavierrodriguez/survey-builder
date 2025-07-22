@@ -359,10 +359,10 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your current role?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your background</p>
+              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What's your current role?</h2>
+              <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400">Help us understand your background</p>
             </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
+            <div className="grid gap-3 max-w-3xl mx-auto">
               {roleOptions.map((role) => (
                 <button
                   key={role}
@@ -378,7 +378,7 @@ export default function ProductSurvey() {
               ))}
             </div>
             {surveyData.role === "Other" && (
-              <div className="max-w-2xl mx-auto mt-4">
+              <div className="max-w-3xl mx-auto mt-4">
                 <Input
                   value={surveyData.other_role}
                   onChange={(e) => handleOtherRoleChange(e.target.value)}
@@ -537,10 +537,10 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What tools do you use daily?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Select all that apply</p>
+              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What tools do you use daily?</h2>
+              <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400">Select all that apply</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-6xl mx-auto">
               {toolOptions.map((tool) => (
                 <button
                   key={tool}
@@ -646,7 +646,7 @@ export default function ProductSurvey() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4 xl:p-8">
       {/* Theme toggle */}
       <div className="fixed top-4 right-4 z-20">
         <ModeToggle />
@@ -665,9 +665,9 @@ export default function ProductSurvey() {
         </Button>
       </div>
 
-      <div className="w-full max-w-4xl mx-auto">
+      <div className="w-full max-w-5xl mx-auto">
         <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
-          <CardContent className="p-6 sm:p-8 lg:p-12">
+          <CardContent className="p-6 sm:p-8 lg:p-12 xl:p-16">
             {/* Progress bar */}
             <div className="mb-8 lg:mb-12">
               <div className="flex justify-between items-center mb-3">

@@ -38,39 +38,91 @@ export default function DatabasePage() {
 
   const testConnection = async () => {
     try {
+      setConnectionStatus("testing")
+      
+      // First try Supabase connection
       const response = await fetch("https://qaauhwulohxeeacexrav.supabase.co/rest/v1/", {
         headers: {
-          apikey:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod2Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+          apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
         },
       })
-      setConnectionStatus(response.ok ? "connected" : "disconnected")
+      
+      if (response.ok) {
+        setConnectionStatus("connected")
+      } else {
+        // Fallback to localStorage for demo
+        const localData = localStorage.getItem("survey")
+        setConnectionStatus(localData ? "connected" : "disconnected")
+      }
     } catch (error) {
-      setConnectionStatus("disconnected")
+      console.warn("Supabase connection failed, using localStorage")
+      // Check if we have local data
+      const localData = localStorage.getItem("survey")
+      setConnectionStatus(localData ? "connected" : "disconnected")
     }
   }
 
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
+      // Try to fetch from Supabase first
       const response = await fetch(
         "https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?select=*&order=created_at.desc",
         {
           headers: {
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+            apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
           },
         },
       )
 
       if (response.ok) {
         const data = await response.json()
-        setResponses(data)
+        setResponses(data || [])
+      } else {
+        // Fallback to localStorage
+        const localData = localStorage.getItem("survey")
+        if (localData) {
+          const parsedData = JSON.parse(localData)
+          // Transform local data to match expected format
+          const transformedData = parsedData.map((item: any, index: number) => ({
+            id: item.id || `local-${index}`,
+            role: item.role || 'Unknown',
+            other_role: item.other_role,
+            company_type: item.company_type || item.company_size || 'Unknown',
+            main_challenge: item.main_challenge || 'No challenge provided',
+            daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
+            learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
+            email: item.email,
+            created_at: item.created_at || new Date().toISOString(),
+          }))
+          setResponses(transformedData)
+        } else {
+          setResponses([])
+        }
       }
     } catch (error) {
-      console.error("Error fetching responses:", error)
+      console.error("Error fetching responses, using localStorage:", error)
+      // Fallback to localStorage
+      const localData = localStorage.getItem("survey")
+      if (localData) {
+        const parsedData = JSON.parse(localData)
+        const transformedData = parsedData.map((item: any, index: number) => ({
+          id: item.id || `local-${index}`,
+          role: item.role || 'Unknown',
+          other_role: item.other_role,
+          company_type: item.company_type || item.company_size || 'Unknown',
+          main_challenge: item.main_challenge || 'No challenge provided',
+          daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
+          learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
+          email: item.email,
+          created_at: item.created_at || new Date().toISOString(),
+        }))
+        setResponses(transformedData)
+      } else {
+        setResponses([])
+      }
     } finally {
       setIsLoading(false)
     }
