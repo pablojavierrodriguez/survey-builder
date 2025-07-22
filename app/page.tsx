@@ -144,6 +144,7 @@ export default function ProductSurvey() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [surveyConfig, setSurveyConfig] = useState<any>(null)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -176,6 +177,7 @@ export default function ProductSurvey() {
         const surveyConfig = localStorage.getItem("survey_config")
         if (surveyConfig) {
           const config = JSON.parse(surveyConfig)
+          setSurveyConfig(config)
           // You can add survey config checks here if needed
           console.log("Survey config loaded:", config)
         }
@@ -671,17 +673,17 @@ export default function ProductSurvey() {
             {/* Progress bar */}
             <div className="mb-8 lg:mb-12">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  {currentStep < totalSteps - 1 ? `${currentStep + 1} of ${totalSteps - 1}` : "Complete"}
-                </span>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  {Math.round(((currentStep + 1) / totalSteps) * 100)}%
-                </span>
-              </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+                                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    {currentStep < totalSteps - 1 ? `${currentStep + 1} of ${totalSteps - 1}` : "Complete"}
+                  </span>
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    {Math.round(((currentStep + 1) / totalSteps) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
                 />
               </div>
             </div>
@@ -689,8 +691,8 @@ export default function ProductSurvey() {
             {/* Question content */}
             <div className="mb-8 lg:mb-12">{renderQuestion()}</div>
 
-            {/* Navigation buttons */}
-            {currentStep < totalSteps - 1 && (
+                          {/* Navigation buttons */}
+              {currentStep < totalSteps - 1 && (
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <Button
                   variant="outline"

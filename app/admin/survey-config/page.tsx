@@ -245,20 +245,38 @@ export default function SurveyConfigPage() {
       } catch (error) {
         console.error("Error loading survey config:", error)
       }
+    } else {
+      // If no config exists, save the default one with all questions visible
+      saveConfig({
+        title: "Product Community Survey",
+        description: "Help us understand the product community better",
+        thankYouMessage: "Thank you for your valuable feedback!",
+        questions: defaultQuestions,
+        isActive: true,
+      })
     }
   }, [])
 
-  const saveConfig = () => {
+  const saveConfig = (configToSave = config) => {
     setSaveStatus("saving")
     try {
-      localStorage.setItem("survey_config", JSON.stringify(config))
+      localStorage.setItem("survey_config", JSON.stringify(configToSave))
+      setConfig(configToSave)
       setSaveStatus("saved")
       setTimeout(() => setSaveStatus("idle"), 2000)
     } catch (error) {
       console.error("Error saving survey config:", error)
       setSaveStatus("error")
-      setTimeout(() => setSaveStatus("idle"), 2000)
+      setTimeout(() => setSaveStatus("idle"), 3000)
     }
+  }
+
+  const makeAllQuestionsVisible = () => {
+    const updatedConfig = {
+      ...config,
+      questions: config.questions.map(q => ({ ...q, isVisible: true }))
+    }
+    saveConfig(updatedConfig)
   }
 
   const addQuestion = () => {
@@ -415,10 +433,20 @@ export default function SurveyConfigPage() {
                 {config.questions.length} visible)
               </CardDescription>
             </div>
-            <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Question
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={makeAllQuestionsVisible} 
+                variant="outline"
+                className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 dark:border-gray-600"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Make All Visible
+              </Button>
+              <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Question
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
