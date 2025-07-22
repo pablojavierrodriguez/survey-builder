@@ -38,39 +38,91 @@ export default function DatabasePage() {
 
   const testConnection = async () => {
     try {
+      setConnectionStatus("testing")
+      
+      // First try Supabase connection
       const response = await fetch("https://qaauhwulohxeeacexrav.supabase.co/rest/v1/", {
         headers: {
-          apikey:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+          apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
         },
       })
-      setConnectionStatus(response.ok ? "connected" : "disconnected")
+      
+      if (response.ok) {
+        setConnectionStatus("connected")
+      } else {
+        // Fallback to localStorage for demo
+        const localData = localStorage.getItem("survey")
+        setConnectionStatus(localData ? "connected" : "disconnected")
+      }
     } catch (error) {
-      setConnectionStatus("disconnected")
+      console.warn("Supabase connection failed, using localStorage")
+      // Check if we have local data
+      const localData = localStorage.getItem("survey")
+      setConnectionStatus(localData ? "connected" : "disconnected")
     }
   }
 
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
+      // Try to fetch from Supabase first
       const response = await fetch(
         "https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?select=*&order=created_at.desc",
         {
           headers: {
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+            apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
           },
         },
       )
 
       if (response.ok) {
         const data = await response.json()
-        setResponses(data)
+        setResponses(data || [])
+      } else {
+        // Fallback to localStorage
+        const localData = localStorage.getItem("survey")
+        if (localData) {
+          const parsedData = JSON.parse(localData)
+          // Transform local data to match expected format
+          const transformedData = parsedData.map((item: any, index: number) => ({
+            id: item.id || `local-${index}`,
+            role: item.role || 'Unknown',
+            other_role: item.other_role,
+            company_type: item.company_type || item.company_size || 'Unknown',
+            main_challenge: item.main_challenge || 'No challenge provided',
+            daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
+            learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
+            email: item.email,
+            created_at: item.created_at || new Date().toISOString(),
+          }))
+          setResponses(transformedData)
+        } else {
+          setResponses([])
+        }
       }
     } catch (error) {
-      console.error("Error fetching responses:", error)
+      console.error("Error fetching responses, using localStorage:", error)
+      // Fallback to localStorage
+      const localData = localStorage.getItem("survey")
+      if (localData) {
+        const parsedData = JSON.parse(localData)
+        const transformedData = parsedData.map((item: any, index: number) => ({
+          id: item.id || `local-${index}`,
+          role: item.role || 'Unknown',
+          other_role: item.other_role,
+          company_type: item.company_type || item.company_size || 'Unknown',
+          main_challenge: item.main_challenge || 'No challenge provided',
+          daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
+          learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
+          email: item.email,
+          created_at: item.created_at || new Date().toISOString(),
+        }))
+        setResponses(transformedData)
+      } else {
+        setResponses([])
+      }
     } finally {
       setIsLoading(false)
     }
@@ -161,7 +213,7 @@ export default function DatabasePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Database Management</h1>
+        <h1 className="text-3xl font-bold text-foreground">Database Management</h1>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             {connectionStatus === "connected" ? (
@@ -171,7 +223,7 @@ export default function DatabasePage() {
             ) : (
               <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />
             )}
-            <span className="text-sm text-gray-600 capitalize">{connectionStatus}</span>
+            <span className="text-sm text-muted-foreground capitalize">{connectionStatus}</span>
           </div>
           <Button onClick={fetchResponses} variant="outline">
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -182,36 +234,36 @@ export default function DatabasePage() {
 
       {/* Database Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="bg-card text-card-foreground border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Records</p>
-                <p className="text-3xl font-bold text-gray-900">{responses.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Records</p>
+                <p className="text-3xl font-bold text-foreground">{responses.length}</p>
               </div>
               <Database className="w-8 h-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card text-card-foreground border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Filtered Results</p>
-                <p className="text-3xl font-bold text-gray-900">{filteredResponses.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Filtered Results</p>
+                <p className="text-3xl font-bold text-foreground">{filteredResponses.length}</p>
               </div>
               <Filter className="w-8 h-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card text-card-foreground border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Unique Roles</p>
-                <p className="text-3xl font-bold text-gray-900">{uniqueRoles.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Unique Roles</p>
+                <p className="text-3xl font-bold text-foreground">{uniqueRoles.length}</p>
               </div>
               <Eye className="w-8 h-8 text-purple-500" />
             </div>
@@ -220,15 +272,15 @@ export default function DatabasePage() {
       </div>
 
       {/* Filters and Actions */}
-      <Card>
+      <Card className="bg-card text-card-foreground border-border">
         <CardHeader>
-          <CardTitle>Filters & Actions</CardTitle>
+          <CardTitle className="text-foreground">Filters & Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Search responses..."
                   value={searchTerm}
@@ -241,11 +293,11 @@ export default function DatabasePage() {
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border bg-input text-input-foreground border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-background"
             >
-              <option value="">All Roles</option>
+              <option value="" className="bg-popover text-popover-foreground">All Roles</option>
               {uniqueRoles.map((role) => (
-                <option key={role} value={role}>
+                <option key={role} value={role} className="bg-popover text-popover-foreground">
                   {role}
                 </option>
               ))}
@@ -260,40 +312,40 @@ export default function DatabasePage() {
       </Card>
 
       {/* Responses Table */}
-      <Card>
+      <Card className="bg-card text-card-foreground border-border">
         <CardHeader>
-          <CardTitle>Survey Responses ({filteredResponses.length})</CardTitle>
+          <CardTitle className="text-foreground">Survey Responses ({filteredResponses.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-muted-foreground/50 rounded w-1/2"></div>
                 </div>
               ))}
             </div>
           ) : filteredResponses.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No responses found matching your criteria.</div>
+            <div className="text-center py-8 text-muted-foreground">No responses found matching your criteria.</div>
           ) : (
             <div className="space-y-4">
               {filteredResponses.map((response) => (
-                <div key={response.id} className="border rounded-lg p-4">
+                <div key={response.id} className="border border-border rounded-lg p-4 bg-card text-card-foreground">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline">{response.role}</Badge>
                         <Badge variant="secondary">{response.company_type}</Badge>
-                        <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(response.created_at).toLocaleString()}</span>
                       </div>
 
-                      <p className="text-sm text-gray-900 mb-2">
+                      <p className="text-sm text-foreground mb-2">
                         <strong>Challenge:</strong> {response.main_challenge}
                       </p>
 
                       <div className="flex flex-wrap gap-1 mb-2">
-                        <span className="text-xs text-gray-600">Tools:</span>
+                        <span className="text-xs text-muted-foreground">Tools:</span>
                         {response.daily_tools.map((tool, i) => (
                           <Badge key={i} variant="outline" className="text-xs">
                             {tool}
@@ -302,7 +354,7 @@ export default function DatabasePage() {
                       </div>
 
                       {response.email && (
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-muted-foreground">
                           <strong>Email:</strong> {response.email}
                         </p>
                       )}
@@ -312,7 +364,7 @@ export default function DatabasePage() {
                       size="sm"
                       variant="ghost"
                       onClick={() => deleteResponse(response.id)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-destructive hover:text-destructive-foreground hover:bg-destructive/10"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

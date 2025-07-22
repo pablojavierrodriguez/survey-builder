@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Settings, Database, Shield, Bell, Save, TestTube, Lock } from "lucide-react"
+import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye } from "lucide-react"
 
 interface AppSettings {
   database: {
@@ -45,9 +45,11 @@ export default function SettingsPage() {
     },
     security: {
       sessionTimeout: 480, // 8 hours in minutes
-      maxLoginAttempts: 3,
+      maxLoginAttempts: 5,
       requireHttps: true,
       enableRateLimit: true,
+      enforceStrongPasswords: false, // Demo mode
+      enableTwoFactor: false, // Demo mode
     },
     notifications: {
       emailAlerts: false,
@@ -65,6 +67,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<"success" | "error" | null>(null)
+  const [showApiKey, setShowApiKey] = useState(false)
 
   useEffect(() => {
     // Load settings from localStorage
@@ -123,7 +126,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
         <Button onClick={saveSettings} disabled={isSaving}>
           <Save className="w-4 h-4 mr-2" />
           {isSaving ? "Saving..." : "Save Changes"}
@@ -131,9 +134,9 @@ export default function SettingsPage() {
       </div>
 
       {/* Database Settings */}
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-foreground">
             <Database className="w-5 h-5" />
             Database Configuration
           </CardTitle>
@@ -141,114 +144,108 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Supabase URL</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Supabase URL</label>
               <Input
                 value={settings.database.url}
                 onChange={(e) => updateSettings("database", "url", e.target.value)}
                 placeholder="https://your-project.supabase.co"
+                className="bg-background text-foreground border-border"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Table Name</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Table Name</label>
               <Input
                 value={settings.database.tableName}
                 onChange={(e) => updateSettings("database", "tableName", e.target.value)}
                 placeholder="pc_survey_data"
+                className="bg-background text-foreground border-border"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground mb-2">API Key</label>
             <div className="flex gap-2">
               <Input
-                type="password"
+                type={showApiKey ? "text" : "password"}
                 value={settings.database.apiKey}
                 onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
                 placeholder="Your Supabase anon key"
-                className="flex-1"
+                className="flex-1 bg-background text-foreground border-border"
               />
-              <Button onClick={testDatabaseConnection} disabled={testingConnection} variant="outline">
-                <TestTube className="w-4 h-4 mr-2" />
-                {testingConnection ? "Testing..." : "Test"}
+              <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)}>
+                {showApiKey ? <Eye className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
             </div>
+          </div>
 
+          <div className="flex items-center justify-between">
+            <Button onClick={testDatabaseConnection} disabled={testingConnection} variant="outline">
+              <TestTube className="w-4 h-4 mr-2" />
+              {testingConnection ? "Testing..." : "Test Connection"}
+            </Button>
             {connectionStatus && (
-              <div
-                className={`mt-2 flex items-center gap-2 text-sm ${
-                  connectionStatus === "success" ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {connectionStatus === "success" ? (
-                  <>
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                      Connected
-                    </Badge>
-                    Database connection successful
-                  </>
-                ) : (
-                  <>
-                    <Badge variant="outline" className="text-red-600 border-red-600">
-                      Failed
-                    </Badge>
-                    Unable to connect to database
-                  </>
-                )}
-              </div>
+              <Badge variant={connectionStatus === "success" ? "default" : "destructive"}>
+                {connectionStatus === "success" ? "Connected" : "Failed"}
+              </Badge>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Connection Timeout (seconds)</label>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Connection Timeout (seconds)
+            </label>
             <Input
               type="number"
               value={settings.database.connectionTimeout}
-              onChange={(e) => updateSettings("database", "connectionTimeout", Number.parseInt(e.target.value))}
-              className="w-32"
+              onChange={(e) =>
+                updateSettings("database", "connectionTimeout", Number.parseInt(e.target.value))
+              }
+              className="w-32 bg-background text-foreground border-border"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Security Settings */}
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-foreground">
             <Shield className="w-5 h-5" />
-            Security & Authentication
+            Security Settings
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Session Timeout (minutes)</label>
-              <Input
-                type="number"
-                value={settings.security.sessionTimeout}
-                onChange={(e) => updateSettings("security", "sessionTimeout", Number.parseInt(e.target.value))}
-                className="w-32"
-              />
-              <p className="text-xs text-gray-500 mt-1">Users will be logged out after this period of inactivity</p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Session Timeout (minutes)
+            </label>
+            <Input
+              type="number"
+              value={settings.security.sessionTimeout}
+              onChange={(e) => updateSettings("security", "sessionTimeout", Number.parseInt(e.target.value))}
+              className="w-32 bg-background text-foreground border-border"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              How long before users are automatically logged out
+            </p>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Max Login Attempts</label>
-              <Input
-                type="number"
-                value={settings.security.maxLoginAttempts}
-                onChange={(e) => updateSettings("security", "maxLoginAttempts", Number.parseInt(e.target.value))}
-                className="w-32"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Max Login Attempts</label>
+            <Input
+              type="number"
+              value={settings.security.maxLoginAttempts}
+              onChange={(e) => updateSettings("security", "maxLoginAttempts", Number.parseInt(e.target.value))}
+              className="w-32 bg-background text-foreground border-border"
+            />
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-700">Require HTTPS</label>
-                <p className="text-xs text-gray-500">Force secure connections only</p>
+                <label className="text-sm font-medium text-foreground">Require HTTPS</label>
+                <p className="text-xs text-muted-foreground">Force secure connections only</p>
               </div>
               <Switch
                 checked={settings.security.requireHttps}
@@ -258,8 +255,8 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-700">Enable Rate Limiting</label>
-                <p className="text-xs text-gray-500">Prevent brute force attacks</p>
+                <label className="text-sm font-medium text-foreground">Enable Rate Limiting</label>
+                <p className="text-xs text-muted-foreground">Prevent brute force attacks</p>
               </div>
               <Switch
                 checked={settings.security.enableRateLimit}
@@ -270,10 +267,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Notification Settings */}
-      <Card>
+      {/* Notifications */}
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-foreground">
             <Bell className="w-5 h-5" />
             Notifications
           </CardTitle>
@@ -281,8 +278,8 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm font-medium text-gray-700">Email Alerts</label>
-              <p className="text-xs text-gray-500">Receive notifications for new responses</p>
+              <label className="text-sm font-medium text-foreground">Email Alerts</label>
+              <p className="text-xs text-muted-foreground">Receive notifications for new responses</p>
             </div>
             <Switch
               checked={settings.notifications.emailAlerts}
@@ -293,26 +290,27 @@ export default function SettingsPage() {
           {settings.notifications.emailAlerts && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Email</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Admin Email</label>
                 <Input
                   type="email"
                   value={settings.notifications.adminEmail}
                   onChange={(e) => updateSettings("notifications", "adminEmail", e.target.value)}
                   placeholder="admin@example.com"
+                  className="bg-background text-foreground border-border"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Alert Threshold</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Alert Threshold</label>
                 <Input
                   type="number"
                   value={settings.notifications.responseThreshold}
                   onChange={(e) =>
                     updateSettings("notifications", "responseThreshold", Number.parseInt(e.target.value))
                   }
-                  className="w-32"
+                  className="w-32 bg-background text-foreground border-border"
                 />
-                <p className="text-xs text-gray-500 mt-1">Send alert every N responses</p>
+                <p className="text-xs text-muted-foreground mt-1">Send alert every N responses</p>
               </div>
             </div>
           )}
@@ -320,9 +318,9 @@ export default function SettingsPage() {
       </Card>
 
       {/* General Settings */}
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-foreground">
             <Settings className="w-5 h-5" />
             General Settings
           </CardTitle>
@@ -330,20 +328,22 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Application Name</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Application Name</label>
               <Input
                 value={settings.general.appName}
                 onChange={(e) => updateSettings("general", "appName", e.target.value)}
                 placeholder="Product Survey Builder"
+                className="bg-background text-foreground border-border"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Public URL</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Public URL</label>
               <Input
                 value={settings.general.publicUrl}
                 onChange={(e) => updateSettings("general", "publicUrl", e.target.value)}
                 placeholder="https://your-domain.com"
+                className="bg-background text-foreground border-border"
               />
             </div>
           </div>
@@ -351,8 +351,8 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-700">Maintenance Mode</label>
-                <p className="text-xs text-gray-500">Temporarily disable survey collection</p>
+                <label className="text-sm font-medium text-foreground">Maintenance Mode</label>
+                <p className="text-xs text-muted-foreground">Temporarily disable survey collection</p>
               </div>
               <Switch
                 checked={settings.general.maintenanceMode}
@@ -362,8 +362,8 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-gray-700">Analytics Enabled</label>
-                <p className="text-xs text-gray-500">Track usage and performance metrics</p>
+                <label className="text-sm font-medium text-foreground">Analytics Enabled</label>
+                <p className="text-xs text-muted-foreground">Track usage and performance metrics</p>
               </div>
               <Switch
                 checked={settings.general.analyticsEnabled}
@@ -375,28 +375,38 @@ export default function SettingsPage() {
       </Card>
 
       {/* Security Information */}
-      <Card className="border-yellow-200 bg-yellow-50">
+      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-yellow-800">
+          <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
             <Lock className="w-5 h-5" />
-            Security Information
+            Security Status & Recommendations
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-yellow-700">
-          <div className="space-y-2 text-sm">
-            <p>
-              <strong>Authentication:</strong> Demo credentials are hardcoded for testing purposes.
-            </p>
-            <p>
-              <strong>Session Management:</strong> Sessions are stored in localStorage and sessionStorage.
-            </p>
-            <p>
-              <strong>Database Access:</strong> Using Supabase Row Level Security with anonymous access.
-            </p>
-            <p>
-              <strong>Production Notes:</strong> Implement proper JWT authentication, server-side session management,
-              and environment variables for sensitive data.
-            </p>
+        <CardContent className="text-amber-700 dark:text-amber-200">
+          <div className="space-y-3 text-sm">
+            <div className="bg-amber-100 dark:bg-amber-900/30 p-3 rounded-lg">
+              <p className="font-semibold mb-2">⚠️ Current Security Status (Demo Mode)</p>
+              <ul className="space-y-1 ml-4">
+                <li>• Authentication: Hardcoded credentials (admin/admin123, viewer/viewer123)</li>
+                <li>• Session Management: Client-side localStorage with 8-hour timeout</li>
+                <li>• Rate Limiting: Basic attempt counting (max 5 attempts)</li>
+                <li>• Database: Supabase anonymous access with RLS</li>
+              </ul>
+            </div>
+            
+            <div className="bg-green-100 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="font-semibold mb-2 text-green-800 dark:text-green-200">✅ Production Recommendations</p>
+              <ul className="space-y-1 ml-4 text-green-700 dark:text-green-300">
+                <li>• Implement proper JWT authentication with secure tokens</li>
+                <li>• Use environment variables for all sensitive data</li>
+                <li>• Add server-side session management</li>
+                <li>• Enable HTTPS enforcement</li>
+                <li>• Implement proper password hashing (bcrypt/argon2)</li>
+                <li>• Add input validation and sanitization</li>
+                <li>• Enable database-level security policies</li>
+                <li>• Add proper error handling without information disclosure</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>
