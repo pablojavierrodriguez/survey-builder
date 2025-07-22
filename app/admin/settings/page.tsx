@@ -45,9 +45,11 @@ export default function SettingsPage() {
     },
     security: {
       sessionTimeout: 480, // 8 hours in minutes
-      maxLoginAttempts: 3,
+      maxLoginAttempts: 5,
       requireHttps: true,
       enableRateLimit: true,
+      enforceStrongPasswords: false, // Demo mode
+      enableTwoFactor: false, // Demo mode
     },
     notifications: {
       emailAlerts: false,
@@ -386,28 +388,38 @@ export default function SettingsPage() {
       </Card>
 
       {/* Security Information */}
-      <Card className="border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/30">
+      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+          <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
             <Lock className="w-5 h-5" />
-            Security Information
+            Security Status & Recommendations
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-yellow-700 dark:text-yellow-100">
-          <div className="space-y-2 text-sm">
-            <p>
-              <strong>Authentication:</strong> Demo credentials are hardcoded for testing purposes.
-            </p>
-            <p>
-              <strong>Session Management:</strong> Sessions are stored in localStorage and sessionStorage.
-            </p>
-            <p>
-              <strong>Database Access:</strong> Using Supabase Row Level Security with anonymous access.
-            </p>
-            <p>
-              <strong>Production Notes:</strong> Implement proper JWT authentication, server-side session management,
-              and environment variables for sensitive data.
-            </p>
+        <CardContent className="text-amber-700 dark:text-amber-200">
+          <div className="space-y-3 text-sm">
+            <div className="bg-amber-100 dark:bg-amber-900/30 p-3 rounded-lg">
+              <p className="font-semibold mb-2">⚠️ Current Security Status (Demo Mode)</p>
+              <ul className="space-y-1 ml-4">
+                <li>• Authentication: Hardcoded credentials (admin/admin123, viewer/viewer123)</li>
+                <li>• Session Management: Client-side localStorage with 8-hour timeout</li>
+                <li>• Rate Limiting: Basic attempt counting (max 5 attempts)</li>
+                <li>• Database: Supabase anonymous access with RLS</li>
+              </ul>
+            </div>
+            
+            <div className="bg-green-100 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="font-semibold mb-2 text-green-800 dark:text-green-200">✅ Production Recommendations</p>
+              <ul className="space-y-1 ml-4 text-green-700 dark:text-green-300">
+                <li>• Implement proper JWT authentication with secure tokens</li>
+                <li>• Use environment variables for all sensitive data</li>
+                <li>• Add server-side session management</li>
+                <li>• Enable HTTPS enforcement</li>
+                <li>• Implement proper password hashing (bcrypt/argon2)</li>
+                <li>• Add input validation and sanitization</li>
+                <li>• Enable database-level security policies</li>
+                <li>• Add proper error handling without information disclosure</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>

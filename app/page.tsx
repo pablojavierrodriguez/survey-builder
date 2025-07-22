@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, ArrowLeft, Check, Shield } from "lucide-react"
-//import { env } from "@/lib/env"
+import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle } from "lucide-react"
+import { ModeToggle } from "@/components/mode-toggle"
 
 interface SurveyData {
   role: string
@@ -22,6 +22,14 @@ interface SurveyData {
   other_tool: string
   learning_methods: string[]
   email: string
+}
+
+interface AppSettings {
+  general: {
+    maintenanceMode: boolean
+    [key: string]: any
+  }
+  [key: string]: any
 }
 
 const roleOptions = [
@@ -134,6 +142,8 @@ const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors",
 export default function ProductSurvey() {
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -151,6 +161,85 @@ export default function ProductSurvey() {
   })
 
   const totalSteps = 11
+
+  // Check maintenance mode on component mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const savedSettings = localStorage.getItem("app_settings")
+        if (savedSettings) {
+          const settings: AppSettings = JSON.parse(savedSettings)
+          setIsMaintenanceMode(settings.general?.maintenanceMode || false)
+        }
+        
+        // Also check for survey configuration
+        const surveyConfig = localStorage.getItem("survey_config")
+        if (surveyConfig) {
+          const config = JSON.parse(surveyConfig)
+          // You can add survey config checks here if needed
+          console.log("Survey config loaded:", config)
+        }
+      } catch (error) {
+        console.error("Error checking settings:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadSettings()
+  }, [])
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Show maintenance mode screen
+  if (isMaintenanceMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 p-4">
+        {/* Theme toggle */}
+        <div className="absolute top-4 right-4">
+          <ModeToggle />
+        </div>
+        
+        {/* Admin Login Button */}
+        <div className="absolute top-4 left-4">
+          <Button
+            onClick={() => window.open("/auth/login", "_blank")}
+            variant="outline"
+            size="sm"
+            className="bg-white/80 backdrop-blur-sm border-slate-200 hover:bg-white/90 text-slate-600 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-300"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Admin Login
+          </Button>
+        </div>
+
+        <div className="text-center max-w-md mx-auto">
+          <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Wrench className="w-10 h-10 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-4">
+            Under Maintenance
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
+            We're currently performing scheduled maintenance on our survey system. 
+            Please check back later or contact the administrator if you need immediate assistance.
+          </p>
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              This maintenance mode can be disabled by administrators in the settings panel.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handleNext = () => {
     if (currentStep < totalSteps - 1) {
@@ -338,18 +427,18 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">What's your current role?</h2>
-              <p className="text-lg text-gray-600">Help us understand your background</p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your current role?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your background</p>
             </div>
-            <div className="grid gap-3 max-w-md mx-auto">
+            <div className="grid gap-3 max-w-2xl mx-auto">
               {roleOptions.map((role) => (
                 <button
                   key={role}
                   onClick={() => handleRoleSelect(role)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 ${
+                                      className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.role === role
-                      ? "border-blue-500 bg-blue-50 text-blue-900"
-                      : "border-gray-200 bg-white text-gray-700"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <span className="font-medium">{role}</span>
@@ -625,87 +714,95 @@ export default function ProductSurvey() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4">
+      {/* Theme toggle */}
+      <div className="fixed top-4 right-4 z-20">
+        <ModeToggle />
+      </div>
+      
       {/* Admin Login Button */}
-      <div className="fixed top-4 right-4 z-10">
+      <div className="fixed top-4 left-4 z-20">
         <Button
           onClick={() => window.open("/auth/login", "_blank")}
           variant="outline"
           size="sm"
-          className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-white/90 text-slate-600"
+          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg"
         >
           <Shield className="w-4 h-4 mr-2" />
           Admin Login
         </Button>
       </div>
 
-      <Card className="w-full max-w-2xl bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
-        <CardContent className="p-8 md:p-12">
-          {/* Progress bar */}
-          <div className="mb-12">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-500">
-                {currentStep < totalSteps - 1 ? `${currentStep + 1} of ${totalSteps - 1}` : "Complete"}
-              </span>
-              <span className="text-sm font-medium text-gray-500">
-                {Math.round(((currentStep + 1) / totalSteps) * 100)}%
-              </span>
+      <div className="w-full max-w-4xl mx-auto">
+        <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
+          <CardContent className="p-6 sm:p-8 lg:p-12">
+            {/* Progress bar */}
+            <div className="mb-8 lg:mb-12">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {currentStep < totalSteps - 1 ? `${currentStep + 1} of ${totalSteps - 1}` : "Complete"}
+                </span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {Math.round(((currentStep + 1) / totalSteps) * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-              />
-            </div>
-          </div>
 
-          {/* Question content */}
-          <div className="mb-12">{renderQuestion()}</div>
+            {/* Question content */}
+            <div className="mb-8 lg:mb-12">{renderQuestion()}</div>
 
-          {/* Navigation buttons */}
-          {currentStep < totalSteps - 1 && (
-            <div className="flex justify-between items-center">
-              <Button
-                variant="primary"
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-
-              {currentStep === 9 ? (
+            {/* Navigation buttons */}
+            {currentStep < totalSteps - 1 && (
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <Button
-                  onClick={submitSurvey}
-                  disabled={!canProceed() || isSubmitting}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-3 rounded-2xl disabled:opacity-50"
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 0}
+                  className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 order-2 sm:order-1"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      Submit
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
                 </Button>
-              ) : (
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceed()}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-8 py-3 rounded-2xl disabled:opacity-50"
-                >
-                  Next
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                {currentStep === 9 ? (
+                  <Button
+                    onClick={submitSurvey}
+                    disabled={!canProceed() || isSubmitting}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        Submit Survey
+                        <Check className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleNext}
+                    disabled={!canProceed()}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
