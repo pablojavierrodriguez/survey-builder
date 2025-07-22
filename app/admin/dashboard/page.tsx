@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -29,6 +30,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -312,15 +314,27 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => router.push("/admin/analytics")}
+            >
               <BarChart3 className="h-5 w-5" />
               <span className="text-sm">View Analytics</span>
             </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => router.push("/admin/database")}
+            >
               <Database className="h-5 w-5" />
               <span className="text-sm">Export Data</span>
             </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => router.push("/admin/survey-config")}
+            >
               <FileText className="h-5 w-5" />
               <span className="text-sm">Survey Config</span>
             </Button>
