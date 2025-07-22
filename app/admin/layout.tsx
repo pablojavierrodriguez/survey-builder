@@ -74,9 +74,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setIsLoading(false)
   }, [router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("survey_auth")
-    router.push("/auth/login")
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      // Always redirect to login, even if API fails
+      router.push("/auth/login")
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Still redirect to login page
+      router.push("/auth/login")
+    }
   }
 
   const navigation = [
