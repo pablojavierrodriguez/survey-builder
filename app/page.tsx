@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, ArrowLeft, Check, Shield } from "lucide-react"
-import { env } from "@/lib/env"
+//import { env } from "@/lib/env"
 
 interface SurveyData {
   role: string
@@ -256,7 +256,7 @@ export default function ProductSurvey() {
     }
   }
 
-  const submitSurvey = async () => {
+  /*const submitSurvey = async () => {
     setIsSubmitting(true)
     try {
       // Process tools array to include custom tool
@@ -315,6 +315,22 @@ export default function ProductSurvey() {
       setIsSubmitting(false)
     }
   }
+  */
+  
+  //Submit local
+  const submitSurvey = () => {
+  try {
+    const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+    const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+    localStorage.setItem("survey", JSON.stringify(updated))
+    console.log("✅ Survey saved to localStorage:", updated)
+
+    handleNext()
+  } catch (error) {
+    console.error("❌ Error saving to localStorage:", error)
+    alert("Error saving survey locally.")
+  }
+}
 
   const renderQuestion = () => {
     switch (currentStep) {
@@ -490,7 +506,7 @@ export default function ProductSurvey() {
                 value={surveyData.main_challenge}
                 onChange={(e) => handleChallengeChange(e.target.value)}
                 placeholder="Describe your biggest challenge in product management, design, or development..."
-                className="min-h-32 text-lg p-4 rounded-2xl border-2 border-gray-200 focus:border-blue-500 resize-none"
+                className="min-h-32 text-lg p-4 rounded-2xl border-2 border-gray-200 focus:border-blue-500 resize-none bg-transparent text-slate-500"
               />
             </div>
           </div>
@@ -575,7 +591,7 @@ export default function ProductSurvey() {
                 value={surveyData.email}
                 onChange={(e) => handleEmailChange(e.target.value)}
                 placeholder="your@email.com"
-                className={`text-lg p-4 h-14 rounded-2xl border-2 ${
+                className={`text-lg p-4 h-14 rounded-2xl border-2 bg-transparent text-slate-500 ${
                   !isValidEmail(surveyData.email)
                     ? "border-red-300 focus:border-red-500"
                     : "border-gray-200 focus:border-blue-500"
@@ -616,7 +632,7 @@ export default function ProductSurvey() {
           onClick={() => window.open("/auth/login", "_blank")}
           variant="outline"
           size="sm"
-          className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-white/90"
+          className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-white/90 text-slate-600"
         >
           <Shield className="w-4 h-4 mr-2" />
           Admin Login
@@ -650,7 +666,7 @@ export default function ProductSurvey() {
           {currentStep < totalSteps - 1 && (
             <div className="flex justify-between items-center">
               <Button
-                variant="ghost"
+                variant="primary"
                 onClick={handlePrevious}
                 disabled={currentStep === 0}
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900"

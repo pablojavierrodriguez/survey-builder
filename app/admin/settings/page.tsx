@@ -123,7 +123,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">Settings</h1>
         <Button onClick={saveSettings} disabled={isSaving}>
           <Save className="w-4 h-4 mr-2" />
           {isSaving ? "Saving..." : "Save Changes"}
@@ -131,7 +131,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Database Settings */}
-      <Card>
+      <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="w-5 h-5" />
@@ -141,33 +141,35 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Supabase URL</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Supabase URL</label>
               <Input
                 value={settings.database.url}
                 onChange={(e) => updateSettings("database", "url", e.target.value)}
                 placeholder="https://your-project.supabase.co"
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Table Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Table Name</label>
               <Input
                 value={settings.database.tableName}
                 onChange={(e) => updateSettings("database", "tableName", e.target.value)}
                 placeholder="pc_survey_data"
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API Key</label>
             <div className="flex gap-2">
               <Input
                 type="password"
                 value={settings.database.apiKey}
                 onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
                 placeholder="Your Supabase anon key"
-                className="flex-1"
+                className="flex-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
               />
               <Button onClick={testDatabaseConnection} disabled={testingConnection} variant="outline">
                 <TestTube className="w-4 h-4 mr-2" />
@@ -201,19 +203,21 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Connection Timeout (seconds)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Connection Timeout (seconds)
+            </label>
             <Input
               type="number"
               value={settings.database.connectionTimeout}
               onChange={(e) => updateSettings("database", "connectionTimeout", Number.parseInt(e.target.value))}
-              className="w-32"
+              className="w-32 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Security Settings */}
-      <Card>
+      <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
@@ -223,23 +227,27 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Session Timeout (minutes)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Session Timeout (minutes)
+              </label>
               <Input
                 type="number"
                 value={settings.security.sessionTimeout}
                 onChange={(e) => updateSettings("security", "sessionTimeout", Number.parseInt(e.target.value))}
-                className="w-32"
+                className="w-32 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
               />
-              <p className="text-xs text-gray-500 mt-1">Users will be logged out after this period of inactivity</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Users will be logged out after this period of inactivity
+              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Max Login Attempts</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Login Attempts</label>
               <Input
                 type="number"
                 value={settings.security.maxLoginAttempts}
                 onChange={(e) => updateSettings("security", "maxLoginAttempts", Number.parseInt(e.target.value))}
-                className="w-32"
+                className="w-32 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
               />
             </div>
           </div>
@@ -271,7 +279,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Notification Settings */}
-      <Card>
+      <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="w-5 h-5" />
@@ -293,26 +301,27 @@ export default function SettingsPage() {
           {settings.notifications.emailAlerts && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Admin Email</label>
                 <Input
                   type="email"
                   value={settings.notifications.adminEmail}
                   onChange={(e) => updateSettings("notifications", "adminEmail", e.target.value)}
                   placeholder="admin@example.com"
+                  className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Alert Threshold</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alert Threshold</label>
                 <Input
                   type="number"
                   value={settings.notifications.responseThreshold}
                   onChange={(e) =>
                     updateSettings("notifications", "responseThreshold", Number.parseInt(e.target.value))
                   }
-                  className="w-32"
+                  className="w-32 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
                 />
-                <p className="text-xs text-gray-500 mt-1">Send alert every N responses</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Send alert every N responses</p>
               </div>
             </div>
           )}
@@ -320,7 +329,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* General Settings */}
-      <Card>
+      <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -330,20 +339,22 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Application Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Application Name</label>
               <Input
                 value={settings.general.appName}
                 onChange={(e) => updateSettings("general", "appName", e.target.value)}
                 placeholder="Product Survey Builder"
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Public URL</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Public URL</label>
               <Input
                 value={settings.general.publicUrl}
                 onChange={(e) => updateSettings("general", "publicUrl", e.target.value)}
                 placeholder="https://your-domain.com"
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50"
               />
             </div>
           </div>
@@ -375,14 +386,14 @@ export default function SettingsPage() {
       </Card>
 
       {/* Security Information */}
-      <Card className="border-yellow-200 bg-yellow-50">
+      <Card className="border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/30">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-yellow-800">
+          <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
             <Lock className="w-5 h-5" />
             Security Information
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-yellow-700">
+        <CardContent className="text-yellow-700 dark:text-yellow-100">
           <div className="space-y-2 text-sm">
             <p>
               <strong>Authentication:</strong> Demo credentials are hardcoded for testing purposes.

@@ -33,7 +33,7 @@ export default function AdminDashboard() {
             apikey:
               "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
             Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9zZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
           },
         },
       )
@@ -79,7 +79,7 @@ export default function AdminDashboard() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">Dashboard</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">Dashboard</h1>
         <Button onClick={fetchDashboardData} variant="outline">
           <Activity className="w-4 h-4 mr-2" />
           Refresh
@@ -106,12 +106,12 @@ export default function AdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Responses</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.totalResponses || 0}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Responses</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">{stats?.totalResponses || 0}</p>
               </div>
               <Users className="w-8 h-8 text-blue-500" />
             </div>
@@ -122,8 +122,8 @@ export default function AdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Today's Responses</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.todayResponses || 0}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Responses</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">{stats?.todayResponses || 0}</p>
               </div>
               <TrendingUp className="w-8 h-8 text-green-500" />
             </div>
@@ -134,8 +134,8 @@ export default function AdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Completion Rate</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.completionRate || 0}%</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Rate</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">{stats?.completionRate || 0}%</p>
               </div>
               <CheckCircle className="w-8 h-8 text-purple-500" />
             </div>
@@ -146,8 +146,8 @@ export default function AdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Avg. Time</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.avgTimeToComplete || 0}m</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg. Time</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">{stats?.avgTimeToComplete || 0}m</p>
               </div>
               <Clock className="w-8 h-8 text-orange-500" />
             </div>
@@ -162,17 +162,17 @@ export default function AdminDashboard() {
             <CardTitle>Quick Insights</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-700">Most Common Role</span>
-              <span className="text-sm font-bold text-blue-700">{stats?.topRole}</span>
+            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Most Common Role</span>
+              <span className="text-sm font-bold text-blue-700 dark:text-blue-300">{stats?.topRole}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-700">Top Industry</span>
-              <span className="text-sm font-bold text-green-700">{stats?.topIndustry}</span>
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Top Industry</span>
+              <span className="text-sm font-bold text-green-700 dark:text-green-300">{stats?.topIndustry}</span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-700">Database Status</span>
-              <span className="text-sm font-bold text-purple-700 flex items-center gap-1">
+            <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Database Status</span>
+              <span className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1">
                 <CheckCircle className="w-4 h-4" />
                 Connected
               </span>
@@ -187,12 +187,12 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="space-y-3">
               {stats?.recentResponses.map((response, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg border-gray-200 dark:border-gray-700">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{response.role}</p>
-                    <p className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-50">{response.role}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(response.created_at).toLocaleString()}</p>
                   </div>
-                  <div className="text-xs text-gray-500">{response.company_type || "N/A"}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{response.company_type || "N/A"}</div>
                 </div>
               )) || <div className="text-center py-4 text-gray-500">No responses yet</div>}
             </div>

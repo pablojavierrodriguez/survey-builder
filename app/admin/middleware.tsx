@@ -3,11 +3,11 @@
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
-interface AuthData {
+interface Auth {
   username: string
   role: string
-  loginTime: number
-  sessionId: string
+  loginTime?: number
+  sessionId?: string
 }
 
 export function useRoleBasedAccess() {
@@ -20,7 +20,7 @@ export function useRoleBasedAccess() {
       if (!authStr) return
 
       try {
-        const auth: AuthData = JSON.parse(authStr)
+        const auth: Auth = JSON.parse(authStr)
 
         // Define role-based access rules
         const roleAccess = {
@@ -28,14 +28,14 @@ export function useRoleBasedAccess() {
           viewer: ["/admin/analytics"],
         }
 
-        const allowedPaths = roleAccess[auth.role as keyof typeof roleAccess] || []
+        const allowedPaths = roleAccess[Auth.role as keyof typeof roleAccess] || []
 
         // Check if current path is allowed for user's role
         const isAllowed = allowedPaths.some((path) => pathname.startsWith(path))
 
         if (!isAllowed) {
           // Redirect to appropriate default page based on role
-          const defaultPath = auth.role === "admin" ? "/admin/dashboard" : "/admin/analytics"
+          const defaultPath = Auth.role === "admin" ? "/admin/dashboard" : "/admin/analytics"
           router.push(defaultPath)
         }
       } catch (error) {
