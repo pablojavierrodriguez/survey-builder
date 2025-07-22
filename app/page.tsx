@@ -341,17 +341,61 @@ export default function ProductSurvey() {
     }
   }
 
-  const submitSurvey = () => {
+  const submitSurvey = async () => {
     try {
-      const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-      const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-      localStorage.setItem("survey", JSON.stringify(updated))
-      console.log("✅ Survey saved to localStorage:", updated)
+      setIsSubmitting(true)
+      
+      // Use the secure API instead of localStorage
+      const response = await fetch('/api/survey/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(surveyData)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 400) {
+          console.error('Validation errors:', result.details)
+          alert(`Survey submission failed: ${result.details?.join(', ') || 'Invalid data'}`)
+        } else {
+          console.error('API error:', result.error)
+          alert(`Survey submission failed: ${result.error || 'Unknown error'}`)
+        }
+        setIsSubmitting(false)
+        return
+      }
+
+      console.log('✅ Survey submitted successfully:', result.id)
+      
+      // Also save to localStorage as backup for demo
+      try {
+        const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+        const updated = [...existing, { ...surveyData, id: result.id, created_at: new Date().toISOString() }]
+        localStorage.setItem("survey", JSON.stringify(updated))
+      } catch (localError) {
+        console.warn('Local storage backup failed:', localError)
+      }
 
       handleNext()
     } catch (error) {
-      console.error("❌ Error saving to localStorage:", error)
-      alert("Error saving survey locally.")
+      console.error("❌ Network error submitting survey:", error)
+      
+      // Fallback to localStorage if API fails
+      try {
+        const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+        const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+        localStorage.setItem("survey", JSON.stringify(updated))
+        console.log("✅ Survey saved to localStorage as fallback")
+        handleNext()
+      } catch (localError) {
+        console.error("❌ Complete failure - cannot save survey:", localError)
+        alert("Failed to submit survey. Please check your connection and try again.")
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
