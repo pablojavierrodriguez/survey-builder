@@ -21,6 +21,10 @@ interface SurveyData {
   daily_tools: string[]
   other_tool: string
   learning_methods: string[]
+  salary_currency: string
+  salary_min: string
+  salary_max: string
+  salary_average: string
   email: string
 }
 
@@ -158,10 +162,14 @@ export default function ProductSurvey() {
     daily_tools: [],
     other_tool: "",
     learning_methods: [],
+    salary_currency: "ARS", // Default to Argentine Pesos
+    salary_min: "",
+    salary_max: "",
+    salary_average: "",
     email: "",
   })
 
-  const totalSteps = 11
+  const totalSteps = 12
 
   // Check maintenance mode on component mount
   useEffect(() => {
@@ -605,6 +613,80 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your salary range?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand compensation in the product community (optional)</p>
+            </div>
+            <div className="max-w-2xl mx-auto space-y-6">
+              <div className="flex gap-4 items-center">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Currency:</label>
+                <select
+                  value={surveyData.salary_currency}
+                  onChange={(e) => setSurveyData({ ...surveyData, salary_currency: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
+                >
+                  <option value="ARS">🇦🇷 Pesos Argentinos (ARS)</option>
+                  <option value="USD">🇺🇸 US Dollars (USD)</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Salary Range</label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      value={surveyData.salary_min}
+                      onChange={(e) => setSurveyData({ ...surveyData, salary_min: e.target.value, salary_average: "" })}
+                      placeholder="Min"
+                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    />
+                    <span className="text-slate-500">-</span>
+                    <Input
+                      type="number"
+                      value={surveyData.salary_max}
+                      onChange={(e) => setSurveyData({ ...surveyData, salary_max: e.target.value, salary_average: "" })}
+                      placeholder="Max"
+                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2 flex items-center justify-center">
+                  <span className="text-slate-500 dark:text-slate-400">OR</span>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Average Salary</label>
+                  <Input
+                    type="number"
+                    value={surveyData.salary_average}
+                    onChange={(e) => {
+                      const avg = parseInt(e.target.value) || 0
+                      setSurveyData({ 
+                        ...surveyData, 
+                        salary_average: e.target.value,
+                        salary_min: avg > 0 ? Math.round(avg * 0.85).toString() : "",
+                        salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : ""
+                      })
+                    }}
+                    placeholder="Average"
+                    className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                  {surveyData.salary_average && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Auto-calculated range: {Math.round(parseInt(surveyData.salary_average) * 0.85)} - {Math.round(parseInt(surveyData.salary_average) * 1.15)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+
+      case 10:
+        return (
+          <div className="space-y-8">
+            <div className="text-center space-y-4">
               <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Your email</h2>
               <p className="text-lg text-slate-600 dark:text-slate-400">Optional - only if you'd like us to follow up</p>
             </div>
@@ -627,7 +709,7 @@ export default function ProductSurvey() {
           </div>
         )
 
-      case 10:
+      case 11:
         return (
           <div className="text-center space-y-8">
             <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
@@ -704,7 +786,7 @@ export default function ProductSurvey() {
                   Back
                 </Button>
 
-                {currentStep === 9 ? (
+                {currentStep === 10 ? (
                   <Button
                     onClick={submitSurvey}
                     disabled={!canProceed() || isSubmitting}

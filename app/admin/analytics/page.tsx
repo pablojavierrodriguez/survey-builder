@@ -19,6 +19,12 @@ interface AnalyticsData {
   learningMethodsUsage: { [key: string]: number }
   responsesByDate: { [key: string]: number }
   mainChallenges: string[]
+  salaryData: {
+    averageByCurrency: { [key: string]: number }
+    averageByRole: { [key: string]: { ARS: number; USD: number } }
+    averageByIndustry: { [key: string]: { ARS: number; USD: number } }
+    rangeDistribution: { [key: string]: number }
+  }
   totalResponses: number
 }
 
@@ -228,6 +234,23 @@ const getNGrams = (text: string, n: number) => {
   return ngrams
 }
 
+// Helper function to categorize salaries into ranges
+const getSalaryRange = (salary: number, currency: string): string => {
+  if (currency === "USD") {
+    if (salary < 50000) return "< $50K USD"
+    if (salary < 80000) return "$50K - $80K USD" 
+    if (salary < 120000) return "$80K - $120K USD"
+    if (salary < 180000) return "$120K - $180K USD"
+    return "> $180K USD"
+  } else { // ARS
+    if (salary < 1000000) return "< $1M ARS"
+    if (salary < 2000000) return "$1M - $2M ARS"
+    if (salary < 3500000) return "$2M - $3.5M ARS"
+    if (salary < 5000000) return "$3.5M - $5M ARS"
+    return "> $5M ARS"
+  }
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -276,6 +299,10 @@ export default function AnalyticsPage() {
         const learningMethodsUsage: { [key: string]: number } = {}
         const responsesByDate: { [key: string]: number } = {}
         const mainChallenges: string[] = []
+        const salaryDataByRole: { [key: string]: { ARS: number[], USD: number[] } } = {}
+        const salaryDataByIndustry: { [key: string]: { ARS: number[], USD: number[] } } = {}
+        const salaryRanges: { [key: string]: number } = {}
+        const salaryByCurrency: { ARS: number[], USD: number[] } = { ARS: [], USD: [] }
 
         responses.forEach((response: any) => {
           // Role distribution
@@ -336,6 +363,78 @@ export default function AnalyticsPage() {
           if (response.main_challenge && response.main_challenge.trim()) {
             mainChallenges.push(response.main_challenge.trim())
           }
+
+          // Salary data processing
+          if (response.salary_currency && (response.salary_average || (response.salary_min && response.salary_max))) {
+            const currency = response.salary_currency
+            let salaryValue = 0
+
+            if (response.salary_average) {
+              salaryValue = parseInt(response.salary_average)
+            } else if (response.salary_min && response.salary_max) {
+              salaryValue = (parseInt(response.salary_min) + parseInt(response.salary_max)) / 2
+            }
+
+            if (salaryValue > 0) {
+              // Salary by currency
+              salaryByCurrency[currency].push(salaryValue)
+
+              // Salary by role
+              if (response.role) {
+                if (!salaryDataByRole[response.role]) {
+                  salaryDataByRole[response.role] = { ARS: [], USD: [] }
+                }
+                salaryDataByRole[response.role][currency].push(salaryValue)
+              }
+
+              // Salary by industry
+              if (response.industry) {
+                if (!salaryDataByIndustry[response.industry]) {
+                  salaryDataByIndustry[response.industry] = { ARS: [], USD: [] }
+                }
+                salaryDataByIndustry[response.industry][currency].push(salaryValue)
+              }
+
+              // Salary range distribution
+              const range = getSalaryRange(salaryValue, currency)
+              salaryRanges[range] = (salaryRanges[range] || 0) + 1
+            }
+          }
+        })
+
+        // Calculate salary averages
+        const averageByCurrency: { [key: string]: number } = {}
+        const averageByRole: { [key: string]: { ARS: number; USD: number } } = {}
+        const averageByIndustry: { [key: string]: { ARS: number; USD: number } } = {}
+
+        // Average by currency
+        Object.keys(salaryByCurrency).forEach(currency => {
+          const salaries = salaryByCurrency[currency]
+          if (salaries.length > 0) {
+            averageByCurrency[currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+          }
+        })
+
+        // Average by role
+        Object.keys(salaryDataByRole).forEach(role => {
+          averageByRole[role] = { ARS: 0, USD: 0 }
+          Object.keys(salaryDataByRole[role]).forEach(currency => {
+            const salaries = salaryDataByRole[role][currency]
+            if (salaries.length > 0) {
+              averageByRole[role][currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+            }
+          })
+        })
+
+        // Average by industry
+        Object.keys(salaryDataByIndustry).forEach(industry => {
+          averageByIndustry[industry] = { ARS: 0, USD: 0 }
+          Object.keys(salaryDataByIndustry[industry]).forEach(currency => {
+            const salaries = salaryDataByIndustry[industry][currency]
+            if (salaries.length > 0) {
+              averageByIndustry[industry][currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+            }
+          })
         })
 
         setData({
@@ -349,6 +448,12 @@ export default function AnalyticsPage() {
           learningMethodsUsage,
           responsesByDate,
           mainChallenges,
+          salaryData: {
+            averageByCurrency,
+            averageByRole,
+            averageByIndustry,
+            rangeDistribution: salaryRanges
+          },
           totalResponses: responses.length,
         })
       }
@@ -643,6 +748,82 @@ export default function AnalyticsPage() {
         {data &&
           renderRankingChart(data.learningMethodsUsage, "Learning Methods Ranking", <BarChart3 className="w-5 h-5" />)}
       </div>
+
+      {/* Salary Analytics */}
+      {data && Object.keys(data.salaryData.averageByCurrency).length > 0 && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Average Salary by Currency */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+                  <TrendingUp className="w-5 h-5" />
+                  Average Salary by Currency
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(data.salaryData.averageByCurrency).map(([currency, avg]) => (
+                    <div key={currency} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="font-medium text-gray-900 dark:text-gray-50">
+                        {currency === 'USD' ? '🇺🇸 USD' : '🇦🇷 ARS'}
+                      </span>
+                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        {currency === 'USD' ? '$' : '$'}{Math.round(avg).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Salary Range Distribution */}
+            {data && renderRankingChart(data.salaryData.rangeDistribution, "Salary Range Distribution", <BarChart3 className="w-5 h-5" />)}
+          </div>
+
+          {/* Salary by Role */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+                <Users className="w-5 h-5" />
+                Average Salary by Role
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {Object.entries(data.salaryData.averageByRole)
+                  .filter(([role, salaries]) => salaries.ARS > 0 || salaries.USD > 0)
+                  .sort((a, b) => (b[1].USD + b[1].ARS/300) - (a[1].USD + a[1].ARS/300)) // Sort by USD equivalent
+                  .map(([role, salaries]) => (
+                    <div key={role} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-50">{role}</h4>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {salaries.ARS > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">🇦🇷 ARS:</span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400">
+                              ${Math.round(salaries.ARS).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        {salaries.USD > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">🇺🇸 USD:</span>
+                            <span className="font-bold text-green-600 dark:text-green-400">
+                              ${Math.round(salaries.USD).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Main Challenges - Actual Responses */}
       {data && data.mainChallenges.length > 0 && (

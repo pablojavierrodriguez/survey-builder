@@ -14,7 +14,7 @@ import { Plus, Edit, Trash2, Save, Eye, EyeOff, AlertCircle } from "lucide-react
 
 interface SurveyQuestion {
   id: string
-  type: "single-choice" | "multiple-choice" | "text" | "email"
+  type: "single-choice" | "multiple-choice" | "text" | "email" | "salary-range"
   title: string
   description: string
   options?: string[]
@@ -214,11 +214,20 @@ const defaultQuestions: SurveyQuestion[] = [
   },
   {
     id: "10",
+    type: "salary-range",
+    title: "What's your salary range?",
+    description: "Help us understand compensation in the product community (optional)",
+    required: false,
+    order: 10,
+    isVisible: true,
+  },
+  {
+    id: "11",
     type: "email",
     title: "Your email",
     description: "Optional - only if you'd like us to follow up",
     required: false,
-    order: 10,
+    order: 11,
     isVisible: true,
   },
 ]
@@ -269,14 +278,6 @@ export default function SurveyConfigPage() {
       setSaveStatus("error")
       setTimeout(() => setSaveStatus("idle"), 3000)
     }
-  }
-
-  const makeAllQuestionsVisible = () => {
-    const updatedConfig = {
-      ...config,
-      questions: config.questions.map(q => ({ ...q, isVisible: true }))
-    }
-    saveConfig(updatedConfig)
   }
 
   const addQuestion = () => {
@@ -434,14 +435,6 @@ export default function SurveyConfigPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={makeAllQuestionsVisible} 
-                variant="outline"
-                className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 dark:border-gray-600"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Make All Visible
-              </Button>
               <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Question

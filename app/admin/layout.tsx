@@ -266,11 +266,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-foreground">
                               <FileText className="h-5 w-5" />
-                              Version 1.4.0 - Latest
+                              Version 2.0.0 - Latest
                             </CardTitle>
                             <CardDescription className="text-muted-foreground">
                               Released: {new Date().toLocaleDateString()}
                             </CardDescription>
+                          </CardHeader>
+                          <CardContent className="text-foreground">
+                            <ul className="list-disc list-inside space-y-2 text-sm mb-4">
+                              <li><strong>🆕 Major Feature:</strong> Salary Range Analysis - New survey question with dual currency support (ARS/USD)</li>
+                              <li><strong>📊 New Analytics:</strong> Salary charts by role, industry, and currency with automatic range calculation</li>
+                              <li><strong>👥 User Management:</strong> Prepared infrastructure for role-based access (Admin, Collaborator, Viewer)</li>
+                              <li><strong>🔧 Survey Config:</strong> Removed unnecessary "Make All Visible" button, all questions now always visible</li>
+                              <li><strong>🗑️ Cleanup:</strong> Removed obsolete security recommendations from Settings (fully implemented)</li>
+                              <li><strong>📱 UX Improvements:</strong> Enhanced salary input with auto-calculation and currency selection</li>
+                              <li><strong>📈 Advanced Analytics:</strong> Salary filtering by role and industry for precise community insights</li>
+                              <li><strong>🎯 Survey Flow:</strong> Added salary question (step 9) before email collection</li>
+                            </ul>
+                          </CardContent>
+                        </Card>
+                        <Card className="bg-card border-border">
+                          <CardHeader>
+                            <CardTitle className="text-foreground">Version 1.4.0</CardTitle>
+                            <CardDescription className="text-muted-foreground">Previous Major Release</CardDescription>
                           </CardHeader>
                           <CardContent className="text-foreground">
                             <ul className="list-disc list-inside space-y-2 text-sm mb-4">

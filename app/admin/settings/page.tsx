@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye } from "lucide-react"
+import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye, Users, Plus } from "lucide-react"
 
 interface AppSettings {
   database: {
@@ -374,40 +374,33 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Security Information */}
-      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+      {/* User Management */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-            <Lock className="w-5 h-5" />
-            Security Status & Recommendations
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            User Management
           </CardTitle>
+          <CardDescription>
+            Manage application users and their permissions
+          </CardDescription>
         </CardHeader>
-        <CardContent className="text-amber-700 dark:text-amber-200">
-          <div className="space-y-3 text-sm">
-            <div className="bg-amber-100 dark:bg-amber-900/30 p-3 rounded-lg">
-              <p className="font-semibold mb-2">⚠️ Current Security Status (Demo Mode)</p>
-              <ul className="space-y-1 ml-4">
-                <li>• Authentication: Hardcoded credentials (admin/admin123, viewer/viewer123)</li>
-                <li>• Session Management: Client-side localStorage with 8-hour timeout</li>
-                <li>• Rate Limiting: Basic attempt counting (max 5 attempts)</li>
-                <li>• Database: Supabase anonymous access with RLS</li>
-              </ul>
-            </div>
-            
-            <div className="bg-green-100 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
-              <p className="font-semibold mb-2 text-green-800 dark:text-green-200">✅ Production Recommendations</p>
-              <ul className="space-y-1 ml-4 text-green-700 dark:text-green-300">
-                <li>• Implement proper JWT authentication with secure tokens</li>
-                <li>• Use environment variables for all sensitive data</li>
-                <li>• Add server-side session management</li>
-                <li>• Enable HTTPS enforcement</li>
-                <li>• Implement proper password hashing (bcrypt/argon2)</li>
-                <li>• Add input validation and sanitization</li>
-                <li>• Enable database-level security policies</li>
-                <li>• Add proper error handling without information disclosure</li>
-              </ul>
-            </div>
+        <CardContent className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+              <strong>Permission Levels:</strong>
+            </p>
+            <ul className="text-sm text-blue-600 dark:text-blue-400 space-y-1 ml-4">
+              <li>• <strong>Admin:</strong> Full access to all features and settings</li>
+              <li>• <strong>Collaborator:</strong> Can edit questions, read-only access to other tabs</li>
+              <li>• <strong>Viewer:</strong> Access only to Analytics tab</li>
+            </ul>
           </div>
+          
+          <Button className="w-full" variant="outline">
+            <Plus className="w-4 h-4 mr-2" />
+            Manage Users (Coming Soon)
+          </Button>
         </CardContent>
       </Card>
     </div>
