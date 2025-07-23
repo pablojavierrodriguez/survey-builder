@@ -310,10 +310,15 @@ export class SupabaseManager {
   // Get all users from app_users table
   static async getUsers(): Promise<{ users: any[]; error?: string }> {
     try {
-      // Use anon key since service key seems to be incorrect
+      console.log('Getting users with anon key...')
+      
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return { users: [], error: 'Supabase configuration is missing. Check .env.local file.' }
+      }
+      
       const apiKey = SUPABASE_ANON_KEY!
       
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?select=*`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?select=*&order=created_at.desc`, {
         method: 'GET',
         headers: {
           'apikey': apiKey,
@@ -323,24 +328,42 @@ export class SupabaseManager {
         }
       })
 
+      console.log('Get users response status:', response.status)
+
       if (!response.ok) {
         const errorText = await response.text()
         console.error('Get app users error:', response.status, errorText)
         
-        // Check if it's HTML response (common error)
-        if (errorText.includes('<!DOCTYPE')) {
-          return { users: [], error: 'API endpoint returned HTML instead of JSON. Check table permissions.' }
+        // Check if it's HTML response (table doesn't exist or RLS blocking)
+        if (errorText.includes('<!DOCTYPE') || errorText.includes('<html>')) {
+          return { 
+            users: [], 
+            error: 'TABLE NOT CONFIGURED: The app_users table may not exist or RLS policies are blocking access. Please run COMPLETE_USER_FIX.sql script in Supabase SQL Editor.' 
+          }
+        }
+        
+        // Check for common permission errors
+        if (response.status === 401) {
+          return { users: [], error: 'Authentication failed. Check SUPABASE_ANON_KEY in .env.local' }
+        }
+        
+        if (response.status === 403) {
+          return { users: [], error: 'Permission denied. Run COMPLETE_USER_FIX.sql to fix table permissions.' }
+        }
+        
+        if (response.status === 404) {
+          return { users: [], error: 'Table not found. Run COMPLETE_USER_FIX.sql to create app_users table.' }
         }
         
         return { users: [], error: `HTTP ${response.status}: ${errorText}` }
       }
 
       const data = await response.json()
-      console.log('Users fetched successfully:', data)
+      console.log('Users fetched successfully, count:', Array.isArray(data) ? data.length : 'not array')
       return { users: Array.isArray(data) ? data : [] }
     } catch (error) {
-      console.error('Get users error:', error)
-      return { users: [], error: String(error) }
+      console.error('Get users exception:', error)
+      return { users: [], error: `Network error: ${String(error)}` }
     }
   }
 

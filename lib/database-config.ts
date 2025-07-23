@@ -17,10 +17,13 @@ function getCurrentEnvironment(): 'dev' | 'main' {
     if (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
       return 'dev'
     }
+    
+    // Default to main for client-side
+    return 'main'
   }
   
-  // Check environment variables (only server-side)
-  if (typeof window === 'undefined') {
+  // Server-side environment detection
+  try {
     const nodeEnv = process.env.NODE_ENV
     const branch = process.env.BRANCH || process.env.VERCEL_GIT_COMMIT_REF
     
@@ -28,6 +31,9 @@ function getCurrentEnvironment(): 'dev' | 'main' {
     if (branch === 'dev' || nodeEnv === 'development') {
       return 'dev'
     }
+  } catch (error) {
+    // Fallback if environment variables are not accessible
+    console.warn('Could not access environment variables:', error)
   }
   
   // Default to main for production

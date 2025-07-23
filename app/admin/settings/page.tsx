@@ -103,8 +103,8 @@ export default function SettingsPage() {
         
         // Check if it's HTML response (table doesn't exist)
         if (errorText.includes('<!DOCTYPE')) {
-          console.warn('Users table not configured properly')
-          setUsers([]) // Show empty state
+          console.warn('Users table not configured properly - showing empty state')
+          setUsers([]) // Show empty state with helpful message
           return
         }
       }
@@ -114,10 +114,14 @@ export default function SettingsPage() {
       
       if (result.success) {
         setUsers(result.users || [])
-        console.log('Users loaded:', result.users?.length || 0)
+        console.log('Users loaded successfully:', result.users?.length || 0)
       } else {
         console.error('Failed to fetch users:', result.error)
         setUsers([])
+        // Show error message to user if it's a configuration issue
+        if (result.error?.includes('TABLE NOT CONFIGURED')) {
+          console.error('TABLE CONFIGURATION ERROR:', result.error)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch users:', error)
@@ -647,13 +651,17 @@ export default function SettingsPage() {
                   <div className="text-center py-6 text-gray-500">
                     <div className="mb-3">
                       <Users className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-                      <p className="text-sm font-medium">No users found</p>
+                      <p className="text-sm font-medium">No users found in database</p>
                     </div>
-                    <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-800 p-3 rounded border">
-                      <p className="font-medium text-gray-700 dark:text-gray-300">If you're getting errors:</p>
-                      <p>1. Run the MANUAL_SUPABASE_SETUP.sql script</p>
-                      <p>2. Then run FIX_APP_USERS_RLS_SIMPLE.sql</p>
-                      <p>3. Refresh this page and try creating a user</p>
+                    <div className="text-xs space-y-2 bg-red-50 dark:bg-red-900/20 p-4 rounded border border-red-200 dark:border-red-800">
+                      <p className="font-medium text-red-700 dark:text-red-300">⚠️ User table not configured properly</p>
+                      <div className="space-y-1 text-red-600 dark:text-red-400">
+                        <p>🔧 <strong>QUICK FIX:</strong></p>
+                        <p>1. Open Supabase SQL Editor</p>
+                        <p>2. Run <code className="bg-red-100 dark:bg-red-900 px-1 rounded">COMPLETE_USER_FIX.sql</code></p>
+                        <p>3. Refresh this page</p>
+                        <p className="text-xs mt-2 opacity-80">This will create the table with test users you can use immediately.</p>
+                      </div>
                     </div>
                   </div>
                 ) : (
