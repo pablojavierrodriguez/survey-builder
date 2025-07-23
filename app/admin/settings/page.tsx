@@ -397,10 +397,28 @@ export default function SettingsPage() {
             </ul>
           </div>
           
-          <Button className="w-full" variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
-            Manage Users (Coming Soon)
-          </Button>
+          <div className="space-y-3">
+            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">✅ Current Active Users:</p>
+              <div className="space-y-2 text-sm text-green-700 dark:text-green-300">
+                <div className="flex justify-between items-center">
+                  <span>🔑 <strong>Supabase Admin</strong></span>
+                  <span className="text-xs bg-green-100 dark:bg-green-900 px-2 py-1 rounded">ADMIN</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>👁️ <strong>Demo Viewer</strong></span>
+                  <span className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VIEWER</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                <strong>Note:</strong> User management is controlled through Supabase dashboard. 
+                Contact your database administrator to add/modify users with proper permissions.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -750,7 +750,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Salary Analytics */}
-      {data && Object.keys(data.salaryData.averageByCurrency).length > 0 && (
+      {data && Object.keys(data.salaryData.averageByCurrency).length > 0 && Object.values(data.salaryData.averageByCurrency).some(val => val > 0) && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Average Salary by Currency */}

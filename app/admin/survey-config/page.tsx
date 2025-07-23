@@ -559,6 +559,9 @@ export default function SurveyConfigPage() {
                       <SelectItem value="email" className="dark:text-gray-50">
                         Email
                       </SelectItem>
+                      <SelectItem value="salary-range" className="dark:text-gray-50">
+                        Salary Range
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

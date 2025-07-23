@@ -9,10 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Shield, User, Lock, ExternalLink, AlertTriangle, Loader2 } from "lucide-react"
 
-// Simple credentials for demo (compatible with v0)
+// Demo credentials are read-only only
 const DEMO_CREDENTIALS = [
-  { username: "admin", password: "admin123", role: "admin" },
-  { username: "collaborator", password: "collab123", role: "collaborator" },
   { username: "viewer", password: "viewer123", role: "viewer" }
 ]
 
@@ -159,9 +157,8 @@ export default function LoginPage() {
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
                 <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Demo Credentials</h4>
                 <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                  <p><strong>Admin:</strong> admin / admin123 (Full access)</p>
-                  <p><strong>Collaborator:</strong> collaborator / collab123 (Edit questions only)</p>
-                  <p><strong>Viewer:</strong> viewer / viewer123 (Analytics only)</p>
+                  <p><strong>Demo Access:</strong> viewer / viewer123 (Read-only analytics)</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">For admin access, contact administrator</p>
                 </div>
               </div>
             </div>
