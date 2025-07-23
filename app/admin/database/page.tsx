@@ -240,11 +240,41 @@ export default function DatabasePage() {
         alert(`✅ ${result.environment.toUpperCase()} environment setup completed successfully!\n\nTable: ${result.details.tableName}\nSample Data: ${result.details.sampleData}\nFeatures: ${result.details.features.join(', ')}`)
       } else {
         console.error('Setup failed:', result.error)
-        alert(`❌ Setup failed: ${result.error}`)
+        
+        // Show detailed instructions for manual setup
+        const manualInstructions = `❌ Auto-setup failed: ${result.error}
+
+📋 MANUAL SETUP REQUIRED:
+
+1. Go to your Supabase Dashboard
+2. Open the SQL Editor
+3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
+4. The script will create all necessary tables and sample data
+
+🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
+
+After running the SQL script, refresh this page to see your data.`
+        
+        alert(manualInstructions)
       }
     } catch (error) {
       console.error('Auto-setup error:', error)
-      alert('❌ Setup failed: Network error')
+      
+      const networkErrorInstructions = `❌ Auto-setup failed: Network or API error
+
+📋 MANUAL SETUP REQUIRED:
+
+1. Go to your Supabase Dashboard: https://qaauhwulohxeeacexrav.supabase.co
+2. Open the SQL Editor
+3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
+4. The script will create all necessary tables and sample data
+
+🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
+
+The auto-setup feature requires custom SQL functions that may not be enabled.
+Manual setup is the recommended approach for production environments.`
+      
+      alert(networkErrorInstructions)
     } finally {
       setSetupLoading(false)
     }

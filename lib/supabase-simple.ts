@@ -11,6 +11,16 @@ export class SupabaseManager {
   // Execute SQL directly using Supabase REST API
   static async execSQL(sql: string): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
+      // Check if environment variables are configured
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+        return { 
+          success: false, 
+          error: 'Supabase environment variables not configured. Please check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.' 
+        }
+      }
+
+      console.log('Executing SQL via RPC:', sql.substring(0, 100) + '...')
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec_sql`, {
         method: 'POST',
         headers: {
@@ -22,13 +32,27 @@ export class SupabaseManager {
         body: JSON.stringify({ sql })
       })
 
+      console.log('SQL RPC response status:', response.status)
+
       if (!response.ok) {
-        return { success: false, error: `HTTP ${response.status}: ${response.statusText}` }
+        const errorText = await response.text()
+        console.error('SQL RPC error response:', errorText)
+        
+        // Check if it's HTML response (error page)
+        if (errorText.includes('<!DOCTYPE')) {
+          return { 
+            success: false, 
+            error: 'SQL execution failed: API returned HTML error page. This usually means the exec_sql function is not available in your Supabase instance. You may need to create tables manually using the SQL editor in Supabase dashboard.' 
+          }
+        }
+        
+        return { success: false, error: `HTTP ${response.status}: ${errorText}` }
       }
 
       const data = await response.json()
       return { success: true, data }
     } catch (error) {
+      console.error('SQL execution error:', error)
       return { success: false, error: String(error) }
     }
   }
@@ -56,66 +80,33 @@ export class SupabaseManager {
   // Create dev table automatically with ALL survey fields
   static async createDevTable(): Promise<{ success: boolean; error?: string }> {
     try {
-      const createTableSQL = `
-        CREATE TABLE pc_survey_data_dev (
-          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-          role TEXT,
-          other_role TEXT,
-          seniority TEXT,
-          company_type TEXT,
-          company_size TEXT,
-          industry TEXT,
-          product_type TEXT,
-          customer_segment TEXT,
-          main_challenge TEXT,
-          daily_tools TEXT[],
-          other_tool TEXT,
-          learning_methods TEXT[],
-          salary_currency TEXT DEFAULT 'ARS',
-          salary_min TEXT,
-          salary_max TEXT,
-          salary_average TEXT,
-          email TEXT,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-      
-      // Create the table
-      const result = await this.execSQL(createTableSQL)
-      if (!result.success) {
-        return { success: false, error: result.error }
-      }
-      
-      // Create indexes
-      const indexes = [
-        'CREATE INDEX idx_pc_survey_data_dev_created_at ON pc_survey_data_dev(created_at);',
-        'CREATE INDEX idx_pc_survey_data_dev_role ON pc_survey_data_dev(role);',
-        'CREATE INDEX idx_pc_survey_data_dev_industry ON pc_survey_data_dev(industry);',
-        'CREATE INDEX idx_pc_survey_data_dev_salary_currency ON pc_survey_data_dev(salary_currency);',
-        'CREATE INDEX idx_pc_survey_data_dev_seniority ON pc_survey_data_dev(seniority);',
-        'CREATE INDEX idx_pc_survey_data_dev_company_type ON pc_survey_data_dev(company_type);'
-      ]
-      
-      for (const indexSQL of indexes) {
-        await this.execSQL(indexSQL)
+      // Check if environment variables are configured
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+        return { 
+          success: false, 
+          error: 'Environment variables not configured. Auto-setup requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local file.' 
+        }
       }
 
-      // Enable RLS
-      await this.execSQL('ALTER TABLE pc_survey_data_dev ENABLE ROW LEVEL SECURITY;')
-      
-      // Create policies
-      const policies = [
-        `CREATE POLICY "Enable read access for all users" ON pc_survey_data_dev FOR SELECT USING (true);`,
-        `CREATE POLICY "Enable insert access for all users" ON pc_survey_data_dev FOR INSERT WITH CHECK (true);`,
-        `CREATE POLICY "Enable update access for all users" ON pc_survey_data_dev FOR UPDATE USING (true);`,
-        `CREATE POLICY "Enable delete access for all users" ON pc_survey_data_dev FOR DELETE USING (true);`
-      ]
-      
-      for (const policySQL of policies) {
-        await this.execSQL(policySQL)
+      // Try to create a simple table structure first
+      // Since exec_sql RPC is not available by default, we'll use an alternative approach
+      // Try to insert a test record to see if table exists, if not it will fail
+      const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/pc_survey_data_dev?limit=1`, {
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY!,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
+        }
+      })
+
+      if (testResponse.status === 200) {
+        return { success: true } // Table already exists
       }
-      
-      return { success: true }
+
+      // If table doesn't exist, we need manual setup
+      return { 
+        success: false, 
+        error: 'Table does not exist and automatic creation requires manual setup. Please run the MANUAL_SUPABASE_SETUP.sql script in your Supabase SQL editor.' 
+      }
     } catch (error) {
       return { success: false, error: String(error) }
     }
@@ -222,66 +213,31 @@ export class SupabaseManager {
   // Create main table with all fields
   static async createMainTable(): Promise<{ success: boolean; error?: string }> {
     try {
-      const createTableSQL = `
-        CREATE TABLE pc_survey_data (
-          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-          role TEXT,
-          other_role TEXT,
-          seniority TEXT,
-          company_type TEXT,
-          company_size TEXT,
-          industry TEXT,
-          product_type TEXT,
-          customer_segment TEXT,
-          main_challenge TEXT,
-          daily_tools TEXT[],
-          other_tool TEXT,
-          learning_methods TEXT[],
-          salary_currency TEXT DEFAULT 'ARS',
-          salary_min TEXT,
-          salary_max TEXT,
-          salary_average TEXT,
-          email TEXT,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-      
-      // Create the table
-      const result = await this.execSQL(createTableSQL)
-      if (!result.success) {
-        return { success: false, error: result.error }
-      }
-      
-      // Create indexes
-      const indexes = [
-        'CREATE INDEX idx_pc_survey_data_created_at ON pc_survey_data(created_at);',
-        'CREATE INDEX idx_pc_survey_data_role ON pc_survey_data(role);',
-        'CREATE INDEX idx_pc_survey_data_industry ON pc_survey_data(industry);',
-        'CREATE INDEX idx_pc_survey_data_salary_currency ON pc_survey_data(salary_currency);',
-        'CREATE INDEX idx_pc_survey_data_seniority ON pc_survey_data(seniority);',
-        'CREATE INDEX idx_pc_survey_data_company_type ON pc_survey_data(company_type);'
-      ]
-      
-      for (const indexSQL of indexes) {
-        await this.execSQL(indexSQL)
+      // Check if environment variables are configured
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+        return { 
+          success: false, 
+          error: 'Environment variables not configured. Auto-setup requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local file.' 
+        }
       }
 
-      // Enable RLS
-      await this.execSQL('ALTER TABLE pc_survey_data ENABLE ROW LEVEL SECURITY;')
-      
-      // Create policies
-      const policies = [
-        `CREATE POLICY "Enable read access for all users" ON pc_survey_data FOR SELECT USING (true);`,
-        `CREATE POLICY "Enable insert access for all users" ON pc_survey_data FOR INSERT WITH CHECK (true);`,
-        `CREATE POLICY "Enable update access for all users" ON pc_survey_data FOR UPDATE USING (true);`,
-        `CREATE POLICY "Enable delete access for all users" ON pc_survey_data FOR DELETE USING (true);`
-      ]
-      
-      for (const policySQL of policies) {
-        await this.execSQL(policySQL)
+      // Try to test if table exists
+      const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/pc_survey_data?limit=1`, {
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY!,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
+        }
+      })
+
+      if (testResponse.status === 200) {
+        return { success: true } // Table already exists
       }
-      
-      return { success: true }
+
+      // If table doesn't exist, we need manual setup
+      return { 
+        success: false, 
+        error: 'Table does not exist and automatic creation requires manual setup. Please run the MANUAL_SUPABASE_SETUP.sql script in your Supabase SQL editor.' 
+      }
     } catch (error) {
       return { success: false, error: String(error) }
     }
