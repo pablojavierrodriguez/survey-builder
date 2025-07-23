@@ -39,6 +39,29 @@ export default function AdminDashboard() {
     fetchDashboardData()
   }, [])
 
+  // Listen for storage changes to refresh when table configuration changes
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'app_settings') {
+        console.log('Dashboard - Settings changed, refreshing data')
+        fetchDashboardData()
+      }
+    }
+
+    const handleCustomStorageChange = () => {
+      console.log('Dashboard - Custom storage change detected, refreshing data')
+      fetchDashboardData()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('app_settings_changed', handleCustomStorageChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('app_settings_changed', handleCustomStorageChange)
+    }
+  }, [])
+
   const fetchDashboardData = async () => {
     try {
       setError(null)
@@ -47,80 +70,78 @@ export default function AdminDashboard() {
       const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
       const config = getDatabaseConfig()
       
+      console.log('Dashboard - Using database config:', config)
+      
+      let data = []
+      
       // Try to fetch from configured database
       try {
-        const response = await fetch(getDatabaseEndpoint(), {
+        const response = await fetch(`${getDatabaseEndpoint()}?select=*&order=created_at.desc`, {
           headers: getDatabaseHeaders()
         })
         
+        console.log('Dashboard - API response status:', response.status)
+        
         if (response.ok) {
-          const data = await response.json()
-          if (Array.isArray(data)) {
-            calculateStats(data)
-            return
+          const fetchedData = await response.json()
+          console.log('Dashboard - Fetched data length:', fetchedData?.length || 0)
+          if (Array.isArray(fetchedData)) {
+            data = fetchedData
           }
+        } else {
+          console.warn('Dashboard - API response not ok:', response.status, response.statusText)
         }
       } catch (apiError) {
-        console.warn('API fetch failed, trying localStorage:', apiError)
+        console.warn('Dashboard - API fetch failed:', apiError)
       }
       
-      // Fallback to localStorage
-      const localData = localStorage.getItem("survey")
-      let data = []
-      
-      if (localData) {
-        data = JSON.parse(localData)
-      }
-
-      // Try to fetch from Supabase if available
-      try {
-        const response = await fetch(
-          "https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?select=*&order=created_at.desc",
-          {
-            headers: {
-              apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-              Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-            },
-          }
-        )
-
-        if (response.ok) {
-          const supabaseData = await response.json()
-          if (supabaseData && supabaseData.length > 0) {
-            data = supabaseData
+      // Fallback to localStorage only if no data from API
+      if (data.length === 0) {
+        console.log('Dashboard - Falling back to localStorage')
+        const localData = localStorage.getItem("survey")
+        if (localData) {
+          try {
+            data = JSON.parse(localData)
+            console.log('Dashboard - LocalStorage data length:', data.length)
+          } catch (parseError) {
+            console.warn('Dashboard - Error parsing localStorage data:', parseError)
           }
         }
-      } catch (apiError) {
-        console.warn("Supabase API not available, using local data")
       }
+
+      console.log('Dashboard - Final data length:', data.length)
 
       // Process the data
-      const today = new Date().toDateString()
-      const todayResponses = data.filter((r: any) => 
-        new Date(r.created_at).toDateString() === today
-      ).length
-
-      const roles = data.map((r: any) => r.role).filter(Boolean)
-      const topRole = getMostFrequent(roles) || "Product Manager"
-      
-      const industries = data.map((r: any) => r.industry).filter(Boolean)
-      const topIndustry = getMostFrequent(industries) || "Technology/Software"
-
-      setStats({
-        totalResponses: data.length,
-        todayResponses,
-        completionRate: data.length > 0 ? 85 : 0, // Simulated completion rate
-        avgTimeToComplete: 4.2, // Simulated average time
-        topRole,
-        topIndustry,
-        recentResponses: data.slice(0, 5),
-      })
+      calculateStats(data)
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
       setError("Failed to load dashboard data. Please try again later.")
     } finally {
       setIsLoading(false)
     }
+  }
+  
+  const calculateStats = (data: any[]) => {
+    const today = new Date().toDateString()
+    const todayResponses = data.filter((r: any) => 
+      new Date(r.created_at).toDateString() === today
+    ).length
+
+    const roles = data.map((r: any) => r.role).filter(Boolean)
+    const topRole = getMostFrequent(roles) || "Product Manager"
+    
+    const industries = data.map((r: any) => r.industry).filter(Boolean)
+    const topIndustry = getMostFrequent(industries) || "Technology/Software"
+
+    setStats({
+      totalResponses: data.length,
+      todayResponses,
+      completionRate: data.length > 0 ? 85 : 0, // Simulated completion rate
+      avgTimeToComplete: 4.2, // Simulated average time
+      topRole,
+      topIndustry,
+      recentResponses: data.slice(0, 5),
+    })
   }
 
   const getMostFrequent = (arr: string[]) => {

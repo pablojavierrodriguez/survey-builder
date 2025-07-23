@@ -185,6 +185,12 @@ export default function SettingsPage() {
 
     // Save to localStorage (in production, this would be saved to backend)
     localStorage.setItem("app_settings", JSON.stringify(settings))
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('app_settings_changed', { 
+      detail: settings 
+    }))
+    console.log('Settings saved and event dispatched')
 
     setIsSaving(false)
     alert("Settings saved successfully!")
