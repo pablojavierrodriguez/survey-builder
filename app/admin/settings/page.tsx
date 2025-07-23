@@ -630,6 +630,12 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              {/* Debug Info */}
+              <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs">
+                <p>Debug: loadingUsers={loadingUsers.toString()}, users.length={users.length}</p>
+                <p>Users data: {JSON.stringify(users).substring(0, 100)}...</p>
+              </div>
+
               {/* Real Users from Supabase */}
               <div className="space-y-2">
                 {loadingUsers ? (
