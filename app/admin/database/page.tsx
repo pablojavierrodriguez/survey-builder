@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle } from "lucide-react"
+import { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders, ensureDevTableExists } from "@/lib/database-config"
 
 interface SurveyResponse {
   id: string
@@ -40,12 +41,21 @@ export default function DatabasePage() {
     try {
       setConnectionStatus("testing")
       
-      // First try Supabase connection
-      const response = await fetch("https://qaauhwulohxeeacexrav.supabase.co/rest/v1/", {
-        headers: {
-          apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-        },
+      // Get environment-specific config
+      const config = getDatabaseConfig()
+      
+      // Check if dev table exists if we're in dev environment
+      if (config.environment === 'dev') {
+        const devTableExists = await ensureDevTableExists()
+        if (!devTableExists) {
+          setConnectionStatus("disconnected")
+          return
+        }
+      }
+      
+      // Test connection to the appropriate table
+      const response = await fetch(getDatabaseEndpoint("?limit=1"), {
+        headers: getDatabaseHeaders()
       })
       
       if (response.ok) {
@@ -56,7 +66,7 @@ export default function DatabasePage() {
         setConnectionStatus(localData ? "connected" : "disconnected")
       }
     } catch (error) {
-      console.warn("Supabase connection failed, using localStorage")
+      console.warn("Database connection failed, using localStorage")
       // Check if we have local data
       const localData = localStorage.getItem("survey")
       setConnectionStatus(localData ? "connected" : "disconnected")
@@ -66,15 +76,12 @@ export default function DatabasePage() {
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
-      // Try to fetch from Supabase first
+      // Try to fetch from environment-specific database first
       const response = await fetch(
-        "https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?select=*&order=created_at.desc",
+        getDatabaseEndpoint("?select=*&order=created_at.desc"),
         {
-          headers: {
-            apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          },
-        },
+          headers: getDatabaseHeaders()
+        }
       )
 
       if (response.ok) {
@@ -231,6 +238,21 @@ export default function DatabasePage() {
           </Button>
         </div>
       </div>
+
+      {/* Environment Info */}
+      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Environment</p>
+              <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                {getDatabaseConfig().environment.toUpperCase()} - Table: {getDatabaseConfig().tableName}
+              </p>
+            </div>
+            <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Database Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

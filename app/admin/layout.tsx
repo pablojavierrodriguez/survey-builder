@@ -37,7 +37,7 @@ import {
 
 interface AdminUser {
   username: string
-  role: "admin" | "viewer"
+  role: "admin" | "collaborator" | "viewer"
   timestamp?: number
   sessionId?: string
 }
@@ -80,11 +80,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const navigation = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, adminOnly: true },
-    { name: "Analytics", href: "/admin/analytics", icon: BarChart3, adminOnly: false },
-    { name: "Survey Config", href: "/admin/survey-config", icon: FileText, adminOnly: true },
-    { name: "Database", href: "/admin/database", icon: Database, adminOnly: true },
-    { name: "Settings", href: "/admin/settings", icon: Settings, adminOnly: true },
+    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, roles: ["admin"] },
+    { name: "Analytics", href: "/admin/analytics", icon: BarChart3, roles: ["admin", "collaborator", "viewer"] },
+    { name: "Survey Config", href: "/admin/survey-config", icon: FileText, roles: ["admin", "collaborator"] },
+    { name: "Database", href: "/admin/database", icon: Database, roles: ["admin"] },
+    { name: "Settings", href: "/admin/settings", icon: Settings, roles: ["admin"] },
   ]
 
   if (isLoading) {
@@ -99,7 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null
   }
 
-  const filteredNavigation = navigation.filter((item) => !item.adminOnly || user.role === "admin")
+  const filteredNavigation = navigation.filter((item) => item.roles.includes(user.role))
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">

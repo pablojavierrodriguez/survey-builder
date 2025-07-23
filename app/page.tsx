@@ -616,43 +616,87 @@ export default function ProductSurvey() {
               <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your salary range?</h2>
               <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand compensation in the product community (optional)</p>
             </div>
-            <div className="max-w-2xl mx-auto space-y-6">
-              <div className="flex gap-4 items-center">
+            <div className="max-w-lg mx-auto space-y-6">
+              {/* Currency Selection */}
+              <div className="space-y-3">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Currency:</label>
-                <select
-                  value={surveyData.salary_currency}
-                  onChange={(e) => setSurveyData({ ...surveyData, salary_currency: e.target.value })}
-                  className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
-                >
-                  <option value="ARS">🇦🇷 Pesos Argentinos (ARS)</option>
-                  <option value="USD">🇺🇸 US Dollars (USD)</option>
-                </select>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "ARS", salary_min: "", salary_max: "", salary_average: "" })}
+                    className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                      surveyData.salary_currency === "ARS"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🇦🇷</span>
+                      <span className="font-medium">Pesos Argentinos</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "USD", salary_min: "", salary_max: "", salary_average: "" })}
+                    className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                      surveyData.salary_currency === "USD"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🇺🇸</span>
+                      <span className="font-medium">US Dollars</span>
+                    </div>
+                  </button>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Salary Input */}
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Salary Range</label>
                   <div className="flex gap-2 items-center">
                     <Input
                       type="number"
                       value={surveyData.salary_min}
-                      onChange={(e) => setSurveyData({ ...surveyData, salary_min: e.target.value, salary_average: "" })}
-                      placeholder="Min"
+                      onChange={(e) => {
+                        const min = parseInt(e.target.value) || 0
+                        const max = parseInt(surveyData.salary_max) || 0
+                        const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
+                        setSurveyData({ 
+                          ...surveyData, 
+                          salary_min: e.target.value,
+                          salary_average: avg
+                        })
+                      }}
+                      placeholder={surveyData.salary_currency === "USD" ? "Min (e.g., 80000)" : "Min (e.g., 2000000)"}
                       className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                     />
                     <span className="text-slate-500">-</span>
                     <Input
                       type="number"
                       value={surveyData.salary_max}
-                      onChange={(e) => setSurveyData({ ...surveyData, salary_max: e.target.value, salary_average: "" })}
-                      placeholder="Max"
+                      onChange={(e) => {
+                        const min = parseInt(surveyData.salary_min) || 0
+                        const max = parseInt(e.target.value) || 0
+                        const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
+                        setSurveyData({ 
+                          ...surveyData, 
+                          salary_max: e.target.value,
+                          salary_average: avg
+                        })
+                      }}
+                      placeholder={surveyData.salary_currency === "USD" ? "Max (e.g., 120000)" : "Max (e.g., 3000000)"}
                       className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                     />
                   </div>
                 </div>
                 
-                <div className="space-y-2 flex items-center justify-center">
-                  <span className="text-slate-500 dark:text-slate-400">OR</span>
+                <div className="text-center">
+                  <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+                    OR
+                  </span>
                 </div>
                 
                 <div className="space-y-2">
@@ -669,12 +713,12 @@ export default function ProductSurvey() {
                         salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : ""
                       })
                     }}
-                    placeholder="Average"
+                    placeholder={surveyData.salary_currency === "USD" ? "Average (e.g., 100000)" : "Average (e.g., 2500000)"}
                     className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                   />
-                  {surveyData.salary_average && (
+                  {surveyData.salary_average && surveyData.salary_min && surveyData.salary_max && (
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Auto-calculated range: {Math.round(parseInt(surveyData.salary_average) * 0.85)} - {Math.round(parseInt(surveyData.salary_average) * 1.15)}
+                      Auto-calculated range: {parseInt(surveyData.salary_min).toLocaleString()} - {parseInt(surveyData.salary_max).toLocaleString()} {surveyData.salary_currency}
                     </p>
                   )}
                 </div>

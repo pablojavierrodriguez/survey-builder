@@ -243,6 +243,20 @@ export default function SurveyConfigPage() {
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [userRole, setUserRole] = useState<string>("viewer")
+
+  // Get user role from localStorage
+  useEffect(() => {
+    const authStr = localStorage.getItem("survey_auth")
+    if (authStr) {
+      try {
+        const auth = JSON.parse(authStr)
+        setUserRole(auth.role || "viewer")
+      } catch (error) {
+        console.error("Error parsing auth:", error)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     // Load config from localStorage
@@ -435,10 +449,12 @@ export default function SurveyConfigPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Question
-              </Button>
+              {userRole === "admin" && (
+                <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Question
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -488,14 +504,16 @@ export default function SurveyConfigPage() {
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteQuestion(question.id)}
-                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {userRole === "admin" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteQuestion(question.id)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
