@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,9 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Shield, User, Lock, ExternalLink, AlertTriangle } from "lucide-react"
+import { Shield, User, Lock, ExternalLink, AlertTriangle, Loader2 } from "lucide-react"
 
-// Security: Move credentials to environment variables in production
+// Simple credentials for demo (compatible with v0)
 const DEMO_CREDENTIALS = [
   { username: "admin", password: "admin123", role: "admin" },
   { username: "viewer", password: "viewer123", role: "viewer" }
@@ -30,20 +28,27 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    // Security: Rate limiting
+    // Simple rate limiting
     if (loginAttempts >= 5) {
       setError("Too many login attempts. Please try again later.")
       setIsLoading(false)
       return
     }
 
-    // Simple authentication logic - replace with proper auth in production
+    // Simple validation
+    if (!username || !password) {
+      setError("Please enter both username and password")
+      setIsLoading(false)
+      return
+    }
+
+    // Simple authentication - compatible with v0
     const validCredential = DEMO_CREDENTIALS.find(
       cred => cred.username === username && cred.password === password
     )
 
     if (validCredential) {
-      // Security: Store minimal data and add timestamp
+      // Store minimal data - compatible approach
       const authData = {
         username: validCredential.username,
         role: validCredential.role,
@@ -101,6 +106,7 @@ export default function LoginPage() {
                     placeholder="Enter username"
                     required
                     autoComplete="username"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -119,27 +125,43 @@ export default function LoginPage() {
                     placeholder="Enter password"
                     required
                     autoComplete="current-password"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
+
               {error && (
                 <Alert variant="destructive" className="dark:border-red-800 dark:bg-red-900/20">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="dark:text-red-400">{error}</AlertDescription>
                 </Alert>
               )}
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium h-11"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </Button>
             </form>
 
-            {/* Demo credentials for testing - remove in production */}
+            {/* Demo credentials for testing */}
             <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-              
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Demo Credentials</h4>
+                <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                  <p><strong>Admin:</strong> admin / admin123</p>
+                  <p><strong>Viewer:</strong> viewer / viewer123</p>
+                </div>
+              </div>
             </div>
 
             <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
