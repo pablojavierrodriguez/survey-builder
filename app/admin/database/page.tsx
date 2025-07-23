@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle, Loader2 } from "lucide-react"
-import { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders, ensureDevTableExists } from "@/lib/database-config"
+import { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
 
 interface SurveyResponse {
   id: string
@@ -46,14 +46,12 @@ export default function DatabasePage() {
       // Get environment-specific config
       const config = getDatabaseConfig()
       
-      // Check if dev table exists if we're in dev environment
-      if (config.environment === 'dev') {
-        const tableExists = await ensureDevTableExists()
-        setDevTableExists(tableExists)
-        if (!tableExists) {
-          setConnectionStatus("disconnected")
-          return
-        }
+      // Check if configured table exists
+      const tableExists = await ensureTableExists(config.tableName)
+      setDevTableExists(tableExists)
+      if (!tableExists) {
+        setConnectionStatus("disconnected")
+        return
       }
       
       // Test connection to the appropriate table
@@ -291,17 +289,17 @@ export default function DatabasePage() {
         </CardContent>
       </Card>
 
-      {/* Auto-Setup for Dev Environment */}
-      {getDatabaseConfig().environment === 'dev' && !devTableExists && (
+      {/* Auto-Setup for Missing Table */}
+      {!devTableExists && (
         <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
           <CardContent className="p-4">
             <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
               🚀 Auto-Setup Available
             </h3>
-            <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-              The development table `pc_survey_data_dev` doesn't exist yet. 
-              You can create it automatically or manually using SQL.
-            </p>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                The table `{getDatabaseConfig().tableName}` doesn't exist yet. 
+                You can create it automatically or manually using SQL.
+              </p>
             <div className="flex gap-2">
                              <Button
                  size="sm"

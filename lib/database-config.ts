@@ -40,6 +40,26 @@ export function getDatabaseConfig(): DatabaseConfig {
     anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8"
   }
   
+  // Check if user has manually configured a table name in localStorage
+  if (typeof window !== 'undefined') {
+    const savedSettings = localStorage.getItem("app_settings")
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings)
+        if (settings.database?.tableName) {
+          return {
+            ...baseConfig,
+            tableName: settings.database.tableName,
+            environment: settings.database.tableName.includes('_dev') ? 'dev' : 'main'
+          }
+        }
+      } catch (error) {
+        console.warn('Error parsing saved database settings:', error)
+      }
+    }
+  }
+  
+  // Default behavior based on environment
   if (environment === 'dev') {
     return {
       ...baseConfig,
@@ -72,17 +92,14 @@ export function getDatabaseHeaders(): HeadersInit {
   }
 }
 
-// Function to create dev table if it doesn't exist
-export async function ensureDevTableExists(): Promise<boolean> {
+// Function to check if any table exists
+export async function ensureTableExists(tableName?: string): Promise<boolean> {
   const config = getDatabaseConfig()
-  
-  if (config.environment !== 'dev') {
-    return true // No need to create table for main
-  }
+  const targetTable = tableName || config.tableName
   
   try {
-    // Try to fetch from dev table first
-    const response = await fetch(getDatabaseEndpoint("?limit=1"), {
+    // Try to fetch from the specified table
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/${targetTable}?limit=1`, {
       headers: getDatabaseHeaders()
     })
     
@@ -90,13 +107,17 @@ export async function ensureDevTableExists(): Promise<boolean> {
       return true // Table exists
     }
     
-    // If table doesn't exist, we would need to create it
-    // For now, return false to indicate manual creation needed
-    console.warn(`Dev table ${config.tableName} may not exist. Please create it manually with the same structure as pc_survey_data`)
+    // If table doesn't exist, log warning
+    console.warn(`Table ${targetTable} may not exist. Status: ${response.status}`)
     return false
     
   } catch (error) {
-    console.error("Error checking dev table:", error)
+    console.error(`Error checking table ${targetTable}:`, error)
     return false
   }
+}
+
+// Function to create dev table if it doesn't exist (backward compatibility)
+export async function ensureDevTableExists(): Promise<boolean> {
+  return ensureTableExists('pc_survey_data_dev')
 }

@@ -266,7 +266,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-foreground">
                               <FileText className="h-5 w-5" />
-                              Version 2.0.0 - Latest
+                              Version 3.1.0 - Latest
                             </CardTitle>
                             <CardDescription className="text-muted-foreground">
                               Released: {new Date().toLocaleDateString()}
@@ -274,14 +274,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           </CardHeader>
                           <CardContent className="text-foreground">
                             <ul className="list-disc list-inside space-y-2 text-sm mb-4">
-                              <li><strong>🆕 Major Feature:</strong> Salary Range Analysis - New survey question with dual currency support (ARS/USD)</li>
-                              <li><strong>📊 New Analytics:</strong> Salary charts by role, industry, and currency with automatic range calculation</li>
-                              <li><strong>👥 User Management:</strong> Prepared infrastructure for role-based access (Admin, Collaborator, Viewer)</li>
-                              <li><strong>🔧 Survey Config:</strong> Removed unnecessary "Make All Visible" button, all questions now always visible</li>
-                              <li><strong>🗑️ Cleanup:</strong> Removed obsolete security recommendations from Settings (fully implemented)</li>
-                              <li><strong>📱 UX Improvements:</strong> Enhanced salary input with auto-calculation and currency selection</li>
-                              <li><strong>📈 Advanced Analytics:</strong> Salary filtering by role and industry for precise community insights</li>
-                              <li><strong>🎯 Survey Flow:</strong> Added salary question (step 9) before email collection</li>
+                              <li><strong>🤖 Auto-Setup:</strong> Complete Supabase table creation with one-click setup</li>
+                              <li><strong>📊 Dynamic Tables:</strong> Environment-aware configuration (dev/main) with table switching</li>
+                              <li><strong>👥 Real User Management:</strong> Custom app_users table with full CRUD operations</li>
+                              <li><strong>🔧 API Fixes:</strong> Resolved JSON parsing errors and endpoint configurations</li>
+                              <li><strong>💾 Data Safety:</strong> Automatic backup of production data before migrations</li>
+                              <li><strong>💰 Salary Fields:</strong> Added complete salary tracking to both dev and main tables</li>
+                              <li><strong>🔍 Table Validation:</strong> Smart connection testing based on configured table</li>
+                              <li><strong>⚙️ Version Control:</strong> Proper release versioning aligned with actual deployments</li>
                             </ul>
                           </CardContent>
                         </Card>
@@ -442,7 +442,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                   </a>
                                 </p>
                                 <p>
-                                  <strong className="text-foreground">Version:</strong> 1.4.0
+                                  <strong className="text-foreground">Version:</strong> 3.1.0
                                 </p>
                                 <p>
                                   <strong className="text-foreground">Built with:</strong> Next.js, React, Tailwind CSS,

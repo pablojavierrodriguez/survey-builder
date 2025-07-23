@@ -351,11 +351,10 @@ export class SupabaseManager {
     return this.setupEnvironment(true)
   }
 
-  // Get all users via Supabase Auth API
+  // Get all users from app_users table
   static async getUsers(): Promise<{ users: any[]; error?: string }> {
     try {
-      // Correct Supabase Auth endpoint for listing users
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=50`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?select=*`, {
         method: 'GET',
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
@@ -366,63 +365,62 @@ export class SupabaseManager {
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Supabase users API error:', response.status, errorText)
+        console.error('Get app users error:', response.status, errorText)
         return { users: [], error: `HTTP ${response.status}: ${errorText}` }
       }
 
       const data = await response.json()
-      return { users: data.users || data || [] }
+      return { users: Array.isArray(data) ? data : [] }
     } catch (error) {
       console.error('Get users error:', error)
       return { users: [], error: String(error) }
     }
   }
 
-  // Create new user via Supabase Auth API
+  // Create new user in app_users table
   static async createUser(email: string, password: string, role: string): Promise<{ 
     success: boolean; 
     user?: any; 
     error?: string 
   }> {
     try {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      // Simple password hashing (in production, use bcrypt)
+      const encryptedPassword = btoa(password) // Basic encoding for demo
+      
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({
           email,
-          password,
-          user_metadata: { role },
-          email_confirm: true
+          encrypted_password: encryptedPassword,
+          role,
+          is_active: true
         })
       })
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Create user error:', response.status, errorText)
-        try {
-          const errorData = JSON.parse(errorText)
-          return { success: false, error: errorData.msg || errorData.message || `HTTP ${response.status}` }
-        } catch {
-          return { success: false, error: `HTTP ${response.status}: ${errorText}` }
-        }
+        console.error('Create app user error:', response.status, errorText)
+        return { success: false, error: `HTTP ${response.status}: ${errorText}` }
       }
 
       const data = await response.json()
-      return { success: true, user: data }
+      return { success: true, user: Array.isArray(data) ? data[0] : data }
     } catch (error) {
       console.error('Create user exception:', error)
       return { success: false, error: String(error) }
     }
   }
 
-  // Delete user via Supabase Auth API
+  // Delete user from app_users table
   static async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?id=eq.${userId}`, {
         method: 'DELETE',
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
@@ -440,21 +438,22 @@ export class SupabaseManager {
     }
   }
 
-  // Update user role via Supabase Auth API
+  // Update user role in app_users table
   static async updateUserRole(userId: string, role: string): Promise<{ 
     success: boolean; 
     error?: string 
   }> {
     try {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
-        method: 'PUT',
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?id=eq.${userId}`, {
+        method: 'PATCH',
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          user_metadata: { role }
+          role,
+          updated_at: new Date().toISOString()
         })
       })
 
