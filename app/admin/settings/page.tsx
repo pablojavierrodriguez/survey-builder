@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye, Users, Plus } from "lucide-react"
+import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye, Users, Plus, Trash2, Loader2, UserPlus } from "lucide-react"
 
 interface AppSettings {
   database: {
@@ -69,6 +69,12 @@ export default function SettingsPage() {
   const [connectionStatus, setConnectionStatus] = useState<"success" | "error" | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
 
+  // User Management State
+  const [users, setUsers] = useState<any[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer' })
+
   useEffect(() => {
     // Load settings from localStorage
     const savedSettings = localStorage.getItem("app_settings")
@@ -79,7 +85,97 @@ export default function SettingsPage() {
         console.error("Error loading settings:", error)
       }
     }
+    
+    // Load users
+    fetchUsers()
   }, [])
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true)
+    try {
+      const response = await fetch('/api/admin/users')
+      const result = await response.json()
+      
+      if (result.success) {
+        setUsers(result.users)
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  const createUser = async () => {
+    if (!newUser.email || !newUser.password) return
+
+    setCreatingUser(true)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setNewUser({ email: '', password: '', role: 'viewer' })
+        await fetchUsers()
+        alert('✅ User created successfully!')
+      } else {
+        alert(`❌ Failed to create user: ${result.error}`)
+      }
+    } catch (error) {
+      alert('❌ Failed to create user: Network error')
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
+  const deleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user?')) return
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        await fetchUsers()
+        alert('✅ User deleted successfully!')
+      } else {
+        alert(`❌ Failed to delete user: ${result.error}`)
+      }
+    } catch (error) {
+      alert('❌ Failed to delete user: Network error')
+    }
+  }
+
+  const updateUserRole = async (userId: string, role: string) => {
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        await fetchUsers()
+        alert('✅ User role updated successfully!')
+      } else {
+        alert(`❌ Failed to update role: ${result.error}`)
+      }
+    } catch (error) {
+      alert('❌ Failed to update role: Network error')
+    }
+  }
 
   const saveSettings = async () => {
     setIsSaving(true)
@@ -397,26 +493,131 @@ export default function SettingsPage() {
             </ul>
           </div>
           
-          <div className="space-y-3">
-            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
-              <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">✅ Current Active Users:</p>
-              <div className="space-y-2 text-sm text-green-700 dark:text-green-300">
-                <div className="flex justify-between items-center">
-                  <span>🔑 <strong>Supabase Admin</strong></span>
-                  <span className="text-xs bg-green-100 dark:bg-green-900 px-2 py-1 rounded">ADMIN</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>👁️ <strong>Demo Viewer</strong></span>
-                  <span className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VIEWER</span>
-                </div>
+          <div className="space-y-4">
+            {/* Create New User */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3">➕ Create New User</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="dark:bg-gray-900 dark:text-gray-50"
+                />
+                <Input
+                  placeholder="Password"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="dark:bg-gray-900 dark:text-gray-50"
+                />
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-900 dark:text-gray-50"
+                >
+                  <option value="viewer">Viewer</option>
+                  <option value="collaborator">Collaborator</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <Button
+                  onClick={createUser}
+                  disabled={creatingUser || !newUser.email || !newUser.password}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {creatingUser ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Create User
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
-            
-            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                <strong>Note:</strong> User management is controlled through Supabase dashboard. 
-                Contact your database administrator to add/modify users with proper permissions.
-              </p>
+
+            {/* Current Users */}
+            <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">👥 Current Users</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchUsers}
+                  disabled={loadingUsers}
+                  className="text-xs"
+                >
+                  {loadingUsers ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    'Refresh'
+                  )}
+                </Button>
+              </div>
+              
+              {/* Demo User */}
+              <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-sm font-medium text-amber-800 dark:text-amber-200">👁️ Demo Viewer</span>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">viewer@demo.local (Read-only)</p>
+                  </div>
+                  <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+                    DEMO
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Real Users from Supabase */}
+              <div className="space-y-2">
+                {loadingUsers ? (
+                  <div className="text-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                    <p className="text-sm text-gray-500 mt-2">Loading users...</p>
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    No real users found. Create one above.
+                  </div>
+                ) : (
+                  users.map((user) => (
+                    <div key={user.id} className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                      <div>
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                          🔑 {user.email}
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Created: {new Date(user.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={user.user_metadata?.role || 'viewer'}
+                          onChange={(e) => updateUserRole(user.id, e.target.value)}
+                          className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
+                        >
+                          <option value="viewer">Viewer</option>
+                          <option value="collaborator">Collaborator</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => deleteUser(user.id)}
+                          className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 px-2 py-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

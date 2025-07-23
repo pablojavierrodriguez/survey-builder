@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle } from "lucide-react"
+import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders, ensureDevTableExists } from "@/lib/database-config"
 
 interface SurveyResponse {
@@ -27,6 +27,8 @@ export default function DatabasePage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedRole, setSelectedRole] = useState("")
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "testing">("testing")
+  const [setupLoading, setSetupLoading] = useState(false)
+  const [devTableExists, setDevTableExists] = useState(false)
 
   useEffect(() => {
     testConnection()
@@ -46,8 +48,9 @@ export default function DatabasePage() {
       
       // Check if dev table exists if we're in dev environment
       if (config.environment === 'dev') {
-        const devTableExists = await ensureDevTableExists()
-        if (!devTableExists) {
+        const tableExists = await ensureDevTableExists()
+        setDevTableExists(tableExists)
+        if (!tableExists) {
           setConnectionStatus("disconnected")
           return
         }
@@ -215,6 +218,36 @@ export default function DatabasePage() {
     }
   }
 
+  const handleAutoSetup = async () => {
+    setSetupLoading(true)
+    try {
+      const response = await fetch('/api/admin/setup-dev', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setDevTableExists(true)
+        setConnectionStatus("connected")
+        // Refetch responses after setup
+        await fetchResponses()
+        alert('✅ Dev environment setup completed successfully!')
+      } else {
+        console.error('Setup failed:', result.error)
+        alert(`❌ Setup failed: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Auto-setup error:', error)
+      alert('❌ Setup failed: Network error')
+    } finally {
+      setSetupLoading(false)
+    }
+  }
+
   const uniqueRoles = [...new Set(responses.map((r) => r.role))].sort()
 
   return (
@@ -253,6 +286,49 @@ export default function DatabasePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Auto-Setup for Dev Environment */}
+      {getDatabaseConfig().environment === 'dev' && !devTableExists && (
+        <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+          <CardContent className="p-4">
+            <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+              🚀 Auto-Setup Available
+            </h3>
+            <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+              The development table `pc_survey_data_dev` doesn't exist yet. 
+              You can create it automatically or manually using SQL.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleAutoSetup}
+                disabled={setupLoading}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {setupLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Setting up...
+                  </>
+                ) : (
+                  <>
+                    <Database className="w-4 h-4 mr-2" />
+                    Auto-Setup Dev Environment
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open('/setup_dev_database.sql', '_blank')}
+                className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-600 dark:hover:bg-amber-900/30"
+              >
+                📄 Manual SQL Script
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Database Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
