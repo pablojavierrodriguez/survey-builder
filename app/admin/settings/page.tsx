@@ -560,16 +560,30 @@ export default function SettingsPage() {
                 </Button>
               </div>
               
-              {/* Demo User */}
-              <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="text-sm font-medium text-amber-800 dark:text-amber-200">👁️ Demo Viewer</span>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">viewer@demo.local (Read-only)</p>
+              {/* Demo Users */}
+              <div className="mb-3 space-y-2">
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">🔑 Demo Admin (Temporary)</span>
+                      <p className="text-xs text-green-600 dark:text-green-400">admin@demo.local (Full access for testing)</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                      DEMO ADMIN
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
-                    DEMO
-                  </Badge>
+                </div>
+                
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-sm font-medium text-amber-800 dark:text-amber-200">👁️ Demo Viewer</span>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">viewer@demo.local (Read-only)</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+                      DEMO
+                    </Badge>
+                  </div>
                 </div>
               </div>
 

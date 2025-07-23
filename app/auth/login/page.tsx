@@ -158,9 +158,8 @@ export default function LoginPage() {
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
                 <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Demo Credentials</h4>
                 <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                  <p><strong>Admin Demo:</strong> admin / admin123 (Temporary - Full access)</p>
-                  <p><strong>Viewer Demo:</strong> viewer / viewer123 (Read-only analytics)</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400">Admin demo enabled temporarily for testing</p>
+                  <p><strong>Demo Access:</strong> viewer / viewer123 (Read-only analytics)</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">For admin access, contact administrator</p>
                 </div>
               </div>
             </div>

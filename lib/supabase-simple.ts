@@ -53,7 +53,7 @@ export class SupabaseManager {
     }
   }
 
-  // Create dev table automatically
+  // Create dev table automatically with ALL survey fields
   static async createDevTable(): Promise<{ success: boolean; error?: string }> {
     try {
       const createTableSQL = `
@@ -199,8 +199,96 @@ export class SupabaseManager {
     }
   }
 
-  // Setup complete dev environment
-  static async setupDevEnvironment(): Promise<{ 
+  // Check if main table exists
+  static async checkMainTableExists(): Promise<boolean> {
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/information_schema.tables?table_schema=eq.public&table_name=eq.pc_survey_data&select=table_name`, {
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY!,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
+        }
+      })
+
+      if (!response.ok) return false
+      
+      const data = await response.json()
+      return Array.isArray(data) && data.length > 0
+    } catch (error) {
+      console.error('Error checking main table:', error)
+      return false
+    }
+  }
+
+  // Create main table with all fields
+  static async createMainTable(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const createTableSQL = `
+        CREATE TABLE pc_survey_data (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          role TEXT,
+          other_role TEXT,
+          seniority TEXT,
+          company_type TEXT,
+          company_size TEXT,
+          industry TEXT,
+          product_type TEXT,
+          customer_segment TEXT,
+          main_challenge TEXT,
+          daily_tools TEXT[],
+          other_tool TEXT,
+          learning_methods TEXT[],
+          salary_currency TEXT DEFAULT 'ARS',
+          salary_min TEXT,
+          salary_max TEXT,
+          salary_average TEXT,
+          email TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+      `
+      
+      // Create the table
+      const result = await this.execSQL(createTableSQL)
+      if (!result.success) {
+        return { success: false, error: result.error }
+      }
+      
+      // Create indexes
+      const indexes = [
+        'CREATE INDEX idx_pc_survey_data_created_at ON pc_survey_data(created_at);',
+        'CREATE INDEX idx_pc_survey_data_role ON pc_survey_data(role);',
+        'CREATE INDEX idx_pc_survey_data_industry ON pc_survey_data(industry);',
+        'CREATE INDEX idx_pc_survey_data_salary_currency ON pc_survey_data(salary_currency);',
+        'CREATE INDEX idx_pc_survey_data_seniority ON pc_survey_data(seniority);',
+        'CREATE INDEX idx_pc_survey_data_company_type ON pc_survey_data(company_type);'
+      ]
+      
+      for (const indexSQL of indexes) {
+        await this.execSQL(indexSQL)
+      }
+
+      // Enable RLS
+      await this.execSQL('ALTER TABLE pc_survey_data ENABLE ROW LEVEL SECURITY;')
+      
+      // Create policies
+      const policies = [
+        `CREATE POLICY "Enable read access for all users" ON pc_survey_data FOR SELECT USING (true);`,
+        `CREATE POLICY "Enable insert access for all users" ON pc_survey_data FOR INSERT WITH CHECK (true);`,
+        `CREATE POLICY "Enable update access for all users" ON pc_survey_data FOR UPDATE USING (true);`,
+        `CREATE POLICY "Enable delete access for all users" ON pc_survey_data FOR DELETE USING (true);`
+      ]
+      
+      for (const policySQL of policies) {
+        await this.execSQL(policySQL)
+      }
+      
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  }
+
+  // Setup complete environment (dev or main)
+  static async setupEnvironment(isDev: boolean = true): Promise<{ 
     success: boolean; 
     steps: { 
       tableCreated: boolean; 
@@ -219,11 +307,11 @@ export class SupabaseManager {
 
     try {
       // Check if table already exists
-      const tableExists = await this.checkDevTableExists()
+      const tableExists = isDev ? await this.checkDevTableExists() : await this.checkMainTableExists()
       
       if (!tableExists) {
         // Create table
-        const createResult = await this.createDevTable()
+        const createResult = isDev ? await this.createDevTable() : await this.createMainTable()
         if (!createResult.success) {
           result.steps.error = createResult.error
           return result
@@ -231,13 +319,17 @@ export class SupabaseManager {
         result.steps.tableCreated = true
       }
 
-      // Insert sample data
-      const dataResult = await this.insertSampleData()
-      if (!dataResult.success) {
-        result.steps.error = dataResult.error
-        return result
+      // Insert sample data only for dev
+      if (isDev) {
+        const dataResult = await this.insertSampleData()
+        if (!dataResult.success) {
+          result.steps.error = dataResult.error
+          return result
+        }
+        result.steps.dataInserted = true
+      } else {
+        result.steps.dataInserted = true // No sample data for production
       }
-      result.steps.dataInserted = true
 
       result.success = true
       return result
@@ -247,10 +339,24 @@ export class SupabaseManager {
     }
   }
 
+  // Legacy function for backward compatibility
+  static async setupDevEnvironment(): Promise<{ 
+    success: boolean; 
+    steps: { 
+      tableCreated: boolean; 
+      dataInserted: boolean; 
+      error?: string 
+    } 
+  }> {
+    return this.setupEnvironment(true)
+  }
+
   // Get all users via Supabase Auth API
   static async getUsers(): Promise<{ users: any[]; error?: string }> {
     try {
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      // Correct Supabase Auth endpoint for listing users
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=50`, {
+        method: 'GET',
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
@@ -259,12 +365,15 @@ export class SupabaseManager {
       })
 
       if (!response.ok) {
-        return { users: [], error: `HTTP ${response.status}: ${response.statusText}` }
+        const errorText = await response.text()
+        console.error('Supabase users API error:', response.status, errorText)
+        return { users: [], error: `HTTP ${response.status}: ${errorText}` }
       }
 
       const data = await response.json()
-      return { users: data.users || [] }
+      return { users: data.users || data || [] }
     } catch (error) {
+      console.error('Get users error:', error)
       return { users: [], error: String(error) }
     }
   }
@@ -292,13 +401,20 @@ export class SupabaseManager {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        return { success: false, error: errorData.msg || `HTTP ${response.status}` }
+        const errorText = await response.text()
+        console.error('Create user error:', response.status, errorText)
+        try {
+          const errorData = JSON.parse(errorText)
+          return { success: false, error: errorData.msg || errorData.message || `HTTP ${response.status}` }
+        } catch {
+          return { success: false, error: `HTTP ${response.status}: ${errorText}` }
+        }
       }
 
       const data = await response.json()
       return { success: true, user: data }
     } catch (error) {
+      console.error('Create user exception:', error)
       return { success: false, error: String(error) }
     }
   }

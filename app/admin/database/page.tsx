@@ -221,11 +221,15 @@ export default function DatabasePage() {
   const handleAutoSetup = async () => {
     setSetupLoading(true)
     try {
-      const response = await fetch('/api/admin/setup-dev', {
+      const config = getDatabaseConfig()
+      const environment = config.environment
+      
+      const response = await fetch('/api/admin/setup-environment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ environment })
       })
 
       const result = await response.json()
@@ -235,7 +239,7 @@ export default function DatabasePage() {
         setConnectionStatus("connected")
         // Refetch responses after setup
         await fetchResponses()
-        alert('✅ Dev environment setup completed successfully!')
+        alert(`✅ ${result.environment.toUpperCase()} environment setup completed successfully!\n\nTable: ${result.details.tableName}\nSample Data: ${result.details.sampleData}\nFeatures: ${result.details.features.join(', ')}`)
       } else {
         console.error('Setup failed:', result.error)
         alert(`❌ Setup failed: ${result.error}`)
@@ -299,24 +303,24 @@ export default function DatabasePage() {
               You can create it automatically or manually using SQL.
             </p>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={handleAutoSetup}
-                disabled={setupLoading}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {setupLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Setting up...
-                  </>
-                ) : (
-                  <>
-                    <Database className="w-4 h-4 mr-2" />
-                    Auto-Setup Dev Environment
-                  </>
-                )}
-              </Button>
+                             <Button
+                 size="sm"
+                 onClick={handleAutoSetup}
+                 disabled={setupLoading}
+                 className="bg-green-600 hover:bg-green-700 text-white"
+               >
+                 {setupLoading ? (
+                   <>
+                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                     Setting up...
+                   </>
+                 ) : (
+                   <>
+                     <Database className="w-4 h-4 mr-2" />
+                     Auto-Setup {getDatabaseConfig().environment.toUpperCase()} Environment
+                   </>
+                 )}
+               </Button>
               <Button
                 variant="outline"
                 size="sm"
