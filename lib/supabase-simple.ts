@@ -359,17 +359,25 @@ export class SupabaseManager {
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       })
 
       if (!response.ok) {
         const errorText = await response.text()
         console.error('Get app users error:', response.status, errorText)
+        
+        // Check if it's HTML response (common error)
+        if (errorText.includes('<!DOCTYPE')) {
+          return { users: [], error: 'API endpoint returned HTML instead of JSON. Check table permissions.' }
+        }
+        
         return { users: [], error: `HTTP ${response.status}: ${errorText}` }
       }
 
       const data = await response.json()
+      console.log('Users fetched successfully:', data)
       return { users: Array.isArray(data) ? data : [] }
     } catch (error) {
       console.error('Get users error:', error)
@@ -387,12 +395,15 @@ export class SupabaseManager {
       // Simple password hashing (in production, use bcrypt)
       const encryptedPassword = btoa(password) // Basic encoding for demo
       
+      console.log('Creating user:', { email, role })
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Prefer': 'return=representation'
         },
         body: JSON.stringify({
@@ -406,10 +417,17 @@ export class SupabaseManager {
       if (!response.ok) {
         const errorText = await response.text()
         console.error('Create app user error:', response.status, errorText)
+        
+        // Check if it's HTML response
+        if (errorText.includes('<!DOCTYPE')) {
+          return { success: false, error: 'API endpoint returned HTML instead of JSON. Check table permissions and RLS policies.' }
+        }
+        
         return { success: false, error: `HTTP ${response.status}: ${errorText}` }
       }
 
       const data = await response.json()
+      console.log('User created successfully:', data)
       return { success: true, user: Array.isArray(data) ? data[0] : data }
     } catch (error) {
       console.error('Create user exception:', error)

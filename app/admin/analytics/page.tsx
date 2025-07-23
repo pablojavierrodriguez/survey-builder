@@ -276,13 +276,12 @@ export default function AnalyticsPage() {
   const fetchAnalyticsData = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?select=*", {
-        headers: {
-          apikey:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-        },
+      // Get dynamic database configuration
+      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
+      const config = getDatabaseConfig()
+      
+      const response = await fetch(getDatabaseEndpoint(), {
+        headers: getDatabaseHeaders()
       })
 
       if (response.ok) {

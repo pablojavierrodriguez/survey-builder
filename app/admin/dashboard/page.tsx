@@ -43,7 +43,28 @@ export default function AdminDashboard() {
     try {
       setError(null)
       
-      // Try to fetch from localStorage first (fallback)
+      // Get dynamic database configuration
+      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
+      const config = getDatabaseConfig()
+      
+      // Try to fetch from configured database
+      try {
+        const response = await fetch(getDatabaseEndpoint(), {
+          headers: getDatabaseHeaders()
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (Array.isArray(data)) {
+            calculateStats(data)
+            return
+          }
+        }
+      } catch (apiError) {
+        console.warn('API fetch failed, trying localStorage:', apiError)
+      }
+      
+      // Fallback to localStorage
       const localData = localStorage.getItem("survey")
       let data = []
       

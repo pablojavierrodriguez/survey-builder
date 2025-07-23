@@ -290,7 +290,7 @@ export default function DatabasePage() {
       </Card>
 
       {/* Auto-Setup for Missing Table */}
-      {!devTableExists && (
+      {connectionStatus === "disconnected" && (
         <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
           <CardContent className="p-4">
             <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">

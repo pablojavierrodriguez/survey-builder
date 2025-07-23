@@ -266,23 +266,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-foreground">
                               <FileText className="h-5 w-5" />
-                              Version 3.1.0 - Latest
+                              Version 1.5.0 - Latest
                             </CardTitle>
                             <CardDescription className="text-muted-foreground">
                               Released: {new Date().toLocaleDateString()}
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="text-foreground">
-                            <ul className="list-disc list-inside space-y-2 text-sm mb-4">
-                              <li><strong>🤖 Auto-Setup:</strong> Complete Supabase table creation with one-click setup</li>
-                              <li><strong>📊 Dynamic Tables:</strong> Environment-aware configuration (dev/main) with table switching</li>
-                              <li><strong>👥 Real User Management:</strong> Custom app_users table with full CRUD operations</li>
-                              <li><strong>🔧 API Fixes:</strong> Resolved JSON parsing errors and endpoint configurations</li>
-                              <li><strong>💾 Data Safety:</strong> Automatic backup of production data before migrations</li>
-                              <li><strong>💰 Salary Fields:</strong> Added complete salary tracking to both dev and main tables</li>
-                              <li><strong>🔍 Table Validation:</strong> Smart connection testing based on configured table</li>
-                              <li><strong>⚙️ Version Control:</strong> Proper release versioning aligned with actual deployments</li>
-                            </ul>
+                                                          <ul className="list-disc list-inside space-y-2 text-sm mb-4">
+                                <li><strong>🤖 Database Auto-Setup:</strong> Manual SQL script for complete Supabase configuration</li>
+                                <li><strong>📊 Dynamic Configuration:</strong> Table switching with environment detection</li>
+                                <li><strong>👥 User Management:</strong> Full CRUD operations with app_users table</li>
+                                <li><strong>🔧 API Integration:</strong> Fixed JSON parsing and endpoint issues</li>
+                                <li><strong>💾 Data Migration:</strong> Safe addition of salary fields with backup</li>
+                                <li><strong>💰 Salary Analytics:</strong> Complete salary tracking with dual currency support</li>
+                                <li><strong>🔍 Connection Testing:</strong> Dynamic validation based on configured table</li>
+                                <li><strong>📋 Production Ready:</strong> All core functionality fully operational</li>
+                              </ul>
                           </CardContent>
                         </Card>
                         <Card className="bg-card border-border">
@@ -442,7 +442,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                   </a>
                                 </p>
                                 <p>
-                                  <strong className="text-foreground">Version:</strong> 3.1.0
+                                  <strong className="text-foreground">Version:</strong> 1.5.0
                                 </p>
                                 <p>
                                   <strong className="text-foreground">Built with:</strong> Next.js, React, Tailwind CSS,
