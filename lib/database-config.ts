@@ -19,13 +19,15 @@ function getCurrentEnvironment(): 'dev' | 'main' {
     }
   }
   
-  // Check environment variables
-  const nodeEnv = process.env.NODE_ENV
-  const branch = process.env.BRANCH || process.env.VERCEL_GIT_COMMIT_REF
-  
-  // If we detect dev branch or development environment
-  if (branch === 'dev' || nodeEnv === 'development') {
-    return 'dev'
+  // Check environment variables (only server-side)
+  if (typeof window === 'undefined') {
+    const nodeEnv = process.env.NODE_ENV
+    const branch = process.env.BRANCH || process.env.VERCEL_GIT_COMMIT_REF
+    
+    // If we detect dev branch or development environment
+    if (branch === 'dev' || nodeEnv === 'development') {
+      return 'dev'
+    }
   }
   
   // Default to main for production
