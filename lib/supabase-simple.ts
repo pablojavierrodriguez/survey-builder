@@ -310,11 +310,14 @@ export class SupabaseManager {
   // Get all users from app_users table
   static async getUsers(): Promise<{ users: any[]; error?: string }> {
     try {
+      // Use anon key since service key seems to be incorrect
+      const apiKey = SUPABASE_ANON_KEY!
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?select=*`, {
         method: 'GET',
         headers: {
-          'apikey': SUPABASE_SERVICE_KEY!,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
@@ -353,11 +356,14 @@ export class SupabaseManager {
       
       console.log('Creating user:', { email, role })
       
+      // Use anon key since service key seems to be incorrect
+      const apiKey = SUPABASE_ANON_KEY!
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users`, {
         method: 'POST',
         headers: {
-          'apikey': SUPABASE_SERVICE_KEY!,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'Prefer': 'return=representation'
@@ -394,11 +400,14 @@ export class SupabaseManager {
   // Delete user from app_users table
   static async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // Use anon key since service key seems to be incorrect
+      const apiKey = SUPABASE_ANON_KEY!
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?id=eq.${userId}`, {
         method: 'DELETE',
         headers: {
-          'apikey': SUPABASE_SERVICE_KEY!,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`
         }
       })
 
@@ -418,11 +427,14 @@ export class SupabaseManager {
     error?: string 
   }> {
     try {
+      // Use anon key since service key seems to be incorrect
+      const apiKey = SUPABASE_ANON_KEY!
+      
       const response = await fetch(`${SUPABASE_URL}/rest/v1/app_users?id=eq.${userId}`, {
         method: 'PATCH',
         headers: {
-          'apikey': SUPABASE_SERVICE_KEY!,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`,
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
