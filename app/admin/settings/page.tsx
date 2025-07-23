@@ -93,14 +93,35 @@ export default function SettingsPage() {
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
+      console.log('Fetching users...')
       const response = await fetch('/api/admin/users')
+      console.log('Fetch users response status:', response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Fetch users error response:', errorText)
+        
+        // Check if it's HTML response (table doesn't exist)
+        if (errorText.includes('<!DOCTYPE')) {
+          console.warn('Users table not configured properly')
+          setUsers([]) // Show empty state
+          return
+        }
+      }
+      
       const result = await response.json()
+      console.log('Fetch users result:', result)
       
       if (result.success) {
-        setUsers(result.users)
+        setUsers(result.users || [])
+        console.log('Users loaded:', result.users?.length || 0)
+      } else {
+        console.error('Failed to fetch users:', result.error)
+        setUsers([])
       }
     } catch (error) {
       console.error('Failed to fetch users:', error)
+      setUsers([])
     } finally {
       setLoadingUsers(false)
     }
@@ -111,13 +132,37 @@ export default function SettingsPage() {
 
     setCreatingUser(true)
     try {
+      console.log('Creating user:', newUser)
+      
       const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser)
       })
 
+      console.log('Create user response status:', response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Create user error response:', errorText)
+        
+        // Check if it's HTML response
+        if (errorText.includes('<!DOCTYPE')) {
+          alert(`❌ Failed to create user: Database table not properly configured. Please run the MANUAL_SUPABASE_SETUP.sql script first.`)
+          return
+        }
+        
+        try {
+          const errorResult = JSON.parse(errorText)
+          alert(`❌ Failed to create user: ${errorResult.error || 'Unknown error'}`)
+        } catch {
+          alert(`❌ Failed to create user: Server error (${response.status})`)
+        }
+        return
+      }
+
       const result = await response.json()
+      console.log('Create user result:', result)
 
       if (result.success) {
         setNewUser({ email: '', password: '', role: 'viewer' })
@@ -127,7 +172,8 @@ export default function SettingsPage() {
         alert(`❌ Failed to create user: ${result.error}`)
       }
     } catch (error) {
-      alert('❌ Failed to create user: Network error')
+      console.error('Create user exception:', error)
+      alert(`❌ Failed to create user: ${error instanceof Error ? error.message : 'Network error'}`)
     } finally {
       setCreatingUser(false)
     }
@@ -566,30 +612,21 @@ export default function SettingsPage() {
                 </Button>
               </div>
               
-              {/* Demo Users */}
-              <div className="mb-3 space-y-2">
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+              {/* Demo Users Info */}
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">🔒 Demo Credentials (Hardcoded)</h4>
+                <div className="space-y-2 text-xs">
                   <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-sm font-medium text-green-800 dark:text-green-200">🔑 Demo Admin (Temporary)</span>
-                      <p className="text-xs text-green-600 dark:text-green-400">admin@demo.local (Full access for testing)</p>
-                    </div>
-                    <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
-                      DEMO ADMIN
-                    </Badge>
+                    <span className="text-blue-700 dark:text-blue-300">Admin: admin / admin123</span>
+                    <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">FULL ACCESS</Badge>
                   </div>
-                </div>
-                
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
                   <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-sm font-medium text-amber-800 dark:text-amber-200">👁️ Demo Viewer</span>
-                      <p className="text-xs text-amber-600 dark:text-amber-400">viewer@demo.local (Read-only)</p>
-                    </div>
-                    <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
-                      DEMO
-                    </Badge>
+                    <span className="text-blue-700 dark:text-blue-300">Viewer: viewer / viewer123</span>
+                    <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">READ-ONLY</Badge>
                   </div>
+                  <p className="text-blue-600 dark:text-blue-400 text-xs mt-2">
+                    ℹ️ These are temporary demo accounts. Real users are managed below.
+                  </p>
                 </div>
               </div>
 
@@ -601,8 +638,17 @@ export default function SettingsPage() {
                     <p className="text-sm text-gray-500 mt-2">Loading users...</p>
                   </div>
                 ) : users.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500 text-sm">
-                    No real users found. Create one above.
+                  <div className="text-center py-6 text-gray-500">
+                    <div className="mb-3">
+                      <Users className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                      <p className="text-sm font-medium">No users found</p>
+                    </div>
+                    <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-800 p-3 rounded border">
+                      <p className="font-medium text-gray-700 dark:text-gray-300">If you're getting errors:</p>
+                      <p>1. Run the MANUAL_SUPABASE_SETUP.sql script</p>
+                      <p>2. Then run FIX_APP_USERS_RLS_SIMPLE.sql</p>
+                      <p>3. Refresh this page and try creating a user</p>
+                    </div>
                   </div>
                 ) : (
                   users.map((user) => (
@@ -612,12 +658,15 @@ export default function SettingsPage() {
                           🔑 {user.email}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Created: {new Date(user.created_at).toLocaleDateString()}
+                          Created: {new Date(user.created_at).toLocaleDateString()} | Status: {user.is_active ? 'Active' : 'Inactive'}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {user.role?.toUpperCase() || 'VIEWER'}
+                        </Badge>
                         <select
-                          value={user.user_metadata?.role || 'viewer'}
+                          value={user.role || 'viewer'}
                           onChange={(e) => updateUserRole(user.id, e.target.value)}
                           className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
                         >
