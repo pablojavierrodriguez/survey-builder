@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+import { supabase, requireSupabase, isSupabaseConfigured } from './supabase'
 import { Profile } from './supabase'
 
 interface AuthContextType {
@@ -26,6 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Only initialize Supabase auth if configured
+    if (!isSupabaseConfigured || !supabase) {
+      console.log('Supabase not configured - auth features disabled')
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('Initial session:', session)
@@ -58,8 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const fetchProfile = async (userId: string) => {
+    if (!requireSupabase()) return
+
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -78,7 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    if (!requireSupabase()) {
+      return { error: new Error('Supabase not configured') }
+    }
+    
+    const { error } = await supabase!.auth.signInWithPassword({
       email,
       password,
     })
@@ -86,7 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const { error } = await supabase.auth.signUp({
+    if (!requireSupabase()) {
+      return { error: new Error('Supabase not configured') }
+    }
+    
+    const { error } = await supabase!.auth.signUp({
       email,
       password,
       options: {
@@ -99,7 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    if (!requireSupabase()) {
+      return { error: new Error('Supabase not configured - Google OAuth not available') }
+    }
+    
+    const { error } = await supabase!.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -109,14 +130,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
+    if (!requireSupabase()) {
+      return { error: new Error('Supabase not configured') }
+    }
+    
+    const { error } = await supabase!.auth.signOut()
     return { error }
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') }
+    if (!requireSupabase()) {
+      return { error: new Error('Supabase not configured') }
+    }
 
-    const { error } = await supabase
+    const { error } = await supabase!
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', user.id)

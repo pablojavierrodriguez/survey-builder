@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabase, requireSupabase, isSupabaseConfigured } from "@/lib/supabase"
 import { getCurrentUserPermissions, getUserRole, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -107,12 +107,17 @@ export default function SettingsPage() {
   }, [])
 
   const fetchUsers = async () => {
+    if (!requireSupabase()) {
+      setLoadingUsers(false)
+      return
+    }
+
     setLoadingUsers(true)
     try {
       console.log('Fetching users from Supabase...')
       
       // Try to fetch from user_management view first
-      const { data: viewData, error: viewError } = await supabase
+      const { data: viewData, error: viewError } = await supabase!
         .from('user_management')
         .select('*')
         .order('created_at', { ascending: false })
@@ -122,7 +127,7 @@ export default function SettingsPage() {
         setUsers(viewData || [])
       } else {
         // Fallback to profiles table
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabase!
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false })
