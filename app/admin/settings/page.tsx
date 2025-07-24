@@ -608,9 +608,12 @@ export default function SettingsPage() {
               <strong>Authentication Methods:</strong>
             </p>
             <ul className="text-sm text-blue-600 dark:text-blue-400 space-y-1 ml-4">
-              <li>• <strong>Demo Users:</strong> admin/admin123, viewer/viewer123 (hardcoded)</li>
-              <li>• <strong>Google OAuth:</strong> Users can sign up via Google on login page</li>
-              <li>• <strong>Email/Password:</strong> Created via form below</li>
+              <li>• <strong>Demo Users:</strong> viewer/viewer123, admin-demo/demo123 (public)</li>
+              {userRole === 'admin' && (
+                <li>• <strong>Private Users:</strong> collaborator/collab456, admin/admin789</li>
+              )}
+              <li>• <strong>Google OAuth:</strong> {isSupabaseConfigured ? 'Available on login page' : 'Requires Supabase config'}</li>
+              <li>• <strong>Email/Password:</strong> {isSupabaseConfigured ? 'Created via form below' : 'Requires Supabase config'}</li>
             </ul>
           </div>
           

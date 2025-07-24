@@ -34,7 +34,7 @@ import {
   Eye,
   LayoutDashboard,
 } from "lucide-react"
-import { getUserRole, getPermissions, canAccessRoute, type UserRole } from "@/lib/permissions"
+import { getUserRole, getPermissions, canAccessRoute, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 
 interface AdminUser {
   username: string
@@ -199,7 +199,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-foreground truncate">{user?.username}</div>
               <div className="text-xs text-muted-foreground capitalize">
-                {user?.role === "admin" ? "Administrator" : "Analytics Viewer"}
+                {getRoleDisplayName(user?.role as UserRole)}
               </div>
             </div>
           </div>
