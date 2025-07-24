@@ -4,6 +4,7 @@ import "./globals.css" // Importa CSS global aquí y SOLO AQUÍ
 
 import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/lib/auth-context"
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -75,7 +76,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children} {/* Aquí se renderiza TODO el contenido de tu aplicación, incluyendo /admin */}
+          <AuthProvider>
+            {children} {/* Aquí se renderiza TODO el contenido de tu aplicación, incluyendo /admin */}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
