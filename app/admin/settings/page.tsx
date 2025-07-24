@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { getCurrentUserPermissions, getUserRole, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye, Users, Plus, Trash2, Loader2, UserPlus } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye, Users, Plus, Trash2, Loader2, UserPlus, Info } from "lucide-react"
 
 interface AppSettings {
   database: {
@@ -78,7 +80,16 @@ export default function SettingsPage() {
   const [creatingUser, setCreatingUser] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer' })
 
+  // Permissions and role management
+  const [userRole, setUserRole] = useState<UserRole>('viewer')
+  const [permissions, setPermissions] = useState(getCurrentUserPermissions())
+
   useEffect(() => {
+    // Load user role and permissions
+    const currentRole = getUserRole()
+    setUserRole(currentRole)
+    setPermissions(getCurrentUserPermissions())
+
     // Load settings from localStorage
     const savedSettings = localStorage.getItem("app_settings")
     if (savedSettings) {
@@ -89,8 +100,10 @@ export default function SettingsPage() {
       }
     }
     
-    // Load users
-    fetchUsers()
+    // Load users if permitted
+    if (permissions.canViewUsers) {
+      fetchUsers()
+    }
   }, [])
 
   const fetchUsers = async () => {
@@ -131,6 +144,11 @@ export default function SettingsPage() {
   }
 
   const createUser = async () => {
+    if (!permissions.canManageUsers) {
+      alert("⚠️ Demo mode: User creation is not allowed")
+      return
+    }
+    
     if (!newUser.email || !newUser.password) return
 
     setCreatingUser(true)
@@ -178,6 +196,11 @@ export default function SettingsPage() {
   }
 
   const updateUserRole = async (userId: string, role: string) => {
+    if (!permissions.canManageUsers) {
+      alert("⚠️ Demo mode: User role changes are not allowed")
+      return
+    }
+    
     try {
       console.log('Updating user role:', userId, role)
       
@@ -211,6 +234,11 @@ export default function SettingsPage() {
   }
 
   const saveSettings = async () => {
+    if (!permissions.canEditSettings) {
+      alert("⚠️ Demo mode: Settings cannot be saved")
+      return
+    }
+    
     setIsSaving(true)
 
     // Simulate save delay
@@ -248,7 +276,29 @@ export default function SettingsPage() {
     }
   }
 
+  // Sanitize sensitive data for demo users
+  const getSafeSettings = (settings: AppSettings): AppSettings => {
+    if (permissions.canViewSensitiveData) {
+      return settings
+    }
+    
+    // Return safe/demo version for admin-demo role
+    return {
+      ...settings,
+      database: {
+        ...settings.database,
+        url: "https://your-project.supabase.co",
+        apiKey: "your_supabase_anon_key_here_••••••••••••••••",
+      }
+    }
+  }
+
   const updateSettings = (section: keyof AppSettings, key: string, value: any) => {
+    if (!permissions.canEditSettings) {
+      alert("⚠️ Demo mode: Settings changes are not allowed")
+      return
+    }
+    
     setSettings((prev) => ({
       ...prev,
       [section]: {
@@ -258,11 +308,35 @@ export default function SettingsPage() {
     }))
   }
 
+  const safeSettings = getSafeSettings(settings)
+
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {userRole === 'admin-demo' && (
+        <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Demo Mode:</strong> You're viewing the admin interface in read-only mode. 
+            Data may be masked for security. Real functionality is available with full access credentials.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-        <Button onClick={saveSettings} disabled={isSaving}>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="outline">{getRoleDisplayName(userRole)}</Badge>
+            {!permissions.canEditSettings && (
+              <Badge variant="secondary" className="text-xs">Read-Only</Badge>
+            )}
+          </div>
+        </div>
+        <Button 
+          onClick={saveSettings} 
+          disabled={isSaving || !permissions.canEditSettings}
+        >
           <Save className="w-4 h-4 mr-2" />
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
@@ -280,34 +354,37 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Supabase URL</label>
-              <Input
-                value={settings.database.url}
-                onChange={(e) => updateSettings("database", "url", e.target.value)}
-                placeholder="https://your-project.supabase.co"
-                className="bg-background text-foreground border-border"
-              />
+                             <Input
+                 value={safeSettings.database.url}
+                 onChange={(e) => updateSettings("database", "url", e.target.value)}
+                 placeholder="https://your-project.supabase.co"
+                 className="bg-background text-foreground border-border"
+                 disabled={!permissions.canEditSettings}
+               />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Table Name</label>
-              <Input
-                value={settings.database.tableName}
-                onChange={(e) => updateSettings("database", "tableName", e.target.value)}
-                placeholder="pc_survey_data"
-                className="bg-background text-foreground border-border"
-              />
+                             <Input
+                 value={safeSettings.database.tableName}
+                 onChange={(e) => updateSettings("database", "tableName", e.target.value)}
+                 placeholder="pc_survey_data"
+                 className="bg-background text-foreground border-border"
+                 disabled={!permissions.canEditSettings}
+               />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground mb-2">API Key</label>
             <div className="flex gap-2">
-              <Input
-                type={showApiKey ? "text" : "password"}
-                value={settings.database.apiKey}
-                onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
-                placeholder="Your Supabase anon key"
-                className="flex-1 bg-background text-foreground border-border"
-              />
+                             <Input
+                 type={showApiKey ? "text" : "password"}
+                 value={safeSettings.database.apiKey}
+                 onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
+                 placeholder="Your Supabase anon key"
+                 className="flex-1 bg-background text-foreground border-border"
+                 disabled={!permissions.canEditSettings}
+               />
               <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)}>
                 {showApiKey ? <Eye className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
@@ -533,10 +610,11 @@ export default function SettingsPage() {
           </div>
           
           <div className="space-y-4">
-            {/* Create New User */}
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-              <h4 className="text-sm font-medium text-green-800 dark:text-green-200 mb-3">➕ Create New User (Supabase Auth)</h4>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                         {/* Create New User */}
+             {permissions.canManageUsers ? (
+               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                 <h4 className="text-sm font-medium text-green-800 dark:text-green-200 mb-3">➕ Create New User (Supabase Auth)</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <Input
                   placeholder="Email"
                   type="email"
@@ -579,6 +657,14 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </div>
+            ) : (
+              <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">➕ Create New User</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  👀 Demo mode: User creation interface is available in full admin access
+                </p>
+              </div>
+            )}
 
             {/* Current Users */}
             <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -600,39 +686,84 @@ export default function SettingsPage() {
               </div>
               
               {/* Demo Users Info */}
-              <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
-                <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">🔒 Demo Credentials (Hardcoded)</h4>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-amber-700 dark:text-amber-300">Admin: admin / admin123</span>
-                    <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">FULL ACCESS</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-amber-700 dark:text-amber-300">Viewer: viewer / viewer123</span>
-                    <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">READ-ONLY</Badge>
-                  </div>
-                  <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
-                    ℹ️ These are hardcoded demo accounts for testing. Real users are managed below.
-                  </p>
-                </div>
-              </div>
+                             <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                 <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">🔒 Demo Credentials (Hardcoded)</h4>
+                 <div className="space-y-2 text-xs">
+                   <div className="flex justify-between items-center">
+                     <span className="text-amber-700 dark:text-amber-300">Viewer: viewer / viewer123</span>
+                     <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">ANALYTICS ONLY</Badge>
+                   </div>
+                   <div className="flex justify-between items-center">
+                     <span className="text-amber-700 dark:text-amber-300">Admin Demo: admin-demo / demo123</span>
+                     <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">READ-ONLY ADMIN</Badge>
+                   </div>
+                   {userRole === 'admin' && (
+                     <>
+                       <div className="flex justify-between items-center">
+                         <span className="text-amber-700 dark:text-amber-300">Collaborator: collaborator / collab456</span>
+                         <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">SURVEY EDITOR</Badge>
+                       </div>
+                       <div className="flex justify-between items-center">
+                         <span className="text-amber-700 dark:text-amber-300">Admin: admin / admin789</span>
+                         <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">FULL ACCESS</Badge>
+                       </div>
+                     </>
+                   )}
+                   <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
+                     ℹ️ These are hardcoded demo accounts. {userRole === 'admin-demo' ? 'Some credentials are hidden in demo mode.' : 'Real users are managed below.'}
+                   </p>
+                 </div>
+               </div>
 
-              {/* Real Users from Supabase */}
-              <div className="space-y-2">
-                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Supabase Auth Users:</h5>
-                
-                {loadingUsers ? (
+                             {/* Real Users from Supabase */}
+               <div className="space-y-2">
+                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                   {userRole === 'admin-demo' ? 'Sample Users (Demo Data):' : 'Supabase Auth Users:'}
+                 </h5>
+                 
+                 {loadingUsers ? (
                   <div className="text-center py-4">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                     <p className="text-sm text-gray-500 mt-2">Loading users...</p>
                   </div>
-                ) : users.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500">
-                    <Users className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-                    <p className="text-sm font-medium mb-2">No real users found</p>
-                    <p className="text-xs">Create users above or users can sign up via Google on login page</p>
-                  </div>
-                ) : (
+                                 ) : userRole === 'admin-demo' ? (
+                   // Show demo-safe user data for admin-demo role
+                   [
+                     { id: 'demo-1', email: 'john.doe@example.com', full_name: 'John Doe', role: 'viewer', created_at: '2024-01-15', email_confirmed: true },
+                     { id: 'demo-2', email: 'jane.smith@company.com', full_name: 'Jane Smith', role: 'collaborator', created_at: '2024-01-10', email_confirmed: true },
+                     { id: 'demo-3', email: 'admin@company.com', full_name: 'System Admin', role: 'admin', created_at: '2024-01-01', email_confirmed: true }
+                   ].map((user) => (
+                     <div key={user.id} className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                       <div>
+                         <div className="flex items-center gap-2">
+                           <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                             🔑 {user.email}
+                           </span>
+                           {user.email_confirmed && (
+                             <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                               ✓ Verified
+                             </Badge>
+                           )}
+                         </div>
+                         <p className="text-xs text-gray-500 dark:text-gray-400">
+                           {user.full_name} • Created: {new Date(user.created_at).toLocaleDateString()}
+                         </p>
+                       </div>
+                       <div className="flex items-center gap-2">
+                         <Badge variant="outline" className="text-xs">
+                           {user.role?.toUpperCase() || 'VIEWER'}
+                         </Badge>
+                         <span className="text-xs text-gray-400">Read-only</span>
+                       </div>
+                     </div>
+                   ))
+                 ) : users.length === 0 ? (
+                   <div className="text-center py-6 text-gray-500">
+                     <Users className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                     <p className="text-sm font-medium mb-2">No real users found</p>
+                     <p className="text-xs">Create users above or users can sign up via Google on login page</p>
+                   </div>
+                 ) : (
                   users.map((user) => (
                     <div key={user.id} className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
                       <div>

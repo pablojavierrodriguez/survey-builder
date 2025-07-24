@@ -10,10 +10,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Shield, User, Lock, ExternalLink, AlertTriangle, Loader2 } from "lucide-react"
 
-// Demo credentials - temporarily enabled admin for testing
+// Demo credentials - public and private access levels
 const DEMO_CREDENTIALS = [
-  { username: "admin", password: "admin123", role: "admin" },
-  { username: "viewer", password: "viewer123", role: "viewer" }
+  // Public demo accounts (shown on login page)
+  { username: "viewer", password: "viewer123", role: "viewer" },
+  { username: "admin-demo", password: "demo123", role: "admin-demo" },
+  
+  // Private accounts (not shown publicly) 
+  { username: "collaborator", password: "collab456", role: "collaborator" },
+  { username: "admin", password: "admin789", role: "admin" }
 ]
 
 export default function LoginPage() {
@@ -60,10 +65,12 @@ export default function LoginPage() {
       localStorage.setItem("survey_auth", JSON.stringify(authData))
       
       // Route based on role
-      if (validCredential.role === "admin") {
+      if (validCredential.role === "admin" || validCredential.role === "admin-demo") {
         router.push("/admin/dashboard")
+      } else if (validCredential.role === "collaborator") {
+        router.push("/admin/dashboard") // Collaborators get full dashboard access
       } else {
-        router.push("/admin/analytics")
+        router.push("/admin/analytics") // Viewers get analytics only
       }
     } else {
       setError("Invalid username or password")
@@ -206,8 +213,8 @@ export default function LoginPage() {
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
                 <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Demo Credentials</h4>
                 <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                  <p><strong>Admin Demo:</strong> admin / admin123 (Full access)</p>
                   <p><strong>Viewer Demo:</strong> viewer / viewer123 (Read-only analytics)</p>
+                  <p><strong>Admin Demo:</strong> admin-demo / demo123 (Read-only admin panel)</p>
                   <p className="text-xs text-amber-600 dark:text-amber-400">Or sign up with Google OAuth above</p>
                 </div>
               </div>

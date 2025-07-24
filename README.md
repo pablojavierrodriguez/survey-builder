@@ -40,8 +40,8 @@ A modern, responsive survey platform designed for product and community feedback
 ### Demo Access
 Try the application with these demo accounts:
 
-- **Admin Access**: `admin` / `admin123` (Full dashboard access)
 - **Viewer Access**: `viewer` / `viewer123` (Read-only analytics)
+- **Admin Demo**: `admin-demo` / `demo123` (Read-only admin interface)
 
 ### Production Setup
 
