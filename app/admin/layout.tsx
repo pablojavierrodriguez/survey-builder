@@ -34,10 +34,11 @@ import {
   Eye,
   LayoutDashboard,
 } from "lucide-react"
+import { getUserRole, getPermissions, canAccessRoute, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 
 interface AdminUser {
   username: string
-  role: "admin" | "viewer"
+  role: "admin" | "collaborator" | "viewer"
   timestamp?: number
   sessionId?: string
 }
@@ -79,12 +80,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/auth/login")
   }
 
+  // Get current user role and permissions
+  const currentUserRole = getUserRole()
+  const permissions = getPermissions(currentUserRole)
+
   const navigation = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, adminOnly: true },
-    { name: "Analytics", href: "/admin/analytics", icon: BarChart3, adminOnly: false },
-    { name: "Survey Config", href: "/admin/survey-config", icon: FileText, adminOnly: true },
-    { name: "Database", href: "/admin/database", icon: Database, adminOnly: true },
-    { name: "Settings", href: "/admin/settings", icon: Settings, adminOnly: true },
+    { 
+      name: "Dashboard", 
+      href: "/admin/dashboard", 
+      icon: LayoutDashboard, 
+      show: permissions.canViewDashboard 
+    },
+    { 
+      name: "Analytics", 
+      href: "/admin/analytics", 
+      icon: BarChart3, 
+      show: permissions.canViewAnalytics 
+    },
+    { 
+      name: "Survey Config", 
+      href: "/admin/survey-config", 
+      icon: FileText, 
+      show: permissions.canEditSurveys 
+    },
+    { 
+      name: "Database", 
+      href: "/admin/database", 
+      icon: Database, 
+      show: permissions.canModifyDatabase 
+    },
+    { 
+      name: "Settings", 
+      href: "/admin/settings", 
+      icon: Settings, 
+      show: permissions.canViewSettings 
+    },
   ]
 
   if (isLoading) {
@@ -99,10 +129,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null
   }
 
-  const filteredNavigation = navigation.filter((item) => !item.adminOnly || user.role === "admin")
+  const filteredNavigation = navigation.filter((item) => item.show)
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden mobile-safe">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -169,7 +199,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-foreground truncate">{user?.username}</div>
               <div className="text-xs text-muted-foreground capitalize">
-                {user?.role === "admin" ? "Administrator" : "Analytics Viewer"}
+                {getRoleDisplayName(user?.role as UserRole)}
               </div>
             </div>
           </div>
@@ -266,11 +296,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-foreground">
                               <FileText className="h-5 w-5" />
-                              Version 1.4.0 - Latest
+                              Version 1.5.0 - Latest
                             </CardTitle>
                             <CardDescription className="text-muted-foreground">
                               Released: {new Date().toLocaleDateString()}
                             </CardDescription>
+                          </CardHeader>
+                          <CardContent className="text-foreground">
+                                                          <ul className="list-disc list-inside space-y-2 text-sm mb-4">
+                                <li><strong>🤖 Database Auto-Setup:</strong> Manual SQL script for complete Supabase configuration</li>
+                                <li><strong>📊 Dynamic Configuration:</strong> Table switching with environment detection</li>
+                                <li><strong>👥 User Management:</strong> Full CRUD operations with app_users table</li>
+                                <li><strong>🔧 API Integration:</strong> Fixed JSON parsing and endpoint issues</li>
+                                <li><strong>💾 Data Migration:</strong> Safe addition of salary fields with backup</li>
+                                <li><strong>💰 Salary Analytics:</strong> Complete salary tracking with dual currency support</li>
+                                <li><strong>🔍 Connection Testing:</strong> Dynamic validation based on configured table</li>
+                                <li><strong>📋 Production Ready:</strong> All core functionality fully operational</li>
+                              </ul>
+                          </CardContent>
+                        </Card>
+                        <Card className="bg-card border-border">
+                          <CardHeader>
+                            <CardTitle className="text-foreground">Version 1.4.0</CardTitle>
+                            <CardDescription className="text-muted-foreground">Previous Major Release</CardDescription>
                           </CardHeader>
                           <CardContent className="text-foreground">
                             <ul className="list-disc list-inside space-y-2 text-sm mb-4">
@@ -424,7 +472,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                   </a>
                                 </p>
                                 <p>
-                                  <strong className="text-foreground">Version:</strong> 1.4.0
+                                  <strong className="text-foreground">Version:</strong> 1.5.0
                                 </p>
                                 <p>
                                   <strong className="text-foreground">Built with:</strong> Next.js, React, Tailwind CSS,
@@ -445,8 +493,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Page content */}
         <main className="flex-1 overflow-auto bg-background">
-          <div className="container mx-auto p-4 lg:p-6 xl:p-8 max-w-8xl">
-            <div className="max-w-7xl mx-auto">
+          <div className="w-full px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+            <div className="max-w-7xl mx-auto overflow-hidden">
               {children}
             </div>
           </div>

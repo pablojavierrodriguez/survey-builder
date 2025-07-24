@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle } from "lucide-react"
+import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
 
 interface SurveyResponse {
   id: string
@@ -26,6 +27,8 @@ export default function DatabasePage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedRole, setSelectedRole] = useState("")
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "testing">("testing")
+  const [setupLoading, setSetupLoading] = useState(false)
+  const [devTableExists, setDevTableExists] = useState(false)
 
   useEffect(() => {
     testConnection()
@@ -40,12 +43,20 @@ export default function DatabasePage() {
     try {
       setConnectionStatus("testing")
       
-      // First try Supabase connection
-      const response = await fetch("https://qaauhwulohxeeacexrav.supabase.co/rest/v1/", {
-        headers: {
-          apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-        },
+      // Get environment-specific config
+      const config = getDatabaseConfig()
+      
+      // Check if configured table exists
+      const tableExists = await ensureTableExists(config.tableName)
+      setDevTableExists(tableExists)
+      if (!tableExists) {
+        setConnectionStatus("disconnected")
+        return
+      }
+      
+      // Test connection to the appropriate table
+      const response = await fetch(getDatabaseEndpoint("?limit=1"), {
+        headers: getDatabaseHeaders()
       })
       
       if (response.ok) {
@@ -56,7 +67,7 @@ export default function DatabasePage() {
         setConnectionStatus(localData ? "connected" : "disconnected")
       }
     } catch (error) {
-      console.warn("Supabase connection failed, using localStorage")
+      console.warn("Database connection failed, using localStorage")
       // Check if we have local data
       const localData = localStorage.getItem("survey")
       setConnectionStatus(localData ? "connected" : "disconnected")
@@ -66,15 +77,12 @@ export default function DatabasePage() {
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
-      // Try to fetch from Supabase first
+      // Try to fetch from environment-specific database first
       const response = await fetch(
-        "https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?select=*&order=created_at.desc",
+        getDatabaseEndpoint("?select=*&order=created_at.desc"),
         {
-          headers: {
-            apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          },
-        },
+          headers: getDatabaseHeaders()
+        }
       )
 
       if (response.ok) {
@@ -208,6 +216,70 @@ export default function DatabasePage() {
     }
   }
 
+  const handleAutoSetup = async () => {
+    setSetupLoading(true)
+    try {
+      const config = getDatabaseConfig()
+      const environment = config.environment
+      
+      const response = await fetch('/api/admin/setup-environment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ environment })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setDevTableExists(true)
+        setConnectionStatus("connected")
+        // Refetch responses after setup
+        await fetchResponses()
+        alert(`✅ ${result.environment.toUpperCase()} environment setup completed successfully!\n\nTable: ${result.details.tableName}\nSample Data: ${result.details.sampleData}\nFeatures: ${result.details.features.join(', ')}`)
+      } else {
+        console.error('Setup failed:', result.error)
+        
+        // Show detailed instructions for manual setup
+        const manualInstructions = `❌ Auto-setup failed: ${result.error}
+
+📋 MANUAL SETUP REQUIRED:
+
+1. Go to your Supabase Dashboard
+2. Open the SQL Editor
+3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
+4. The script will create all necessary tables and sample data
+
+🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
+
+After running the SQL script, refresh this page to see your data.`
+        
+        alert(manualInstructions)
+      }
+    } catch (error) {
+      console.error('Auto-setup error:', error)
+      
+      const networkErrorInstructions = `❌ Auto-setup failed: Network or API error
+
+📋 MANUAL SETUP REQUIRED:
+
+1. Go to your Supabase Dashboard: https://qaauhwulohxeeacexrav.supabase.co
+2. Open the SQL Editor
+3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
+4. The script will create all necessary tables and sample data
+
+🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
+
+The auto-setup feature requires custom SQL functions that may not be enabled.
+Manual setup is the recommended approach for production environments.`
+      
+      alert(networkErrorInstructions)
+    } finally {
+      setSetupLoading(false)
+    }
+  }
+
   const uniqueRoles = [...new Set(responses.map((r) => r.role))].sort()
 
   return (
@@ -231,6 +303,64 @@ export default function DatabasePage() {
           </Button>
         </div>
       </div>
+
+      {/* Environment Info */}
+      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Environment</p>
+              <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                {getDatabaseConfig().environment.toUpperCase()} - Table: {getDatabaseConfig().tableName}
+              </p>
+            </div>
+            <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Auto-Setup for Missing Table */}
+      {connectionStatus === "disconnected" && (
+        <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+          <CardContent className="p-4">
+            <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+              🚀 Auto-Setup Available
+            </h3>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                The table `{getDatabaseConfig().tableName}` doesn't exist yet. 
+                You can create it automatically or manually using SQL.
+              </p>
+            <div className="flex gap-2">
+                             <Button
+                 size="sm"
+                 onClick={handleAutoSetup}
+                 disabled={setupLoading}
+                 className="bg-green-600 hover:bg-green-700 text-white"
+               >
+                 {setupLoading ? (
+                   <>
+                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                     Setting up...
+                   </>
+                 ) : (
+                   <>
+                     <Database className="w-4 h-4 mr-2" />
+                     Auto-Setup {getDatabaseConfig().environment.toUpperCase()} Environment
+                   </>
+                 )}
+               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open('/setup_dev_database.sql', '_blank')}
+                className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-600 dark:hover:bg-amber-900/30"
+              >
+                📄 Manual SQL Script
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Database Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

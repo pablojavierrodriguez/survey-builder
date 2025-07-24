@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { getCurrentUserPermissions, getUserRole, getRoleDisplayName } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BarChart3, PieChart, TrendingUp, Users, RefreshCw, Download, Trophy, MessageSquare } from "lucide-react"
@@ -19,6 +20,12 @@ interface AnalyticsData {
   learningMethodsUsage: { [key: string]: number }
   responsesByDate: { [key: string]: number }
   mainChallenges: string[]
+  salaryData: {
+    averageByCurrency: { [key: string]: number }
+    averageByRole: { [key: string]: { ARS: number; USD: number } }
+    averageByIndustry: { [key: string]: { ARS: number; USD: number } }
+    rangeDistribution: { [key: string]: number }
+  }
   totalResponses: number
 }
 
@@ -228,10 +235,28 @@ const getNGrams = (text: string, n: number) => {
   return ngrams
 }
 
+// Helper function to categorize salaries into ranges
+const getSalaryRange = (salary: number, currency: string): string => {
+  if (currency === "USD") {
+    if (salary < 50000) return "< $50K USD"
+    if (salary < 80000) return "$50K - $80K USD" 
+    if (salary < 120000) return "$80K - $120K USD"
+    if (salary < 180000) return "$120K - $180K USD"
+    return "> $180K USD"
+  } else { // ARS
+    if (salary < 1000000) return "< $1M ARS"
+    if (salary < 2000000) return "$1M - $2M ARS"
+    if (salary < 3500000) return "$2M - $3.5M ARS"
+    if (salary < 5000000) return "$3.5M - $5M ARS"
+    return "> $5M ARS"
+  }
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [userRole, setUserRole] = useState<string>("viewer")
+  const [userRole, setUserRole] = useState(getUserRole())
+  const [permissions, setPermissions] = useState(getCurrentUserPermissions())
 
   useEffect(() => {
     // Get user role from auth
@@ -253,13 +278,12 @@ export default function AnalyticsPage() {
   const fetchAnalyticsData = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?select=*", {
-        headers: {
-          apikey:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-        },
+      // Get dynamic database configuration
+      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
+      const config = getDatabaseConfig()
+      
+      const response = await fetch(getDatabaseEndpoint(), {
+        headers: getDatabaseHeaders()
       })
 
       if (response.ok) {
@@ -276,6 +300,10 @@ export default function AnalyticsPage() {
         const learningMethodsUsage: { [key: string]: number } = {}
         const responsesByDate: { [key: string]: number } = {}
         const mainChallenges: string[] = []
+        const salaryDataByRole: { [key: string]: { ARS: number[], USD: number[] } } = {}
+        const salaryDataByIndustry: { [key: string]: { ARS: number[], USD: number[] } } = {}
+        const salaryRanges: { [key: string]: number } = {}
+        const salaryByCurrency: { ARS: number[], USD: number[] } = { ARS: [], USD: [] }
 
         responses.forEach((response: any) => {
           // Role distribution
@@ -336,6 +364,78 @@ export default function AnalyticsPage() {
           if (response.main_challenge && response.main_challenge.trim()) {
             mainChallenges.push(response.main_challenge.trim())
           }
+
+          // Salary data processing
+          if (response.salary_currency && (response.salary_average || (response.salary_min && response.salary_max))) {
+            const currency = response.salary_currency
+            let salaryValue = 0
+
+            if (response.salary_average) {
+              salaryValue = parseInt(response.salary_average)
+            } else if (response.salary_min && response.salary_max) {
+              salaryValue = (parseInt(response.salary_min) + parseInt(response.salary_max)) / 2
+            }
+
+            if (salaryValue > 0) {
+              // Salary by currency
+              salaryByCurrency[currency].push(salaryValue)
+
+              // Salary by role
+              if (response.role) {
+                if (!salaryDataByRole[response.role]) {
+                  salaryDataByRole[response.role] = { ARS: [], USD: [] }
+                }
+                salaryDataByRole[response.role][currency].push(salaryValue)
+              }
+
+              // Salary by industry
+              if (response.industry) {
+                if (!salaryDataByIndustry[response.industry]) {
+                  salaryDataByIndustry[response.industry] = { ARS: [], USD: [] }
+                }
+                salaryDataByIndustry[response.industry][currency].push(salaryValue)
+              }
+
+              // Salary range distribution
+              const range = getSalaryRange(salaryValue, currency)
+              salaryRanges[range] = (salaryRanges[range] || 0) + 1
+            }
+          }
+        })
+
+        // Calculate salary averages
+        const averageByCurrency: { [key: string]: number } = {}
+        const averageByRole: { [key: string]: { ARS: number; USD: number } } = {}
+        const averageByIndustry: { [key: string]: { ARS: number; USD: number } } = {}
+
+        // Average by currency
+        Object.keys(salaryByCurrency).forEach(currency => {
+          const salaries = salaryByCurrency[currency]
+          if (salaries.length > 0) {
+            averageByCurrency[currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+          }
+        })
+
+        // Average by role
+        Object.keys(salaryDataByRole).forEach(role => {
+          averageByRole[role] = { ARS: 0, USD: 0 }
+          Object.keys(salaryDataByRole[role]).forEach(currency => {
+            const salaries = salaryDataByRole[role][currency]
+            if (salaries.length > 0) {
+              averageByRole[role][currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+            }
+          })
+        })
+
+        // Average by industry
+        Object.keys(salaryDataByIndustry).forEach(industry => {
+          averageByIndustry[industry] = { ARS: 0, USD: 0 }
+          Object.keys(salaryDataByIndustry[industry]).forEach(currency => {
+            const salaries = salaryDataByIndustry[industry][currency]
+            if (salaries.length > 0) {
+              averageByIndustry[industry][currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+            }
+          })
         })
 
         setData({
@@ -349,6 +449,12 @@ export default function AnalyticsPage() {
           learningMethodsUsage,
           responsesByDate,
           mainChallenges,
+          salaryData: {
+            averageByCurrency,
+            averageByRole,
+            averageByIndustry,
+            rangeDistribution: salaryRanges
+          },
           totalResponses: responses.length,
         })
       }
@@ -508,16 +614,16 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
             {userRole === "admin" ? "Analytics Dashboard" : "Survey Analytics"}
           </h1>
           {userRole === "viewer" && (
             <p className="text-gray-600 mt-1 dark:text-gray-400">View survey response analytics and insights</p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           <Button
             onClick={fetchAnalyticsData}
             variant="outline"
@@ -526,7 +632,7 @@ export default function AnalyticsPage() {
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-          {userRole === "admin" && (
+          {permissions.canExportData && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 cursor-pointer">
@@ -554,7 +660,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -611,7 +717,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {data && renderRankingChart(data.roleDistribution, "Role Distribution", <Users className="w-5 h-5" />)}
         {data &&
           renderRankingChart(data.seniorityDistribution, "Seniority Distribution", <TrendingUp className="w-5 h-5" />)}
@@ -638,11 +744,87 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Tools Ranking and Learning Methods */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {data && renderRankingChart(data.toolsUsage, "Most Used Tools Ranking", <Trophy className="w-5 h-5" />)}
         {data &&
           renderRankingChart(data.learningMethodsUsage, "Learning Methods Ranking", <BarChart3 className="w-5 h-5" />)}
       </div>
+
+      {/* Salary Analytics */}
+      {data && Object.keys(data.salaryData.averageByCurrency).length > 0 && Object.values(data.salaryData.averageByCurrency).some(val => val > 0) && (
+        <>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            {/* Average Salary by Currency */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+                  <TrendingUp className="w-5 h-5" />
+                  Average Salary by Currency
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(data.salaryData.averageByCurrency).map(([currency, avg]) => (
+                    <div key={currency} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="font-medium text-gray-900 dark:text-gray-50">
+                        {currency === 'USD' ? '🇺🇸 USD' : '🇦🇷 ARS'}
+                      </span>
+                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        {currency === 'USD' ? '$' : '$'}{Math.round(avg).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Salary Range Distribution */}
+            {data && renderRankingChart(data.salaryData.rangeDistribution, "Salary Range Distribution", <BarChart3 className="w-5 h-5" />)}
+          </div>
+
+          {/* Salary by Role */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+                <Users className="w-5 h-5" />
+                Average Salary by Role
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {Object.entries(data.salaryData.averageByRole)
+                  .filter(([role, salaries]) => salaries.ARS > 0 || salaries.USD > 0)
+                  .sort((a, b) => (b[1].USD + b[1].ARS/300) - (a[1].USD + a[1].ARS/300)) // Sort by USD equivalent
+                  .map(([role, salaries]) => (
+                    <div key={role} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-50">{role}</h4>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {salaries.ARS > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">🇦🇷 ARS:</span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400">
+                              ${Math.round(salaries.ARS).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        {salaries.USD > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">🇺🇸 USD:</span>
+                            <span className="font-bold text-green-600 dark:text-green-400">
+                              ${Math.round(salaries.USD).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Main Challenges - Actual Responses */}
       {data && data.mainChallenges.length > 0 && (

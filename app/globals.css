@@ -92,3 +92,36 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile-first responsive improvements */
+@layer utilities {
+  /* Prevent horizontal scroll on small screens */
+  .mobile-safe {
+    @apply max-w-full overflow-x-hidden;
+  }
+  
+  /* Ensure text doesn't break layout */
+  .text-safe {
+    @apply break-words overflow-wrap-anywhere;
+  }
+  
+  /* Better mobile padding */
+  .mobile-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Responsive grid that never breaks */
+  .safe-grid {
+    @apply grid gap-4 grid-cols-1 sm:gap-6;
+  }
+}
+
+/* Prevent any content from causing horizontal scroll */
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+}

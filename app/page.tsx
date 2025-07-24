@@ -21,6 +21,10 @@ interface SurveyData {
   daily_tools: string[]
   other_tool: string
   learning_methods: string[]
+  salary_currency: string
+  salary_min: string
+  salary_max: string
+  salary_average: string
   email: string
 }
 
@@ -158,10 +162,14 @@ export default function ProductSurvey() {
     daily_tools: [],
     other_tool: "",
     learning_methods: [],
+    salary_currency: "ARS", // Default to Argentine Pesos
+    salary_min: "",
+    salary_max: "",
+    salary_average: "",
     email: "",
   })
 
-  const totalSteps = 11
+  const totalSteps = 12
 
   // Check maintenance mode on component mount
   useEffect(() => {
@@ -605,6 +613,124 @@ export default function ProductSurvey() {
         return (
           <div className="space-y-8">
             <div className="text-center space-y-4">
+              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your salary range?</h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand compensation in the product community (optional)</p>
+            </div>
+            <div className="max-w-lg mx-auto space-y-6">
+              {/* Currency Selection */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Currency:</label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "ARS", salary_min: "", salary_max: "", salary_average: "" })}
+                    className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                      surveyData.salary_currency === "ARS"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🇦🇷</span>
+                      <span className="font-medium">Pesos Argentinos</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "USD", salary_min: "", salary_max: "", salary_average: "" })}
+                    className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                      surveyData.salary_currency === "USD"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🇺🇸</span>
+                      <span className="font-medium">US Dollars</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Salary Input */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Salary Range</label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      value={surveyData.salary_min}
+                      onChange={(e) => {
+                        const min = parseInt(e.target.value) || 0
+                        const max = parseInt(surveyData.salary_max) || 0
+                        const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
+                        setSurveyData({ 
+                          ...surveyData, 
+                          salary_min: e.target.value,
+                          salary_average: avg
+                        })
+                      }}
+                      placeholder={surveyData.salary_currency === "USD" ? "Min (e.g., 80000)" : "Min (e.g., 2000000)"}
+                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    />
+                    <span className="text-slate-500">-</span>
+                    <Input
+                      type="number"
+                      value={surveyData.salary_max}
+                      onChange={(e) => {
+                        const min = parseInt(surveyData.salary_min) || 0
+                        const max = parseInt(e.target.value) || 0
+                        const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
+                        setSurveyData({ 
+                          ...surveyData, 
+                          salary_max: e.target.value,
+                          salary_average: avg
+                        })
+                      }}
+                      placeholder={surveyData.salary_currency === "USD" ? "Max (e.g., 120000)" : "Max (e.g., 3000000)"}
+                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    />
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+                    OR
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Average Salary</label>
+                  <Input
+                    type="number"
+                    value={surveyData.salary_average}
+                    onChange={(e) => {
+                      const avg = parseInt(e.target.value) || 0
+                      setSurveyData({ 
+                        ...surveyData, 
+                        salary_average: e.target.value,
+                        salary_min: avg > 0 ? Math.round(avg * 0.85).toString() : "",
+                        salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : ""
+                      })
+                    }}
+                    placeholder={surveyData.salary_currency === "USD" ? "Average (e.g., 100000)" : "Average (e.g., 2500000)"}
+                    className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                  {surveyData.salary_average && surveyData.salary_min && surveyData.salary_max && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Auto-calculated range: {parseInt(surveyData.salary_min).toLocaleString()} - {parseInt(surveyData.salary_max).toLocaleString()} {surveyData.salary_currency}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+
+      case 10:
+        return (
+          <div className="space-y-8">
+            <div className="text-center space-y-4">
               <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Your email</h2>
               <p className="text-lg text-slate-600 dark:text-slate-400">Optional - only if you'd like us to follow up</p>
             </div>
@@ -627,7 +753,7 @@ export default function ProductSurvey() {
           </div>
         )
 
-      case 10:
+      case 11:
         return (
           <div className="text-center space-y-8">
             <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
@@ -704,7 +830,7 @@ export default function ProductSurvey() {
                   Back
                 </Button>
 
-                {currentStep === 9 ? (
+                {currentStep === 10 ? (
                   <Button
                     onClick={submitSurvey}
                     disabled={!canProceed() || isSubmitting}

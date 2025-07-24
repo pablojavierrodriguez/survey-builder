@@ -14,7 +14,7 @@ import { Plus, Edit, Trash2, Save, Eye, EyeOff, AlertCircle } from "lucide-react
 
 interface SurveyQuestion {
   id: string
-  type: "single-choice" | "multiple-choice" | "text" | "email"
+  type: "single-choice" | "multiple-choice" | "text" | "email" | "salary-range"
   title: string
   description: string
   options?: string[]
@@ -214,11 +214,20 @@ const defaultQuestions: SurveyQuestion[] = [
   },
   {
     id: "10",
+    type: "salary-range",
+    title: "What's your salary range?",
+    description: "Help us understand compensation in the product community (optional)",
+    required: false,
+    order: 10,
+    isVisible: true,
+  },
+  {
+    id: "11",
     type: "email",
     title: "Your email",
     description: "Optional - only if you'd like us to follow up",
     required: false,
-    order: 10,
+    order: 11,
     isVisible: true,
   },
 ]
@@ -234,6 +243,20 @@ export default function SurveyConfigPage() {
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [userRole, setUserRole] = useState<string>("viewer")
+
+  // Get user role from localStorage
+  useEffect(() => {
+    const authStr = localStorage.getItem("survey_auth")
+    if (authStr) {
+      try {
+        const auth = JSON.parse(authStr)
+        setUserRole(auth.role || "viewer")
+      } catch (error) {
+        console.error("Error parsing auth:", error)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     // Load config from localStorage
@@ -269,14 +292,6 @@ export default function SurveyConfigPage() {
       setSaveStatus("error")
       setTimeout(() => setSaveStatus("idle"), 3000)
     }
-  }
-
-  const makeAllQuestionsVisible = () => {
-    const updatedConfig = {
-      ...config,
-      questions: config.questions.map(q => ({ ...q, isVisible: true }))
-    }
-    saveConfig(updatedConfig)
   }
 
   const addQuestion = () => {
@@ -434,18 +449,12 @@ export default function SurveyConfigPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={makeAllQuestionsVisible} 
-                variant="outline"
-                className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 dark:border-gray-600"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Make All Visible
-              </Button>
-              <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Question
-              </Button>
+              {userRole === "admin" && (
+                <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Question
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -495,14 +504,16 @@ export default function SurveyConfigPage() {
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteQuestion(question.id)}
-                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {userRole === "admin" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteQuestion(question.id)}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -547,6 +558,9 @@ export default function SurveyConfigPage() {
                       </SelectItem>
                       <SelectItem value="email" className="dark:text-gray-50">
                         Email
+                      </SelectItem>
+                      <SelectItem value="salary-range" className="dark:text-gray-50">
+                        Salary Range
                       </SelectItem>
                     </SelectContent>
                   </Select>
