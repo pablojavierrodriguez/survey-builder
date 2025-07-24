@@ -46,22 +46,22 @@ Try the application with these demo accounts:
 ### Production Setup
 
 1. **Clone the repository**
-   ```bash
+   \`\`\`bash
    git clone https://github.com/your-username/product-survey-builder.git
    cd product-survey-builder
-   ```
+   \`\`\`
 
 2. **Install dependencies**
-   ```bash
+   \`\`\`bash
    npm install
-   ```
+   \`\`\`
 
 3. **Configure environment variables**
-   ```bash
+   \`\`\`bash
    # Create .env.local file
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
+   \`\`\`
 
 4. **Set up database**
    - Create a new Supabase project
@@ -69,9 +69,9 @@ Try the application with these demo accounts:
    - Configure authentication providers in Supabase dashboard
 
 5. **Run development server**
-   ```bash
+   \`\`\`bash
    npm run dev
-   ```
+   \`\`\`
 
 ## 🏗️ Tech Stack
 
@@ -86,7 +86,7 @@ Try the application with these demo accounts:
 
 ## 📱 Application Structure
 
-```
+\`\`\`
 app/
 ├── auth/login/          # Authentication pages
 ├── admin/               # Admin dashboard
@@ -105,7 +105,7 @@ lib/
 ├── auth-context.tsx     # Authentication logic
 ├── supabase.ts          # Database client
 └── utils.ts             # Utility functions
-```
+\`\`\`
 
 ## 🔒 Security Features
 
