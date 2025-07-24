@@ -132,7 +132,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const filteredNavigation = navigation.filter((item) => item.show)
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden mobile-safe">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -493,8 +493,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Page content */}
         <main className="flex-1 overflow-auto bg-background">
-          <div className="container mx-auto p-4 lg:p-6 xl:p-8 max-w-8xl">
-            <div className="max-w-7xl mx-auto">
+          <div className="w-full px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+            <div className="max-w-7xl mx-auto overflow-hidden">
               {children}
             </div>
           </div>

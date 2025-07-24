@@ -622,7 +622,7 @@ export default function SettingsPage() {
              {permissions.canManageUsers ? (
                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                  <h4 className="text-sm font-medium text-green-800 dark:text-green-200 mb-3">➕ Create New User (Supabase Auth)</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <Input
                   placeholder="Email"
                   type="email"
@@ -741,10 +741,10 @@ export default function SettingsPage() {
                      { id: 'demo-2', email: 'jane.smith@company.com', full_name: 'Jane Smith', role: 'collaborator', created_at: '2024-01-10', email_confirmed: true },
                      { id: 'demo-3', email: 'admin@company.com', full_name: 'System Admin', role: 'admin', created_at: '2024-01-01', email_confirmed: true }
                    ].map((user) => (
-                     <div key={user.id} className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-                       <div>
-                         <div className="flex items-center gap-2">
-                           <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                     <div key={user.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-2 mb-1">
+                           <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                              🔑 {user.email}
                            </span>
                            {user.email_confirmed && (
@@ -753,11 +753,11 @@ export default function SettingsPage() {
                              </Badge>
                            )}
                          </div>
-                         <p className="text-xs text-gray-500 dark:text-gray-400">
+                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                            {user.full_name} • Created: {new Date(user.created_at).toLocaleDateString()}
                          </p>
                        </div>
-                       <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-2 flex-shrink-0">
                          <Badge variant="outline" className="text-xs">
                            {user.role?.toUpperCase() || 'VIEWER'}
                          </Badge>
@@ -773,10 +773,10 @@ export default function SettingsPage() {
                    </div>
                  ) : (
                   users.map((user) => (
-                    <div key={user.id} className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    <div key={user.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                             🔑 {user.email}
                           </span>
                           {user.email_confirmed && (
@@ -785,13 +785,13 @@ export default function SettingsPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {user.full_name && `${user.full_name} • `}
                           Created: {new Date(user.created_at).toLocaleDateString()}
                           {user.last_sign_in_at && ` • Last login: ${new Date(user.last_sign_in_at).toLocaleDateString()}`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge variant="outline" className="text-xs">
                           {user.role?.toUpperCase() || 'VIEWER'}
                         </Badge>

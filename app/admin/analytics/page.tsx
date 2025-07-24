@@ -614,16 +614,16 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
             {userRole === "admin" ? "Analytics Dashboard" : "Survey Analytics"}
           </h1>
           {userRole === "viewer" && (
             <p className="text-gray-600 mt-1 dark:text-gray-400">View survey response analytics and insights</p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           <Button
             onClick={fetchAnalyticsData}
             variant="outline"
@@ -660,7 +660,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -717,7 +717,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {data && renderRankingChart(data.roleDistribution, "Role Distribution", <Users className="w-5 h-5" />)}
         {data &&
           renderRankingChart(data.seniorityDistribution, "Seniority Distribution", <TrendingUp className="w-5 h-5" />)}
@@ -744,7 +744,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Tools Ranking and Learning Methods */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {data && renderRankingChart(data.toolsUsage, "Most Used Tools Ranking", <Trophy className="w-5 h-5" />)}
         {data &&
           renderRankingChart(data.learningMethodsUsage, "Learning Methods Ranking", <BarChart3 className="w-5 h-5" />)}
@@ -753,7 +753,7 @@ export default function AnalyticsPage() {
       {/* Salary Analytics */}
       {data && Object.keys(data.salaryData.averageByCurrency).length > 0 && Object.values(data.salaryData.averageByCurrency).some(val => val > 0) && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             {/* Average Salary by Currency */}
             <Card className="dark:bg-gray-800 dark:border-gray-700">
               <CardHeader>
