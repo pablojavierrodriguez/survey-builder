@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { getCurrentUserPermissions, getUserRole, getRoleDisplayName } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -34,6 +35,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState(getUserRole())
+  const [permissions, setPermissions] = useState(getCurrentUserPermissions())
 
   useEffect(() => {
     fetchDashboardData()
@@ -225,12 +228,23 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {userRole === 'admin-demo' && (
+        <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+          <Activity className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Demo Mode:</strong> You're viewing the dashboard in read-only mode. 
+            Administrative actions are disabled for security.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your survey responses and analytics
+            Overview of your survey responses and analytics • {getRoleDisplayName(userRole)}
           </p>
         </div>
         <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading}>
@@ -393,22 +407,26 @@ export default function AdminDashboard() {
               <BarChart3 className="h-5 w-5" />
               <span className="text-sm">View Analytics</span>
             </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => router.push("/admin/database")}
-            >
-              <Database className="h-5 w-5" />
-              <span className="text-sm">Export Data</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
-              onClick={() => router.push("/admin/survey-config")}
-            >
-              <FileText className="h-5 w-5" />
-              <span className="text-sm">Survey Config</span>
-            </Button>
+            {permissions.canModifyDatabase && (
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={() => router.push("/admin/database")}
+              >
+                <Database className="h-5 w-5" />
+                <span className="text-sm">Export Data</span>
+              </Button>
+            )}
+            {permissions.canEditSurveys && (
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+                onClick={() => router.push("/admin/survey-config")}
+              >
+                <FileText className="h-5 w-5" />
+                <span className="text-sm">Survey Config</span>
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

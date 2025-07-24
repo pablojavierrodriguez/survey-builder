@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { getCurrentUserPermissions, getUserRole, getRoleDisplayName } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BarChart3, PieChart, TrendingUp, Users, RefreshCw, Download, Trophy, MessageSquare } from "lucide-react"
@@ -254,7 +255,8 @@ const getSalaryRange = (salary: number, currency: string): string => {
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [userRole, setUserRole] = useState<string>("viewer")
+  const [userRole, setUserRole] = useState(getUserRole())
+  const [permissions, setPermissions] = useState(getCurrentUserPermissions())
 
   useEffect(() => {
     // Get user role from auth
@@ -630,7 +632,7 @@ export default function AnalyticsPage() {
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-          {userRole === "admin" && (
+          {permissions.canExportData && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 cursor-pointer">

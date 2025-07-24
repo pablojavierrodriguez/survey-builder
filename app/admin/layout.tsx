@@ -34,6 +34,7 @@ import {
   Eye,
   LayoutDashboard,
 } from "lucide-react"
+import { getUserRole, getPermissions, canAccessRoute, type UserRole } from "@/lib/permissions"
 
 interface AdminUser {
   username: string
@@ -79,12 +80,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/auth/login")
   }
 
+  // Get current user role and permissions
+  const currentUserRole = getUserRole()
+  const permissions = getPermissions(currentUserRole)
+
   const navigation = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, roles: ["admin"] },
-    { name: "Analytics", href: "/admin/analytics", icon: BarChart3, roles: ["admin", "collaborator", "viewer"] },
-    { name: "Survey Config", href: "/admin/survey-config", icon: FileText, roles: ["admin", "collaborator"] },
-    { name: "Database", href: "/admin/database", icon: Database, roles: ["admin"] },
-    { name: "Settings", href: "/admin/settings", icon: Settings, roles: ["admin"] },
+    { 
+      name: "Dashboard", 
+      href: "/admin/dashboard", 
+      icon: LayoutDashboard, 
+      show: permissions.canViewDashboard 
+    },
+    { 
+      name: "Analytics", 
+      href: "/admin/analytics", 
+      icon: BarChart3, 
+      show: permissions.canViewAnalytics 
+    },
+    { 
+      name: "Survey Config", 
+      href: "/admin/survey-config", 
+      icon: FileText, 
+      show: permissions.canEditSurveys 
+    },
+    { 
+      name: "Database", 
+      href: "/admin/database", 
+      icon: Database, 
+      show: permissions.canModifyDatabase 
+    },
+    { 
+      name: "Settings", 
+      href: "/admin/settings", 
+      icon: Settings, 
+      show: permissions.canViewSettings 
+    },
   ]
 
   if (isLoading) {
@@ -99,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null
   }
 
-  const filteredNavigation = navigation.filter((item) => item.roles.includes(user.role))
+  const filteredNavigation = navigation.filter((item) => item.show)
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
