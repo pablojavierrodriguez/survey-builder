@@ -3,5 +3,43 @@
     "env": {
       "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
     }
-  }
+  },
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "NEXT_PUBLIC_APP_NAME": "Product Survey Builder",
+    "NEXT_PUBLIC_APP_URL": "https://v0-product-survey-builder.vercel.app",
+    "NEXT_PUBLIC_NODE_ENV": "production",
+    "NEXT_PUBLIC_DB_TABLE_DEV": "pc_survey_data_dev",
+    "NEXT_PUBLIC_DB_TABLE_PROD": "pc_survey_data",
+    "NEXT_PUBLIC_ENABLE_ANALYTICS": "true",
+    "NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS": "true",
+    "NEXT_PUBLIC_SESSION_TIMEOUT": "28800000",
+    "NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS": "3"
+  },
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
 }

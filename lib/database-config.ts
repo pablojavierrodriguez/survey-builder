@@ -43,9 +43,10 @@ function getCurrentEnvironment(): 'dev' | 'main' {
 export function getDatabaseConfig(): DatabaseConfig {
   const environment = getCurrentEnvironment()
   
+  // Use environment variables instead of hardcoded values
   const baseConfig = {
-    supabaseUrl: "https://qaauhwulohxeeacexrav.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8"
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "https://qaauhwulohxeeacexrav.supabase.co",
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8"
   }
   
   // Check if user has manually configured a table name in localStorage
@@ -71,13 +72,13 @@ export function getDatabaseConfig(): DatabaseConfig {
   if (environment === 'dev') {
     return {
       ...baseConfig,
-      tableName: "pc_survey_data_dev",
+      tableName: process.env.NEXT_PUBLIC_DB_TABLE_DEV || "pc_survey_data_dev",
       environment: 'dev'
     }
   } else {
     return {
       ...baseConfig, 
-      tableName: "pc_survey_data",
+      tableName: process.env.NEXT_PUBLIC_DB_TABLE_PROD || "pc_survey_data",
       environment: 'main'
     }
   }
@@ -128,4 +129,41 @@ export async function ensureTableExists(tableName?: string): Promise<boolean> {
 // Function to create dev table if it doesn't exist (backward compatibility)
 export async function ensureDevTableExists(): Promise<boolean> {
   return ensureTableExists('pc_survey_data_dev')
+}
+
+// Function to submit survey data to Supabase
+export async function submitSurveyToDatabase(surveyData: any): Promise<{ success: boolean; error?: string; data?: any }> {
+  const config = getDatabaseConfig()
+  
+  try {
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}`, {
+      method: 'POST',
+      headers: getDatabaseHeaders(),
+      body: JSON.stringify({
+        ...surveyData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Survey submission failed:', errorText)
+      return { 
+        success: false, 
+        error: `HTTP ${response.status}: ${errorText}` 
+      }
+    }
+
+    const data = await response.json()
+    console.log('✅ Survey submitted to database:', data)
+    return { success: true, data }
+    
+  } catch (error) {
+    console.error('❌ Error submitting survey to database:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
 }

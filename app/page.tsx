@@ -349,17 +349,61 @@ export default function ProductSurvey() {
     }
   }
 
-  const submitSurvey = () => {
+  const submitSurvey = async () => {
+    setIsSubmitting(true)
+    
     try {
-      const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-      const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-      localStorage.setItem("survey", JSON.stringify(updated))
-      console.log("✅ Survey saved to localStorage:", updated)
-
-      handleNext()
+      // Import the database function
+      const { submitSurveyToDatabase } = await import('@/lib/database-config')
+      
+      // Submit to database
+      const result = await submitSurveyToDatabase(surveyData)
+      
+      if (result.success) {
+        // Also save to localStorage as backup
+        try {
+          const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+          const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+          localStorage.setItem("survey", JSON.stringify(updated))
+          console.log("✅ Survey also saved to localStorage as backup")
+        } catch (localError) {
+          console.warn("⚠️ Could not save to localStorage:", localError)
+        }
+        
+        console.log("✅ Survey submitted successfully to database")
+        handleNext()
+      } else {
+        console.error("❌ Database submission failed:", result.error)
+        
+        // Fallback to localStorage only
+        const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+        const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+        localStorage.setItem("survey", JSON.stringify(updated))
+        console.log("✅ Survey saved to localStorage as fallback")
+        
+        alert("Survey saved locally. Database connection failed.")
+        handleNext()
+      }
     } catch (error) {
-      console.error("❌ Error saving to localStorage:", error)
-      alert("Error saving survey locally.")
+      console.error("❌ Error submitting survey:", error)
+      
+      // Fallback to localStorage only
+      try {
+        const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+        const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+        localStorage.setItem("survey", JSON.stringify(updated))
+        console.log("✅ Survey saved to localStorage as fallback")
+      } catch (localError) {
+        console.error("❌ Error saving to localStorage:", localError)
+        alert("Error saving survey. Please try again.")
+        setIsSubmitting(false)
+        return
+      }
+      
+      alert("Survey saved locally. Please check your connection.")
+      handleNext()
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -368,22 +412,22 @@ export default function ProductSurvey() {
       case 0:
         return (
           <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What's your current role?</h2>
-              <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400">Help us understand your background</p>
+            <div className="text-center space-y-3 sm:space-y-4">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What's your current role?</h2>
+              <p className="text-base sm:text-lg xl:text-xl text-slate-600 dark:text-slate-400">Help us understand your background</p>
             </div>
-            <div className="grid gap-3 max-w-3xl mx-auto">
+            <div className="grid gap-2 sm:gap-3 max-w-3xl mx-auto">
               {roleOptions.map((role) => (
                 <button
                   key={role}
                   onClick={() => handleRoleSelect(role)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
+                  className={`p-3 sm:p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
                     surveyData.role === role
                       ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
                       : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
-                  <span className="font-medium">{role}</span>
+                  <span className="font-medium text-sm sm:text-base">{role}</span>
                 </button>
               ))}
             </div>
@@ -393,7 +437,7 @@ export default function ProductSurvey() {
                   value={surveyData.other_role}
                   onChange={(e) => handleOtherRoleChange(e.target.value)}
                   placeholder="Please specify your role..."
-                  className="text-lg p-4 h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
+                  className="text-base sm:text-lg p-3 sm:p-4 h-12 sm:h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
                 />
               </div>
             )}
@@ -775,27 +819,27 @@ export default function ProductSurvey() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4 xl:p-8">
-      {/* Theme toggle */}
-      <div className="fixed top-4 right-4 z-20">
-        <ModeToggle />
-      </div>
-      
-      {/* Admin Login Button */}
-      <div className="fixed top-4 left-4 z-20">
+      {/* Fixed header for mobile */}
+      <div className="fixed top-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex justify-between items-center">
+        {/* Admin Login Button */}
         <Button
           onClick={() => window.open("/auth/login", "_blank")}
           variant="outline"
           size="sm"
-          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg"
+          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg text-xs sm:text-sm"
         >
-          <Shield className="w-4 h-4 mr-2" />
-          Admin Login
+          <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+          <span className="hidden sm:inline">Admin Login</span>
+          <span className="sm:hidden">Admin</span>
         </Button>
+        
+        {/* Theme toggle */}
+        <ModeToggle />
       </div>
 
-      <div className="w-full max-w-5xl mx-auto">
+      <div className="w-full max-w-5xl mx-auto mt-16 sm:mt-20">
         <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
-          <CardContent className="p-6 sm:p-8 lg:p-12 xl:p-16">
+          <CardContent className="p-4 sm:p-6 lg:p-8 xl:p-12">
             {/* Progress bar */}
             <div className="mb-8 lg:mb-12">
               <div className="flex justify-between items-center mb-3">
@@ -819,12 +863,12 @@ export default function ProductSurvey() {
 
                           {/* Navigation buttons */}
               {currentStep < totalSteps - 1 && (
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
                 <Button
                   variant="outline"
                   onClick={handlePrevious}
                   disabled={currentStep === 0}
-                  className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 order-2 sm:order-1"
+                  className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 w-full sm:w-auto"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back
@@ -834,16 +878,18 @@ export default function ProductSurvey() {
                   <Button
                     onClick={submitSurvey}
                     disabled={!canProceed() || isSubmitting}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 sm:px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                   >
                     {isSubmitting ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Submitting...
+                        <span className="hidden sm:inline">Submitting...</span>
+                        <span className="sm:hidden">Saving...</span>
                       </>
                     ) : (
                       <>
-                        Submit Survey
+                        <span className="hidden sm:inline">Submit Survey</span>
+                        <span className="sm:hidden">Submit</span>
                         <Check className="w-4 h-4" />
                       </>
                     )}
@@ -852,7 +898,7 @@ export default function ProductSurvey() {
                   <Button
                     onClick={handleNext}
                     disabled={!canProceed()}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 sm:px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                   >
                     Next
                     <ArrowRight className="w-4 h-4" />

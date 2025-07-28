@@ -46,32 +46,36 @@ Try the application with these demo accounts:
 ### Production Setup
 
 1. **Clone the repository**
-   \`\`\`bash
-   git clone https://github.com/your-username/product-survey-builder.git
-   cd product-survey-builder
-   \`\`\`
+   ```bash
+   git clone https://github.com/pablojavierrodriguez/v0-product-survey-builder.git
+   cd v0-product-survey-builder
+   ```
 
 2. **Install dependencies**
-   \`\`\`bash
+   ```bash
    npm install
-   \`\`\`
+   ```
 
 3. **Configure environment variables**
-   \`\`\`bash
-   # Create .env.local file
+   ```bash
+   # Copy development environment file
+   cp .env.development.local .env.local
+   
+   # Update with your Supabase credentials
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   \`\`\`
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   ```
 
 4. **Set up database**
    - Create a new Supabase project
-   - Run the SQL setup script: `database-setup.sql`
+   - Run the SQL setup script: `database-schema.sql`
    - Configure authentication providers in Supabase dashboard
 
 5. **Run development server**
-   \`\`\`bash
+   ```bash
    npm run dev
-   \`\`\`
+   ```
 
 ## 🏗️ Tech Stack
 
@@ -86,7 +90,7 @@ Try the application with these demo accounts:
 
 ## 📱 Application Structure
 
-\`\`\`
+```
 app/
 ├── auth/login/          # Authentication pages
 ├── admin/               # Admin dashboard
@@ -104,8 +108,9 @@ components/
 lib/
 ├── auth-context.tsx     # Authentication logic
 ├── supabase.ts          # Database client
+├── database-config.ts   # Database configuration
 └── utils.ts             # Utility functions
-\`\`\`
+```
 
 ## 🔒 Security Features
 
@@ -119,17 +124,60 @@ lib/
 
 The application uses a PostgreSQL database with the following main tables:
 
-- `pc_survey_data`: Survey responses and analytics
+- `pc_survey_data`: Production survey responses and analytics
+- `pc_survey_data_dev`: Development survey responses and analytics
 - `profiles`: User profiles and role management
 - `auth.users`: Supabase authentication (managed)
 
 ## 🌐 Deployment
 
-This application is configured for easy deployment on Vercel:
+This application is configured for easy deployment on Vercel with environment separation:
+
+### Environment Configuration
+
+- **DEV Environment**: Uses `pc_survey_data_dev` table
+- **PROD Environment**: Uses `pc_survey_data` table
+- **Shared**: User management and authentication
+
+### Deployment Steps
 
 1. Connect your GitHub repository to Vercel
 2. Add environment variables in Vercel dashboard
 3. Deploy automatically on every push to main branch
+4. See `DEPLOYMENT.md` for detailed instructions
+
+## 🔧 Recent Fixes & Improvements
+
+### ✅ **Fixed Issues**
+
+1. **Database Integration**
+   - ✅ Removed hardcoded database credentials
+   - ✅ Implemented proper environment variable usage
+   - ✅ Fixed survey submission to save to database
+   - ✅ Added fallback to localStorage for offline support
+
+2. **Mobile UX Improvements**
+   - ✅ Fixed header layout for mobile devices
+   - ✅ Improved button responsiveness
+   - ✅ Enhanced text sizing for small screens
+   - ✅ Better navigation button layout
+
+3. **Environment Separation**
+   - ✅ Proper dev/prod database table separation
+   - ✅ Environment-specific configuration
+   - ✅ Branch-based deployment strategy
+
+4. **Configuration Management**
+   - ✅ Created proper environment files
+   - ✅ Updated Vercel configuration
+   - ✅ Added deployment documentation
+
+### 🚀 **New Features**
+
+- **Database Schema**: Updated schema matching current survey structure
+- **Deployment Guide**: Comprehensive deployment instructions
+- **Error Handling**: Improved error handling and user feedback
+- **Mobile Optimization**: Enhanced mobile experience
 
 ## 🤝 Contributing
 
@@ -150,3 +198,46 @@ For support, please contact the development team or create an issue in this repo
 ---
 
 **Built with ❤️ using [v0.dev](https://v0.dev) and modern web technologies**
+
+## 📋 Release Notes
+
+### Version 1.0.0 (December 2024)
+
+#### 🎉 **Major Release - Production Ready**
+
+**New Features:**
+- Complete survey system with 11 comprehensive questions
+- Admin dashboard with analytics and user management
+- Role-based authentication system
+- Responsive design for all devices
+- Dark/light theme support
+
+**Technical Improvements:**
+- Fixed database integration and removed hardcoded credentials
+- Implemented proper environment variable management
+- Added dev/prod environment separation
+- Enhanced mobile UX and responsiveness
+- Improved error handling and user feedback
+
+**Database:**
+- Created proper schema with survey data tables
+- Implemented Row Level Security (RLS) policies
+- Added indexes for performance optimization
+- Set up user management and authentication
+
+**Deployment:**
+- Vercel deployment configuration
+- Environment-specific settings
+- Comprehensive deployment documentation
+- Security headers and HTTPS enforcement
+
+**Security:**
+- Environment variable protection
+- Input validation and sanitization
+- Secure authentication flows
+- Rate limiting protection
+
+---
+
+**Status**: ✅ Production Ready
+**Next Steps**: Deploy to production and monitor performance
