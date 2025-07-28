@@ -38,14 +38,20 @@ This guide will help you set up the native integration between Vercel and Supaba
    - Visit [supabase.com/dashboard](https://supabase.com/dashboard)
    - Select **ProductCommunitySurvey** project
 
-2. **Run Database Schema**
+2. **Clean Up Existing Policies (if needed)**
+   - Go to **SQL Editor**
+   - If you get policy conflicts, run `cleanup-existing-policies.sql` first
+   - This will remove any existing RLS policies
+
+3. **Run Database Schema**
    - Go to **SQL Editor**
    - Copy and paste the contents of `database-schema-productcommunity.sql`
    - Click **"Run"** to execute the schema
 
-3. **Verify Tables Created**
+4. **Verify Tables Created**
    - Go to **Table Editor**
    - You should see:
+     - `app_settings` (environment configuration)
      - `pc_survey_data` (production)
      - `pc_survey_data_dev` (development)
      - `profiles` (user management)
@@ -137,7 +143,12 @@ NEXT_PUBLIC_DB_TABLE_PROD=pc_survey_data
    - Check RLS policies
    - Ensure tables exist
 
-3. **Authentication Issues**
+3. **Policy Conflicts (Error 42710)**
+   - Run `cleanup-existing-policies.sql` first
+   - Then run the main schema
+   - This removes existing policies before creating new ones
+
+4. **Authentication Issues**
    - Verify redirect URLs in Supabase
    - Check site URL configuration
    - Clear browser cache

@@ -178,6 +178,23 @@ ALTER TABLE pc_survey_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pc_survey_data_dev ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies to avoid conflicts
+DROP POLICY IF EXISTS "Public can read app settings" ON app_settings;
+DROP POLICY IF EXISTS "Admins can manage app settings" ON app_settings;
+
+DROP POLICY IF EXISTS "Public can insert survey data" ON pc_survey_data;
+DROP POLICY IF EXISTS "Admins can view all survey data" ON pc_survey_data;
+DROP POLICY IF EXISTS "Collaborators can view survey data" ON pc_survey_data;
+
+DROP POLICY IF EXISTS "Public can insert dev survey data" ON pc_survey_data_dev;
+DROP POLICY IF EXISTS "Admins can view all dev survey data" ON pc_survey_data_dev;
+DROP POLICY IF EXISTS "Collaborators can view dev survey data" ON pc_survey_data_dev;
+
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON profiles;
+
 -- RLS Policies for App Settings (Admin read/write, Public read)
 CREATE POLICY "Public can read app settings" ON app_settings
 FOR SELECT USING (true);
