@@ -111,7 +111,7 @@ async function checkTables() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
-  const tables = ['pc_survey_data', 'pc_survey_data_dev', 'profiles'];
+  const tables = ['app_settings', 'pc_survey_data', 'pc_survey_data_dev', 'profiles'];
   const results = {};
   
   for (const table of tables) {
@@ -178,6 +178,43 @@ async function checkSampleData() {
   }
 }
 
+async function checkAppSettings() {
+  log('\n🔍 Checking App Settings...', 'blue');
+  
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  try {
+    const response = await makeRequest(
+      `${supabaseUrl}/rest/v1/app_settings?select=*`,
+      {
+        'apikey': anonKey,
+        'Authorization': `Bearer ${anonKey}`,
+        'Content-Type': 'application/json'
+      }
+    );
+    
+    if (response.status === 200) {
+      const data = JSON.parse(response.data);
+      if (data && data.length > 0) {
+        const environments = data.map(setting => setting.environment).join(', ');
+        log(`✅ App settings found for environments: ${environments}`, 'green');
+        return true;
+      } else {
+        log('⚠️  No app settings found', 'yellow');
+        log('💡 Run the database schema to create app settings', 'yellow');
+        return false;
+      }
+    } else {
+      log(`❌ Could not check app settings: ${response.status}`, 'red');
+      return false;
+    }
+  } catch (error) {
+    log(`❌ Error checking app settings: ${error.message}`, 'red');
+    return false;
+  }
+}
+
 async function main() {
   log('🚀 Vercel + Supabase Integration Verification', 'blue');
   log('==============================================', 'blue');
@@ -186,6 +223,7 @@ async function main() {
     { name: 'Environment Variables', fn: checkEnvironmentVariables },
     { name: 'Database Connection', fn: checkDatabaseConnection },
     { name: 'Database Tables', fn: checkTables },
+    { name: 'App Settings', fn: checkAppSettings },
     { name: 'Sample Data', fn: checkSampleData }
   ];
   
@@ -232,4 +270,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, checkEnvironmentVariables, checkDatabaseConnection, checkTables, checkSampleData };
+module.exports = { main, checkEnvironmentVariables, checkDatabaseConnection, checkTables, checkAppSettings, checkSampleData };

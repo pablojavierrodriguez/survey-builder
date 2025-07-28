@@ -175,22 +175,66 @@ export default function ProductSurvey() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedSettings = localStorage.getItem("app_settings")
-        if (savedSettings) {
-          const settings: AppSettings = JSON.parse(savedSettings)
-          setIsMaintenanceMode(settings.general?.maintenanceMode || false)
-        }
+        // Import the app settings module
+        const { getAppSettings, isMaintenanceMode } = await import('@/lib/app-settings')
+        
+        // Get app settings from Supabase
+        const settings = await getAppSettings()
+        const maintenanceMode = await isMaintenanceMode()
+        
+        // Update maintenance mode state
+        setIsMaintenanceMode(maintenanceMode)
+        
+        // Update app settings state
+        setAppSettings({
+          general: {
+            maintenanceMode: maintenanceMode,
+            appName: settings.app_name,
+            appUrl: settings.app_url
+          },
+          features: {
+            enableAnalytics: settings.enable_analytics,
+            enableEmailNotifications: settings.enable_email_notifications,
+            enableExport: settings.enable_export
+          },
+          database: {
+            tableName: settings.survey_table_name,
+            environment: settings.environment
+          }
+        })
+        
+        console.log('✅ App settings loaded from Supabase:', settings)
         
         // Also check for survey configuration
         const surveyConfig = localStorage.getItem("survey_config")
         if (surveyConfig) {
           const config = JSON.parse(surveyConfig)
           setSurveyConfig(config)
-          // You can add survey config checks here if needed
           console.log("Survey config loaded:", config)
         }
       } catch (error) {
-        console.error("Error checking settings:", error)
+        console.error("❌ Error loading settings from Supabase:", error)
+        
+        // Fallback to localStorage if Supabase fails
+        try {
+          const savedSettings = localStorage.getItem("app_settings")
+          if (savedSettings) {
+            const settings: AppSettings = JSON.parse(savedSettings)
+            setIsMaintenanceMode(settings.general?.maintenanceMode || false)
+            setAppSettings(settings)
+            console.log('⚠️ Using fallback settings from localStorage')
+          }
+          
+          // Also check for survey configuration
+          const surveyConfig = localStorage.getItem("survey_config")
+          if (surveyConfig) {
+            const config = JSON.parse(surveyConfig)
+            setSurveyConfig(config)
+            console.log("Survey config loaded from localStorage:", config)
+          }
+        } catch (localError) {
+          console.error("❌ Error loading fallback settings:", localError)
+        }
       } finally {
         setIsLoading(false)
       }

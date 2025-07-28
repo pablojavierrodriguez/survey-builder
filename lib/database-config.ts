@@ -1,13 +1,15 @@
-// Database configuration for Vercel + Supabase native integration
+// Database configuration using Supabase app settings
+import { getAppSettings, getSurveyTableName } from './app-settings'
+
 export interface DatabaseConfig {
   supabaseUrl: string
   anonKey: string
   tableName: string
-  environment: 'dev' | 'main'
+  environment: 'dev' | 'prod'
 }
 
 // Get current branch/environment from various sources
-function getCurrentEnvironment(): 'dev' | 'main' {
+function getCurrentEnvironment(): 'dev' | 'prod' {
   // Check if we're in a specific environment
   if (typeof window !== 'undefined') {
     // Client-side detection
@@ -18,8 +20,8 @@ function getCurrentEnvironment(): 'dev' | 'main' {
       return 'dev'
     }
     
-    // Default to main for client-side
-    return 'main'
+    // Default to prod for client-side
+    return 'prod'
   }
   
   // Server-side environment detection
@@ -36,63 +38,55 @@ function getCurrentEnvironment(): 'dev' | 'main' {
     console.warn('Could not access environment variables:', error)
   }
   
-  // Default to main for production
-  return 'main'
+  // Default to prod for production
+  return 'prod'
 }
 
-export function getDatabaseConfig(): DatabaseConfig {
-  const environment = getCurrentEnvironment()
-  
-  // Use Vercel's native Supabase integration environment variables
-  const baseConfig = {
+// Get Supabase configuration
+function getSupabaseConfig() {
+  return {
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
   }
+}
+
+export async function getDatabaseConfig(): Promise<DatabaseConfig> {
+  const environment = getCurrentEnvironment()
+  const baseConfig = getSupabaseConfig()
   
-  // Check if user has manually configured a table name in localStorage
-  if (typeof window !== 'undefined') {
-    const savedSettings = localStorage.getItem("app_settings")
-    if (savedSettings) {
-      try {
-        const settings = JSON.parse(savedSettings)
-        if (settings.database?.tableName) {
-          return {
-            ...baseConfig,
-            tableName: settings.database.tableName,
-            environment: settings.database.tableName.includes('_dev') ? 'dev' : 'main'
-          }
-        }
-      } catch (error) {
-        console.warn('Error parsing saved database settings:', error)
-      }
-    }
-  }
-  
-  // Default behavior based on environment
-  if (environment === 'dev') {
+  try {
+    // Get app settings from Supabase
+    const appSettings = await getAppSettings()
+    const tableName = await getSurveyTableName()
+    
     return {
       ...baseConfig,
-      tableName: process.env.NEXT_PUBLIC_DB_TABLE_DEV || "pc_survey_data_dev",
-      environment: 'dev'
+      tableName: tableName,
+      environment: environment
     }
-  } else {
+  } catch (error) {
+    console.warn('⚠️ Could not fetch app settings, using fallback configuration:', error)
+    
+    // Fallback configuration
+    const fallbackTableName = environment === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data'
+    
     return {
-      ...baseConfig, 
-      tableName: process.env.NEXT_PUBLIC_DB_TABLE_PROD || "pc_survey_data",
-      environment: 'main'
+      ...baseConfig,
+      tableName: fallbackTableName,
+      environment: environment
     }
   }
 }
 
 // Helper function to get the API endpoint
-export function getDatabaseEndpoint(path: string = ""): string {
-  const config = getDatabaseConfig()
+export async function getDatabaseEndpoint(path: string = ""): Promise<string> {
+  const config = await getDatabaseConfig()
   return `${config.supabaseUrl}/rest/v1/${config.tableName}${path}`
 }
 
 // Helper function to get headers for Supabase requests
-export function getDatabaseHeaders(): HeadersInit {
-  const config = getDatabaseConfig()
+export async function getDatabaseHeaders(): Promise<HeadersInit> {
+  const config = await getDatabaseConfig()
   return {
     "apikey": config.anonKey,
     "Authorization": `Bearer ${config.anonKey}`,
@@ -103,13 +97,13 @@ export function getDatabaseHeaders(): HeadersInit {
 
 // Function to check if any table exists
 export async function ensureTableExists(tableName?: string): Promise<boolean> {
-  const config = getDatabaseConfig()
+  const config = await getDatabaseConfig()
   const targetTable = tableName || config.tableName
   
   try {
     // Try to fetch from the specified table
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${targetTable}?limit=1`, {
-      headers: getDatabaseHeaders()
+      headers: await getDatabaseHeaders()
     })
     
     if (response.ok) {
@@ -133,12 +127,12 @@ export async function ensureDevTableExists(): Promise<boolean> {
 
 // Function to submit survey data to Supabase
 export async function submitSurveyToDatabase(surveyData: any): Promise<{ success: boolean; error?: string; data?: any }> {
-  const config = getDatabaseConfig()
+  const config = await getDatabaseConfig()
   
   try {
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}`, {
       method: 'POST',
-      headers: getDatabaseHeaders(),
+      headers: await getDatabaseHeaders(),
       body: JSON.stringify({
         ...surveyData,
         created_at: new Date().toISOString(),
@@ -175,11 +169,11 @@ export async function checkDatabaseConnection(): Promise<{
   tableName: string; 
   error?: string 
 }> {
-  const config = getDatabaseConfig()
+  const config = await getDatabaseConfig()
   
   try {
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}?limit=1`, {
-      headers: getDatabaseHeaders()
+      headers: await getDatabaseHeaders()
     })
     
     if (response.ok) {
@@ -203,5 +197,35 @@ export async function checkDatabaseConnection(): Promise<{
       tableName: config.tableName,
       error: error instanceof Error ? error.message : 'Connection failed'
     }
+  }
+}
+
+// Legacy synchronous functions for backward compatibility
+export function getDatabaseConfigSync(): DatabaseConfig {
+  const environment = getCurrentEnvironment()
+  const baseConfig = getSupabaseConfig()
+  
+  // Fallback configuration
+  const fallbackTableName = environment === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data'
+  
+  return {
+    ...baseConfig,
+    tableName: fallbackTableName,
+    environment: environment
+  }
+}
+
+export function getDatabaseEndpointSync(path: string = ""): string {
+  const config = getDatabaseConfigSync()
+  return `${config.supabaseUrl}/rest/v1/${config.tableName}${path}`
+}
+
+export function getDatabaseHeadersSync(): HeadersInit {
+  const config = getDatabaseConfigSync()
+  return {
+    "apikey": config.anonKey,
+    "Authorization": `Bearer ${config.anonKey}`,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
   }
 }
