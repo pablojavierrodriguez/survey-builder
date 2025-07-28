@@ -1,4 +1,4 @@
-// Database configuration based on environment/branch
+// Database configuration for Vercel + Supabase native integration
 export interface DatabaseConfig {
   supabaseUrl: string
   anonKey: string
@@ -43,10 +43,10 @@ function getCurrentEnvironment(): 'dev' | 'main' {
 export function getDatabaseConfig(): DatabaseConfig {
   const environment = getCurrentEnvironment()
   
-  // Use environment variables instead of hardcoded values
+  // Use Vercel's native Supabase integration environment variables
   const baseConfig = {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "https://qaauhwulohxeeacexrav.supabase.co",
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8"
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
   }
   
   // Check if user has manually configured a table name in localStorage
@@ -164,6 +164,44 @@ export async function submitSurveyToDatabase(surveyData: any): Promise<{ success
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
+}
+
+// Function to get database connection status
+export async function checkDatabaseConnection(): Promise<{ 
+  connected: boolean; 
+  environment: string; 
+  tableName: string; 
+  error?: string 
+}> {
+  const config = getDatabaseConfig()
+  
+  try {
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}?limit=1`, {
+      headers: getDatabaseHeaders()
+    })
+    
+    if (response.ok) {
+      return {
+        connected: true,
+        environment: config.environment,
+        tableName: config.tableName
+      }
+    } else {
+      return {
+        connected: false,
+        environment: config.environment,
+        tableName: config.tableName,
+        error: `HTTP ${response.status}: ${await response.text()}`
+      }
+    }
+  } catch (error) {
+    return {
+      connected: false,
+      environment: config.environment,
+      tableName: config.tableName,
+      error: error instanceof Error ? error.message : 'Connection failed'
     }
   }
 }
