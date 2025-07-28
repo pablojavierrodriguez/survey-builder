@@ -149,6 +149,11 @@ export default function ProductSurvey() {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [surveyConfig, setSurveyConfig] = useState<any>(null)
+  const [appSettings, setAppSettings] = useState<AppSettings>({
+    general: {
+      maintenanceMode: false
+    }
+  })
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -185,21 +190,21 @@ export default function ProductSurvey() {
         // Update maintenance mode state
         setIsMaintenanceMode(maintenanceMode)
         
-        // Update app settings state
+        // Update app settings state with proper structure
         setAppSettings({
           general: {
             maintenanceMode: maintenanceMode,
-            appName: settings.app_name,
-            appUrl: settings.app_url
+            appName: settings.app_name || 'Product Community Survey',
+            appUrl: settings.app_url || window.location.origin
           },
           features: {
-            enableAnalytics: settings.enable_analytics,
-            enableEmailNotifications: settings.enable_email_notifications,
-            enableExport: settings.enable_export
+            enableAnalytics: settings.enable_analytics || true,
+            enableEmailNotifications: settings.enable_email_notifications || false,
+            enableExport: settings.enable_export || true
           },
           database: {
-            tableName: settings.survey_table_name,
-            environment: settings.environment
+            tableName: settings.survey_table_name || 'pc_survey_data_dev',
+            environment: settings.environment || 'dev'
           }
         })
         
