@@ -4,21 +4,9 @@ import { createClient } from '@supabase/supabase-js'
 // Get Supabase configuration from environment variables
 function getSupabaseConfig() {
   return {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    supabaseUrl: process.env.POSTGRES_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    anonKey: process.env.POSTGRES_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   }
-}
-
-// Get current environment
-function getCurrentEnvironment(): 'dev' | 'prod' {
-  const nodeEnv = process.env.NODE_ENV
-  const branch = process.env.BRANCH || process.env.VERCEL_GIT_COMMIT_REF
-  
-  if (branch === 'dev' || nodeEnv === 'development') {
-    return 'dev'
-  }
-  
-  return 'prod'
 }
 
 // GET - Fetch app settings
@@ -33,13 +21,12 @@ export async function GET() {
     }
 
     const supabase = createClient(config.supabaseUrl, config.anonKey)
-    const environment = getCurrentEnvironment()
 
     // Fetch settings from app_settings table
     const { data, error } = await supabase
       .from('app_settings')
       .select('*')
-      .eq('environment', environment)
+      .limit(1)
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -52,8 +39,8 @@ export async function GET() {
     // If no settings found, return default settings
     if (!data) {
       const defaultSettings = {
-        environment,
-        survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'survey_data_dev' : 'survey_data'),
+        environment: 'production',
+        survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || 'survey_data',
         app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
         app_url: process.env.NEXT_PUBLIC_APP_URL || '',
         maintenance_mode: false,
@@ -91,13 +78,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(config.supabaseUrl, config.anonKey)
-    const environment = getCurrentEnvironment()
     const body = await request.json()
 
     // Prepare settings data
     const settingsData = {
-      environment,
-      survey_table_name: body.survey_table_name || process.env.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'survey_data_dev' : 'survey_data'),
+      environment: 'production',
+      survey_table_name: body.survey_table_name || process.env.NEXT_PUBLIC_DB_TABLE || 'survey_data',
       app_name: body.app_name || process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
       app_url: body.app_url || process.env.NEXT_PUBLIC_APP_URL || '',
       maintenance_mode: body.maintenance_mode || false,
@@ -112,11 +98,11 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
 
-    // Check if settings exist for this environment
+    // Check if settings exist
     const { data: existingSettings } = await supabase
       .from('app_settings')
       .select('id')
-      .eq('environment', environment)
+      .limit(1)
       .single()
 
     let result
@@ -126,7 +112,6 @@ export async function POST(request: NextRequest) {
       result = await supabase
         .from('app_settings')
         .update(settingsData)
-        .eq('environment', environment)
         .select()
     } else {
       // Insert new settings

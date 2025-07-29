@@ -1,5 +1,5 @@
 // App Settings Configuration
-// Fetches settings from Supabase app_settings table based on environment
+// Fetches settings from Supabase app_settings table
 
 export interface AppSettings {
   environment: string
@@ -18,91 +18,41 @@ export interface AppSettings {
 }
 
 // Cache for settings to avoid repeated API calls
-let settingsCache: { [key: string]: AppSettings } = {}
-let cacheTimestamp: { [key: string]: number } = {}
+let settingsCache: AppSettings | null = null
+let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-
-// Get current environment
-function getCurrentEnvironment(): 'dev' | 'prod' {
-  // Check if we're in a specific environment
-  if (typeof window !== 'undefined') {
-    // Client-side detection
-    const hostname = window.location.hostname
-    
-    // If hostname contains 'dev' or we're on localhost, consider it dev
-    if (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-      return 'dev'
-    }
-    
-    // Default to prod for client-side
-    return 'prod'
-  }
-  
-  // Server-side environment detection
-  try {
-    const nodeEnv = process.env.NODE_ENV
-    const branch = process.env.BRANCH || process.env.VERCEL_GIT_COMMIT_REF
-    
-    // If we detect dev branch or development environment
-    if (branch === 'dev' || nodeEnv === 'development') {
-      return 'dev'
-    }
-  } catch (error) {
-    // Fallback if environment variables are not accessible
-    console.warn('Could not access environment variables:', error)
-  }
-  
-  // Default to prod for production
-  return 'prod'
-}
 
 // Get Supabase configuration
 function getSupabaseConfig() {
   // Server-side environment variables
   if (typeof window === 'undefined') {
     return {
-      supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-      anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+      supabaseUrl: process.env.POSTGRES_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      anonKey: process.env.POSTGRES_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
     }
   }
   
   // Client-side environment variables
   return {
-    supabaseUrl: (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
-                 (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL ||
-                 (window as any).__ENV__?.SUPABASE_URL || "",
-    anonKey: (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-             (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-             (window as any).__ENV__?.SUPABASE_ANON_KEY || ""
+    supabaseUrl: (window as any).__ENV__?.POSTGRES_SUPABASE_URL ||
+                 (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || "",
+    anonKey: (window as any).__ENV__?.POSTGRES_SUPABASE_ANON_KEY ||
+             (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   }
 }
 
 // Get environment-specific configuration from environment variables
-function getEnvironmentConfig(environment: 'dev' | 'prod') {
-  const config = {
-    dev: {
-      app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey (DEV)',
-      app_url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
-      enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
-      enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
-      enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
-      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '3600') * 1000, // Convert to milliseconds
-      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '10')
-    },
-    prod: {
-      app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
-      app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://productcommunitysurvey.vercel.app',
-      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data',
-      enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'false',
-      enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
-      enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT !== 'false',
-      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '3600') * 1000, // Convert to milliseconds
-      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '10')
-    }
+function getEnvironmentConfig() {
+  return {
+    app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
+    app_url: process.env.NEXT_PUBLIC_APP_URL || '',
+    survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || 'survey_data',
+    enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
+    enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
+    enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
+    session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '3600') * 1000, // Convert to milliseconds
+    max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '10')
   }
-  
-  return config[environment]
 }
 
 // Resolve setting with manual configuration priority
@@ -117,27 +67,26 @@ function resolveSetting(manualValue: any, envValue: any, defaultValue: any) {
 }
 
 // Fetch app settings from Supabase
-export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<AppSettings | null> {
-  const targetEnv = environment || getCurrentEnvironment()
+export async function fetchAppSettings(): Promise<AppSettings | null> {
   const config = getSupabaseConfig()
   
   // Check cache first
   const now = Date.now()
-  if (settingsCache[targetEnv] && cacheTimestamp[targetEnv] && (now - cacheTimestamp[targetEnv]) < CACHE_DURATION) {
-    console.log(`📋 Using cached app settings for ${targetEnv}`)
-    return settingsCache[targetEnv]
+  if (settingsCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    console.log(`📋 Using cached app settings`)
+    return settingsCache
   }
   
   // If no Supabase config, return default settings
-  if (!config.supabaseUrl || !config.anonKey || config.supabaseUrl === 'https://your-project.supabase.co') {
+  if (!config.supabaseUrl || !config.anonKey) {
     console.warn('⚠️ No valid Supabase configuration found, using environment-based settings')
-    return getDefaultSettings(targetEnv)
+    return getDefaultSettings()
   }
   
   try {
-    console.log(`🔍 Fetching app settings for ${targetEnv} environment...`)
+    console.log(`🔍 Fetching app settings...`)
     
-    const response = await fetch(`${config.supabaseUrl}/rest/v1/app_settings?environment=eq.${targetEnv}&select=*`, {
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/app_settings?select=*&limit=1`, {
       headers: {
         'apikey': config.anonKey,
         'Authorization': `Bearer ${config.anonKey}`,
@@ -147,21 +96,21 @@ export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<Ap
     
     if (!response.ok) {
       console.error(`❌ Failed to fetch app settings: ${response.status}`)
-      return getDefaultSettings(targetEnv)
+      return getDefaultSettings()
     }
     
     const data = await response.json()
     
     if (data && data.length > 0) {
       const settings = data[0]
-      const envConfig = getEnvironmentConfig(targetEnv)
+      const envConfig = getEnvironmentConfig()
       
       // Merge manual settings with environment variables (manual has priority)
       const mergedSettings = {
         ...settings,
         app_name: resolveSetting(settings.app_name, envConfig.app_name, 'Product Community Survey'),
         app_url: resolveSetting(settings.app_url, envConfig.app_url, ''),
-        survey_table_name: resolveSetting(settings.survey_table_name, envConfig.survey_table_name, targetEnv === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data'),
+        survey_table_name: resolveSetting(settings.survey_table_name, envConfig.survey_table_name, 'survey_data'),
         enable_analytics: resolveSetting(settings.enable_analytics, envConfig.enable_analytics, true),
         enable_email_notifications: resolveSetting(settings.enable_email_notifications, envConfig.enable_email_notifications, true),
         enable_export: resolveSetting(settings.enable_export, envConfig.enable_export, true),
@@ -176,27 +125,27 @@ export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<Ap
       }
       
       // Cache the merged settings
-      settingsCache[targetEnv] = mergedSettings
-      cacheTimestamp[targetEnv] = now
+      settingsCache = mergedSettings
+      cacheTimestamp = now
       
-      console.log(`✅ App settings loaded from Supabase for ${targetEnv} (manual config has priority)`)
+      console.log(`✅ App settings loaded from Supabase (manual config has priority)`)
       return mergedSettings
     } else {
-      console.warn(`⚠️ No app settings found in database for ${targetEnv}, using environment defaults`)
-      return getDefaultSettings(targetEnv)
+      console.warn(`⚠️ No app settings found in database, using environment defaults`)
+      return getDefaultSettings()
     }
     
   } catch (error) {
     console.error('❌ Error fetching app settings:', error)
-    return getDefaultSettings(targetEnv)
+    return getDefaultSettings()
   }
 }
 
-function getDefaultSettings(environment: 'dev' | 'prod'): AppSettings {
-  const envConfig = getEnvironmentConfig(environment)
+function getDefaultSettings(): AppSettings {
+  const envConfig = getEnvironmentConfig()
   
   const defaults = {
-    environment: environment,
+    environment: 'production',
     survey_table_name: envConfig.survey_table_name,
     app_name: envConfig.app_name,
     app_url: envConfig.app_url,
@@ -216,28 +165,27 @@ function getDefaultSettings(environment: 'dev' | 'prod'): AppSettings {
 
 // Get current app settings (with caching)
 export async function getAppSettings(): Promise<AppSettings> {
-  const environment = getCurrentEnvironment()
-  const settings = await fetchAppSettings(environment)
-  return settings || getDefaultSettings(environment)
+  const settings = await fetchAppSettings()
+  return settings || getDefaultSettings()
 }
 
 // Clear settings cache (useful for testing or when settings change)
 export function clearSettingsCache() {
-  settingsCache = {}
-  cacheTimestamp = {}
+  settingsCache = null
+  cacheTimestamp = 0
   console.log('🗑️ App settings cache cleared')
 }
 
 // Update app settings in Supabase (admin only)
-export async function updateAppSettings(environment: 'dev' | 'prod', updates: Partial<AppSettings>): Promise<{ success: boolean; error?: string }> {
+export async function updateAppSettings(updates: Partial<AppSettings>): Promise<{ success: boolean; error?: string }> {
   const config = getSupabaseConfig()
   
-  if (!config.supabaseUrl || !config.anonKey || config.supabaseUrl === 'https://your-project.supabase.co') {
+  if (!config.supabaseUrl || !config.anonKey) {
     return { success: false, error: 'No valid Supabase configuration found' }
   }
   
   try {
-    const response = await fetch(`${config.supabaseUrl}/rest/v1/app_settings?environment=eq.${environment}`, {
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/app_settings`, {
       method: 'PATCH',
       headers: {
         'apikey': config.anonKey,
@@ -259,7 +207,7 @@ export async function updateAppSettings(environment: 'dev' | 'prod', updates: Pa
     // Clear cache to force refresh
     clearSettingsCache()
     
-    console.log(`✅ App settings updated for ${environment}`)
+    console.log(`✅ App settings updated`)
     return { success: true }
     
   } catch (error) {
