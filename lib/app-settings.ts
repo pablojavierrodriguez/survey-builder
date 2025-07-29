@@ -64,6 +64,34 @@ function getSupabaseConfig() {
   }
 }
 
+// Get environment-specific configuration from environment variables
+function getEnvironmentConfig(environment: 'dev' | 'prod') {
+  const config = {
+    dev: {
+      app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey (DEV)',
+      app_url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev',
+      enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
+      enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
+      enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
+      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
+      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3')
+    },
+    prod: {
+      app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
+      app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://productcommunitysurvey.vercel.app',
+      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data',
+      enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'false',
+      enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
+      enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT !== 'false',
+      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
+      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3')
+    }
+  }
+  
+  return config[environment]
+}
+
 // Fetch app settings from Supabase
 export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<AppSettings | null> {
   const targetEnv = environment || getCurrentEnvironment()
@@ -77,8 +105,8 @@ export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<Ap
   }
   
   // If no Supabase config, return default settings
-  if (!config.supabaseUrl || !config.anonKey) {
-    console.warn('⚠️ No Supabase configuration found, using default settings')
+  if (!config.supabaseUrl || !config.anonKey || config.supabaseUrl === 'https://your-project.supabase.co') {
+    console.warn('⚠️ No valid Supabase configuration found, using environment-based settings')
     return getDefaultSettings(targetEnv)
   }
   
@@ -101,16 +129,16 @@ export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<Ap
     const data = await response.json()
     
     if (data && data.length > 0) {
-      const settings = data[0] as AppSettings
+      const settings = data[0]
       
       // Cache the settings
       settingsCache[targetEnv] = settings
       cacheTimestamp[targetEnv] = now
       
-      console.log(`✅ App settings loaded for ${targetEnv}:`, settings.app_name)
+      console.log(`✅ App settings loaded from Supabase for ${targetEnv}`)
       return settings
     } else {
-      console.warn(`⚠️ No app settings found for ${targetEnv}, using defaults`)
+      console.warn(`⚠️ No app settings found in database for ${targetEnv}, using defaults`)
       return getDefaultSettings(targetEnv)
     }
     
@@ -120,42 +148,26 @@ export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<Ap
   }
 }
 
-// Get default settings as fallback
 function getDefaultSettings(environment: 'dev' | 'prod'): AppSettings {
+  const envConfig = getEnvironmentConfig(environment)
+  
   const defaults = {
-    dev: {
-      environment: 'dev',
-      survey_table_name: 'pc_survey_data_dev',
-      app_name: 'Product Community Survey (DEV)',
-      app_url: 'http://localhost:3000',
-      maintenance_mode: false,
-      enable_analytics: true,
-      enable_email_notifications: false,
-      enable_export: true,
-      session_timeout: 28800000,
-      max_login_attempts: 3,
-      theme_default: 'system' as const,
-      language_default: 'en',
-      settings: {}
-    },
-    prod: {
-      environment: 'prod',
-      survey_table_name: 'pc_survey_data',
-      app_name: 'Product Community Survey',
-      app_url: 'https://your-vercel-domain.vercel.app',
-      maintenance_mode: false,
-      enable_analytics: true,
-      enable_email_notifications: true,
-      enable_export: true,
-      session_timeout: 28800000,
-      max_login_attempts: 3,
-      theme_default: 'system' as const,
-      language_default: 'en',
-      settings: {}
-    }
+    environment: environment,
+    survey_table_name: envConfig.survey_table_name,
+    app_name: envConfig.app_name,
+    app_url: envConfig.app_url,
+    maintenance_mode: false,
+    enable_analytics: envConfig.enable_analytics,
+    enable_email_notifications: envConfig.enable_email_notifications,
+    enable_export: envConfig.enable_export,
+    session_timeout: envConfig.session_timeout,
+    max_login_attempts: envConfig.max_login_attempts,
+    theme_default: 'system' as const,
+    language_default: 'en',
+    settings: {}
   }
   
-  return defaults[environment]
+  return defaults
 }
 
 // Get current app settings (with caching)
@@ -176,8 +188,8 @@ export function clearSettingsCache() {
 export async function updateAppSettings(environment: 'dev' | 'prod', updates: Partial<AppSettings>): Promise<{ success: boolean; error?: string }> {
   const config = getSupabaseConfig()
   
-  if (!config.supabaseUrl || !config.anonKey) {
-    return { success: false, error: 'No Supabase configuration found' }
+  if (!config.supabaseUrl || !config.anonKey || config.supabaseUrl === 'https://your-project.supabase.co') {
+    return { success: false, error: 'No valid Supabase configuration found' }
   }
   
   try {
@@ -221,13 +233,13 @@ export async function isMaintenanceMode(): Promise<boolean> {
   return settings.maintenance_mode
 }
 
-// Get survey table name for current environment
+// Get survey table name
 export async function getSurveyTableName(): Promise<string> {
   const settings = await getAppSettings()
   return settings.survey_table_name
 }
 
-// Get app name for current environment
+// Get app name
 export async function getAppName(): Promise<string> {
   const settings = await getAppSettings()
   return settings.app_name
