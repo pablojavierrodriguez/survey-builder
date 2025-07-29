@@ -280,10 +280,10 @@ export default function AnalyticsPage() {
     try {
       // Get dynamic database configuration
       const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
-      const config = getDatabaseConfig()
+      const config = await getDatabaseConfig()
       
-      const response = await fetch(getDatabaseEndpoint(), {
-        headers: getDatabaseHeaders()
+      const response = await fetch(await getDatabaseEndpoint(), {
+        headers: await getDatabaseHeaders()
       })
 
       if (response.ok) {
