@@ -1,93 +1,66 @@
 // Environment variables configuration
 export const env = {
-  // Supabase Configuration
-  SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+  // Supabase configuration
   SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "",
-
-  // App Configuration
-  APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || "",
-  APP_URL: process.env.NEXT_PUBLIC_APP_URL || "",
-
-  // Database Configuration
-  DB_TABLE: process.env.NEXT_PUBLIC_DB_TABLE || "",
-
-  // Security Configuration
-  SESSION_TIMEOUT: Number.parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
-  MAX_LOGIN_ATTEMPTS: Number.parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
-
-  // Feature Flags
-  ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
-  ENABLE_EMAIL_NOTIFICATIONS: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
-  ENABLE_EXPORT: process.env.NEXT_PUBLIC_ENABLE_EXPORT === "true",
-
-  // Development
-  NODE_ENV: process.env.NEXT_PUBLIC_NODE_ENV || "development",
-  IS_PRODUCTION: process.env.NEXT_PUBLIC_NODE_ENV === "production",
-  DEBUG: process.env.NEXT_PUBLIC_DEBUG === "true",
+  
+  // App configuration
+  APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || "Product Community Survey",
+  APP_URL: process.env.NEXT_PUBLIC_APP_URL || "https://productcommunitysurvey.vercel.app",
+  DB_TABLE: process.env.NEXT_PUBLIC_DB_TABLE || "survey_data",
+  NODE_ENV: process.env.NEXT_PUBLIC_NODE_ENV || process.env.NODE_ENV || "production",
+  DEBUG: process.env.NEXT_PUBLIC_DEBUG || "false",
+  
+  // Security settings
+  MAX_LOGIN_ATTEMPTS: process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10",
+  SESSION_TIMEOUT: process.env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600000",
+  
+  // Feature flags
+  ENABLE_EXPORT: process.env.NEXT_PUBLIC_ENABLE_EXPORT || "true",
+  ENABLE_EMAIL_NOTIFICATIONS: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS || "true",
+  ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS || "true",
 }
 
-// Client-side environment variables (for browser access)
+// Client-side environment variables (exposed via window.__ENV__)
 export const clientEnv = {
-  // Supabase Configuration
-  SUPABASE_URL: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
-    (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL ||
-    (window as any).__ENV__?.SUPABASE_URL || "" : "",
-  SUPABASE_ANON_KEY: typeof window !== 'undefined' ? 
+  // Supabase configuration (client-side)
+  SUPABASE_ANON_KEY: typeof window !== 'undefined' ?
     (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : "",
-
-  // App Configuration
-  APP_NAME: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : "",
-  APP_URL: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || "" : "",
-
-  // Database Configuration
-  DB_TABLE: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : "",
-
-  // Security Configuration
-  SESSION_TIMEOUT: typeof window !== 'undefined' ? 
-    Number.parseInt((window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600") : 3600,
-  MAX_LOGIN_ATTEMPTS: typeof window !== 'undefined' ? 
-    Number.parseInt((window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10") : 10,
-
-  // Feature Flags
-  ENABLE_ANALYTICS: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false,
-  ENABLE_EMAIL_NOTIFICATIONS: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false,
-  ENABLE_EXPORT: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EXPORT === "true" : false,
-
-  // Development
-  NODE_ENV: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_NODE_ENV || "development" : "development",
-  IS_PRODUCTION: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_NODE_ENV === "production" : false,
-  DEBUG: typeof window !== 'undefined' ? 
-    (window as any).__ENV__?.NEXT_PUBLIC_DEBUG === "true" : false,
+  
+  // App configuration
+  APP_NAME: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : "",
+  APP_URL: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || "" : "",
+  DB_TABLE: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : "",
+  NODE_ENV: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_NODE_ENV || "" : "",
+  DEBUG: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DEBUG || "" : "",
+  
+  // Security settings
+  MAX_LOGIN_ATTEMPTS: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "" : "",
+  SESSION_TIMEOUT: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "" : "",
+  
+  // Feature flags
+  ENABLE_EXPORT: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EXPORT || "" : "",
+  ENABLE_EMAIL_NOTIFICATIONS: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS || "" : "",
+  ENABLE_ANALYTICS: typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS || "" : "",
 }
 
-// Get environment variables (server-side or client-side)
-export function getEnv() {
-  return typeof window !== 'undefined' ? clientEnv : env
-}
-
-// Validate required environment variables
+// Validation function
 export function validateEnv() {
-  const currentEnv = getEnv()
-  const required = ["SUPABASE_URL", "SUPABASE_ANON_KEY"]
-
-  const missing = required.filter((key) => !currentEnv[key as keyof typeof currentEnv])
-
+  const required = ["SUPABASE_ANON_KEY"]
+  const missing = required.filter(key => !env[key as keyof typeof env])
+  
   if (missing.length > 0) {
-    console.warn(`Missing required environment variables: ${missing.join(", ")}`)
+    console.warn(`Missing required environment variables: ${missing.join(', ')}`)
     return false
   }
+  
   return true
+}
+
+// Get environment variable with fallback
+export function getEnv(key: keyof typeof env, fallback: string = ""): string {
+  return env[key] || fallback
 }
 
 // SSL/Security headers configuration

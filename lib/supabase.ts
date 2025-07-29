@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Extend Window interface for client-side Supabase
+declare global {
+  interface Window {
+    __SUPABASE_CLIENT__?: any
+  }
+}
+
 // For server-side, use environment variables directly
 let supabaseUrl = ''
 let supabaseAnonKey = ''
@@ -12,6 +19,10 @@ if (typeof window !== 'undefined') {
     .then(config => {
       supabaseUrl = config.supabaseUrl
       supabaseAnonKey = config.supabaseAnonKey
+      // Re-initialize the client with the fetched config
+      if (supabaseUrl && supabaseAnonKey) {
+        window.__SUPABASE_CLIENT__ = createClient(supabaseUrl, supabaseAnonKey)
+      }
     })
     .catch(error => {
       console.error('Failed to fetch Supabase config:', error)
@@ -29,6 +40,14 @@ export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
 export const supabase = isSupabaseConfigured 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
+
+// Helper function to get the client (with fallback for client-side)
+export function getSupabaseClient() {
+  if (typeof window !== 'undefined' && window.__SUPABASE_CLIENT__) {
+    return window.__SUPABASE_CLIENT__
+  }
+  return supabase
+}
 
 // Helper function to check if we can use Supabase features
 export function requireSupabase() {

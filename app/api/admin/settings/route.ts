@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       result = await supabase
         .from('app_settings')
         .update(settingsData)
+        .eq('id', existingSettings.id)
         .select()
     } else {
       // Insert new settings
