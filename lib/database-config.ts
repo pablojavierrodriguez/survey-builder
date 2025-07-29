@@ -1,5 +1,16 @@
 import { supabase } from './supabase'
 
+// Get environment variables safely
+function getEnvVar(key: string): string {
+  if (typeof window !== 'undefined') {
+    // Client-side: use window.__ENV__
+    return (window as any).__ENV__?.[key] || ''
+  } else {
+    // Server-side: use process.env
+    return process.env[key] || ''
+  }
+}
+
 export interface DatabaseConfig {
   supabaseUrl: string
   anonKey: string
@@ -10,10 +21,10 @@ export interface DatabaseConfig {
 // Get Supabase configuration from environment variables
 export function getSupabaseConfig(): DatabaseConfig {
   return {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-    tableName: process.env.NEXT_PUBLIC_DB_TABLE || "survey_data",
-    environment: process.env.NEXT_PUBLIC_NODE_ENV || "production"
+    supabaseUrl: getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
+    anonKey: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+    tableName: getEnvVar('NEXT_PUBLIC_DB_TABLE') || "survey_data",
+    environment: getEnvVar('NEXT_PUBLIC_NODE_ENV') || "production"
   }
 }
 

@@ -1,8 +1,19 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Get environment variables safely
+function getEnvVar(key: string): string {
+  if (typeof window !== 'undefined') {
+    // Client-side: use window.__ENV__
+    return (window as any).__ENV__?.[key] || ''
+  } else {
+    // Server-side: use process.env
+    return process.env[key] || ''
+  }
+}
+
 // Use standard Next.js environment variables for Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
+const supabaseAnonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)

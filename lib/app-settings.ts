@@ -4,11 +4,22 @@ import { supabase } from './supabase'
 let settingsCache: any = null
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
+// Get environment variables safely
+function getEnvVar(key: string): string {
+  if (typeof window !== 'undefined') {
+    // Client-side: use window.__ENV__
+    return (window as any).__ENV__?.[key] || ''
+  } else {
+    // Server-side: use process.env
+    return process.env[key] || ''
+  }
+}
+
 // Get Supabase configuration
 function getSupabaseConfig() {
   return {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    supabaseUrl: getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
+    anonKey: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
 }
 
@@ -26,14 +37,14 @@ function resolveSetting(manualValue: any, envValue: any, defaultValue: any) {
 // Get environment configuration
 function getEnvironmentConfig() {
   return {
-    app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
-    app_url: process.env.NEXT_PUBLIC_APP_URL || '',
-    survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || 'survey_data',
-    enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
-    enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
-    enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
-    session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '3600') * 1000,
-    max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '10')
+    app_name: getEnvVar('NEXT_PUBLIC_APP_NAME') || 'Product Community Survey',
+    app_url: getEnvVar('NEXT_PUBLIC_APP_URL') || '',
+    survey_table_name: getEnvVar('NEXT_PUBLIC_DB_TABLE') || 'survey_data',
+    enable_analytics: getEnvVar('NEXT_PUBLIC_ENABLE_ANALYTICS') === 'true',
+    enable_email_notifications: getEnvVar('NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS') === 'true',
+    enable_export: getEnvVar('NEXT_PUBLIC_ENABLE_EXPORT') === 'true',
+    session_timeout: parseInt(getEnvVar('NEXT_PUBLIC_SESSION_TIMEOUT') || '3600') * 1000,
+    max_login_attempts: parseInt(getEnvVar('NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS') || '10')
   }
 }
 

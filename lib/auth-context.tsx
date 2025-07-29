@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Check if Supabase URL is not a placeholder
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://your-project.supabase.co' || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    if (!supabase) {
       console.log('Supabase URL is placeholder - auth features disabled')
       setLoading(false)
       return
