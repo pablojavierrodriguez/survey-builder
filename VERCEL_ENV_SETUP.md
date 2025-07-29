@@ -29,16 +29,14 @@ Se han creado dos archivos JSON con las variables de entorno para cada rama:
 4. Copia y pega el contenido de `vercel-env-prod.json` en el campo de texto
 5. Haz clic en **"Save"**
 
-### Paso 4: Configurar Supabase (Opcional)
-Si tienes Supabase configurado, agrega estas variables:
+### Paso 4: Variables de Supabase (Automáticas)
+⚠️ **IMPORTANTE**: Las variables de Supabase se manejan automáticamente a través de la integración nativa de Vercel con Supabase:
 
-```json
-{
-  "NEXT_PUBLIC_SUPABASE_URL": "https://tu-proyecto.supabase.co",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY": "tu_anon_key_aqui",
-  "SUPABASE_SERVICE_ROLE_KEY": "tu_service_role_key_aqui"
-}
-```
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` 
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+**No necesitas configurar estas variables manualmente** - Vercel las sincroniza automáticamente desde tu proyecto de Supabase.
 
 ## 📋 Variables Incluidas
 
@@ -83,6 +81,21 @@ Si tienes Supabase configurado, agrega estas variables:
 - **Seguridad**: No incluyas claves secretas en variables `NEXT_PUBLIC_`
 - **Ambientes**: Las variables se aplican según el ambiente seleccionado
 - **Cache**: Vercel puede cachear las variables, espera unos minutos para cambios
+
+## 🔗 Integración con Supabase
+
+### Variables Automáticas
+Las siguientes variables se configuran automáticamente a través de la integración nativa de Vercel con Supabase:
+
+- `NEXT_PUBLIC_SUPABASE_URL` - URL de tu proyecto Supabase
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Clave anónima pública
+- `SUPABASE_SERVICE_ROLE_KEY` - Clave de servicio (privada)
+
+### Verificar Integración
+1. Ve a **Settings** > **Integrations** en Vercel
+2. Verifica que Supabase esté conectado
+3. Las variables aparecerán automáticamente en **Environment Variables**
+4. No las modifiques manualmente - se sincronizan automáticamente
 
 ## 🎯 Resultado Esperado
 
