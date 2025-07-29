@@ -45,8 +45,8 @@ function getCurrentEnvironment(): 'dev' | 'prod' {
 // Get Supabase configuration
 function getSupabaseConfig() {
   return {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+    anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
   }
 }
 
@@ -206,8 +206,8 @@ export function getDatabaseConfigSync(): DatabaseConfig {
   const baseConfig = getSupabaseConfig()
   
   // Use environment variables for table names
-  const devTableName = process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev'
-  const prodTableName = process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data'
+  const devTableName = process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev'
+  const prodTableName = process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data'
   
   // Select table name based on environment
   const tableName = environment === 'dev' ? devTableName : prodTableName

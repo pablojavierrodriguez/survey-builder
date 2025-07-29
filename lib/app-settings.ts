@@ -59,8 +59,8 @@ function getCurrentEnvironment(): 'dev' | 'prod' {
 // Get Supabase configuration
 function getSupabaseConfig() {
   return {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+    anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
   }
 }
 
@@ -70,22 +70,22 @@ function getEnvironmentConfig(environment: 'dev' | 'prod') {
     dev: {
       app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey (DEV)',
       app_url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev',
+      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
       enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
       enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
       enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
-      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
-      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3')
+      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '3600') * 1000, // Convert to milliseconds
+      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '10')
     },
     prod: {
       app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
       app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://productcommunitysurvey.vercel.app',
-      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data',
+      survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data',
       enable_analytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'false',
       enable_email_notifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
       enable_export: process.env.NEXT_PUBLIC_ENABLE_EXPORT !== 'false',
-      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
-      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3')
+      session_timeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '3600') * 1000, // Convert to milliseconds
+      max_login_attempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '10')
     }
   }
   

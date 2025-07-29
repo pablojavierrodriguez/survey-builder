@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       steps: result.steps,
       environment: isDev ? 'dev' : 'main',
       details: {
-        tableName: isDev ? (process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev') : (process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data'),
+        tableName: isDev ? (process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev') : (process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data'),
         sampleData: isDev ? 'Included' : 'Not included (production)',
         features: ['Table created', 'Indexes added', 'RLS enabled', 'Policies configured']
       }
@@ -56,12 +56,12 @@ export async function GET() {
     return NextResponse.json({
       dev: {
         tableExists: devTableExists,
-        tableName: process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev',
+        tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
         status: devTableExists ? 'ready' : 'setup_needed'
       },
       main: {
         tableExists: mainTableExists,
-        tableName: process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data',
+        tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data',
         status: mainTableExists ? 'ready' : 'setup_needed'
       },
       recommendation: {
