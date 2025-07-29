@@ -301,7 +301,7 @@ export default function AnalyticsPage() {
         const toolsUsage: { [key: string]: number } = {}
         const learningMethodsUsage: { [key: string]: number } = {}
         const responsesByDate: { [key: string]: number } = {}
-        const mainChallenges: string[] = {}
+        const mainChallenges: string[] = []
         const salaryDataByRole: { [key: string]: { ARS: number[], USD: number[] } } = {}
         const salaryDataByIndustry: { [key: string]: { ARS: number[], USD: number[] } } = {}
         const salaryRanges: { [key: string]: number } = {}
@@ -313,8 +313,32 @@ export default function AnalyticsPage() {
             roleDistribution[response.role] = (roleDistribution[response.role] || 0) + 1
           }
 
-          // Company type distribution
-          if (response.company_type) {
+          // Seniority distribution
+          if (response.seniority) {
+            seniorityDistribution[response.seniority] = (seniorityDistribution[response.seniority] || 0) + 1
+          }
+
+          // Industry distribution
+          if (response.industry) {
+            industryDistribution[response.industry] = (industryDistribution[response.industry] || 0) + 1
+          }
+
+          // Product type distribution
+          if (response.product_type) {
+            productTypeDistribution[response.product_type] = (productTypeDistribution[response.product_type] || 0) + 1
+          }
+
+          // Customer segment distribution
+          if (response.customer_segment) {
+            customerSegmentDistribution[response.customer_segment] =
+              (customerSegmentDistribution[response.customer_segment] || 0) + 1
+          }
+
+          // Company type distribution (using company_size as primary)
+          if (response.company_size) {
+            companySizeDistribution[response.company_size] = (companySizeDistribution[response.company_size] || 0) + 1
+          } else if (response.company_type) {
+            // Fallback to company_type if company_size is null
             companyTypeDistribution[response.company_type] = (companyTypeDistribution[response.company_type] || 0) + 1
           }
 
@@ -342,17 +366,109 @@ export default function AnalyticsPage() {
           if (response.main_challenge && response.main_challenge.trim()) {
             mainChallenges.push(response.main_challenge.trim())
           }
+
+          // Salary data processing
+          if (response.salary_currency && (response.salary_average || (response.salary_min && response.salary_max))) {
+            const currency = response.salary_currency
+            let salaryValue = 0
+
+            if (response.salary_average) {
+              salaryValue = parseInt(response.salary_average)
+            } else if (response.salary_min && response.salary_max) {
+              salaryValue = (parseInt(response.salary_min) + parseInt(response.salary_max)) / 2
+            }
+
+            if (salaryValue > 0) {
+              // Salary by currency
+              if (!salaryByCurrency[currency]) {
+                salaryByCurrency[currency] = []
+              }
+              salaryByCurrency[currency].push(salaryValue)
+
+              // Salary by role
+              if (response.role) {
+                if (!salaryDataByRole[response.role]) {
+                  salaryDataByRole[response.role] = { ARS: [], USD: [] }
+                }
+                if (currency === 'ARS' || currency === 'USD') {
+                  salaryDataByRole[response.role][currency as 'ARS' | 'USD'].push(salaryValue)
+                }
+              }
+
+              // Salary by industry
+              if (response.industry) {
+                if (!salaryDataByIndustry[response.industry]) {
+                  salaryDataByIndustry[response.industry] = { ARS: [], USD: [] }
+                }
+                if (currency === 'ARS' || currency === 'USD') {
+                  salaryDataByIndustry[response.industry][currency as 'ARS' | 'USD'].push(salaryValue)
+                }
+              }
+
+              // Salary range distribution
+              const range = getSalaryRange(salaryValue, currency)
+              salaryRanges[range] = (salaryRanges[range] || 0) + 1
+            }
+          }
         })
 
-        // No salary data processing needed - fields don't exist in current schema
+        // Calculate salary averages
+        const averageByCurrency: { [key: string]: number } = {}
+        const averageByRole: { [key: string]: { ARS: number; USD: number } } = {}
+        const averageByIndustry: { [key: string]: { ARS: number; USD: number } } = {}
+
+        // Average by currency
+        Object.keys(salaryByCurrency).forEach(currency => {
+          const salaries = salaryByCurrency[currency]
+          if (salaries.length > 0) {
+            averageByCurrency[currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+          }
+        })
+
+        // Average by role
+        Object.keys(salaryDataByRole).forEach(role => {
+          averageByRole[role] = { ARS: 0, USD: 0 }
+          Object.keys(salaryDataByRole[role]).forEach(currency => {
+            if (currency === 'ARS' || currency === 'USD') {
+              const salaries = salaryDataByRole[role][currency as 'ARS' | 'USD']
+              if (salaries.length > 0) {
+                averageByRole[role][currency as 'ARS' | 'USD'] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+              }
+            }
+          })
+        })
+
+        // Average by industry
+        Object.keys(salaryDataByIndustry).forEach(industry => {
+          averageByIndustry[industry] = { ARS: 0, USD: 0 }
+          Object.keys(salaryDataByIndustry[industry]).forEach(currency => {
+            if (currency === 'ARS' || currency === 'USD') {
+              const salaries = salaryDataByIndustry[industry][currency as 'ARS' | 'USD']
+              if (salaries.length > 0) {
+                averageByIndustry[industry][currency as 'ARS' | 'USD'] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+              }
+            }
+          })
+        })
 
         setData({
           roleDistribution,
+          seniorityDistribution,
+          industryDistribution,
+          productTypeDistribution,
+          customerSegmentDistribution,
           companyTypeDistribution,
+          companySizeDistribution,
           toolsUsage,
           learningMethodsUsage,
           responsesByDate,
           mainChallenges,
+          salaryData: {
+            averageByCurrency,
+            averageByRole,
+            averageByIndustry,
+            rangeDistribution: salaryRanges
+          },
           totalResponses: responses.length,
         })
       }
@@ -370,11 +486,17 @@ export default function AnalyticsPage() {
       generatedAt: new Date().toISOString(),
       totalResponses: data.totalResponses,
       roleDistribution: data.roleDistribution,
+      seniorityDistribution: data.seniorityDistribution,
+      industryDistribution: data.industryDistribution,
+      productTypeDistribution: data.productTypeDistribution,
+      customerSegmentDistribution: data.customerSegmentDistribution,
       companyTypeDistribution: data.companyTypeDistribution,
+      companySizeDistribution: data.companySizeDistribution,
       toolsUsage: data.toolsUsage,
       learningMethodsUsage: data.learningMethodsUsage,
       responsesByDate: data.responsesByDate,
       mainChallenges: data.mainChallenges,
+      salaryData: data.salaryData,
     }
 
     const blob = new Blob([JSON.stringify(analyticsReport, null, 2)], { type: "application/json" })
@@ -401,7 +523,12 @@ export default function AnalyticsPage() {
     }
 
     addDistributionToRows(data.roleDistribution, "Role Distribution", data.totalResponses)
+    addDistributionToRows(data.seniorityDistribution, "Seniority Distribution", data.totalResponses)
+    addDistributionToRows(data.industryDistribution, "Industry Distribution", data.totalResponses)
+    addDistributionToRows(data.productTypeDistribution, "Product Type Distribution", data.totalResponses)
+    addDistributionToRows(data.customerSegmentDistribution, "Customer Segment Distribution", data.totalResponses)
     addDistributionToRows(data.companyTypeDistribution, "Company Type Distribution", data.totalResponses)
+    addDistributionToRows(data.companySizeDistribution, "Company Size Distribution", data.totalResponses)
 
     const totalTools = Object.values(data.toolsUsage).reduce((sum, count) => sum + count, 0)
     addDistributionToRows(data.toolsUsage, "Tools Usage", totalTools)
