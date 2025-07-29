@@ -178,81 +178,49 @@ export default function ProductSurvey() {
 
   // Check maintenance mode on component mount
   useEffect(() => {
-    const loadSettings = async () => {
+    // Set default settings immediately
+    setAppSettings({
+      general: {
+        maintenanceMode: false,
+        appName: 'Product Community Survey (DEV)',
+        appUrl: window.location.origin
+      },
+      features: {
+        enableAnalytics: true,
+        enableEmailNotifications: false,
+        enableExport: true
+      },
+      database: {
+        tableName: 'pc_survey_data_dev',
+        environment: 'dev'
+      }
+    })
+    
+    // Check for survey configuration
+    const surveyConfig = localStorage.getItem("survey_config")
+    if (surveyConfig) {
       try {
-        // Import the app settings module
-        const { getAppSettings, isMaintenanceMode } = await import('@/lib/app-settings')
-        
-        // Get app settings from Supabase
-        const settings = await getAppSettings()
-        const maintenanceMode = await isMaintenanceMode()
-        
-        // Update maintenance mode state
-        setIsMaintenanceMode(maintenanceMode)
-        
-        // Update app settings state with proper structure
-        setAppSettings({
-          general: {
-            maintenanceMode: maintenanceMode,
-            appName: settings.app_name || 'Product Community Survey',
-            appUrl: settings.app_url || window.location.origin
-          },
-          features: {
-            enableAnalytics: settings.enable_analytics || true,
-            enableEmailNotifications: settings.enable_email_notifications || false,
-            enableExport: settings.enable_export || true
-          },
-          database: {
-            tableName: settings.survey_table_name || 'pc_survey_data_dev',
-            environment: settings.environment || 'dev'
-          }
-        })
-        
-        console.log('✅ App settings loaded from Supabase:', settings)
-        
-        // Also check for survey configuration
-        const surveyConfig = localStorage.getItem("survey_config")
-        if (surveyConfig) {
-          const config = JSON.parse(surveyConfig)
-          setSurveyConfig(config)
-          console.log("Survey config loaded:", config)
-        }
+        const config = JSON.parse(surveyConfig)
+        setSurveyConfig(config)
+        console.log("Survey config loaded:", config)
       } catch (error) {
-        console.error("❌ Error loading settings from Supabase:", error)
-        
-        // Fallback to localStorage if Supabase fails
-        try {
-          const savedSettings = localStorage.getItem("app_settings")
-          if (savedSettings) {
-            const settings: AppSettings = JSON.parse(savedSettings)
-            setIsMaintenanceMode(settings.general?.maintenanceMode || false)
-            setAppSettings(settings)
-            console.log('⚠️ Using fallback settings from localStorage')
-          }
-          
-          // Also check for survey configuration
-          const surveyConfig = localStorage.getItem("survey_config")
-          if (surveyConfig) {
-            const config = JSON.parse(surveyConfig)
-            setSurveyConfig(config)
-            console.log("Survey config loaded from localStorage:", config)
-          }
-        } catch (localError) {
-          console.error("❌ Error loading fallback settings:", localError)
-        }
-      } finally {
-        setIsLoading(false)
+        console.error("Error parsing survey config:", error)
       }
     }
     
-    loadSettings()
+    // Stop loading
+    setIsLoading(false)
+    console.log('✅ App loaded with default settings')
   }, [])
 
   // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading survey...</p>
+        </div>
       </div>
     )
   }
