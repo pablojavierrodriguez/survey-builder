@@ -173,7 +173,7 @@ export default function LoginPage() {
             </form>
 
             {/* Google Sign In - Only show if Supabase is configured */}
-            {isSupabaseConfigured && (
+            {isSupabaseConfigured() && (
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -230,7 +230,7 @@ export default function LoginPage() {
                   <p><strong>Viewer Demo:</strong> viewer / viewer123 (Read-only analytics)</p>
                   <p><strong>Admin Demo:</strong> admin-demo / demo123 (Read-only admin panel)</p>
                   <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {isSupabaseConfigured ? 'Or sign up with Google OAuth above' : 'Google OAuth requires Supabase configuration'}
+                    {isSupabaseConfigured() ? 'Or sign up with Google OAuth above' : 'Google OAuth requires Supabase configuration'}
                   </p>
                 </div>
               </div>

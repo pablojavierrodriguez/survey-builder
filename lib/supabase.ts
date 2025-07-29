@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 // Cache for Supabase configuration
 let supabaseConfig: { supabaseUrl: string; supabaseAnonKey: string } | null = null
+let supabaseClient: any = null
 
 // Function to get Supabase configuration from API
 async function getSupabaseConfig() {
@@ -31,6 +32,10 @@ async function getSupabaseConfig() {
 
 // Create Supabase client with dynamic configuration
 export async function createSupabaseClient() {
+  if (supabaseClient) {
+    return supabaseClient
+  }
+
   const config = await getSupabaseConfig()
   
   if (!config.supabaseUrl || !config.supabaseAnonKey) {
@@ -38,84 +43,21 @@ export async function createSupabaseClient() {
     return null
   }
 
-  return createClient(config.supabaseUrl, config.supabaseAnonKey)
-}
-
-// For backward compatibility, create a default client
-let supabaseClient: any = null
-
-// Initialize the client
-async function initializeClient() {
-  if (!supabaseClient) {
-    supabaseClient = await createSupabaseClient()
-  }
+  supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey)
   return supabaseClient
 }
 
-// Export the client with initialization
-export const supabase = {
-  auth: {
-    getSession: async () => {
-      const client = await initializeClient()
-      return client?.auth.getSession() || { data: { session: null }, error: null }
-    },
-    signUp: async (credentials: any) => {
-      const client = await initializeClient()
-      return client?.auth.signUp(credentials) || { data: null, error: new Error('Supabase not configured') }
-    },
-    signInWithPassword: async (credentials: any) => {
-      const client = await initializeClient()
-      return client?.auth.signInWithPassword(credentials) || { data: null, error: new Error('Supabase not configured') }
-    },
-    signOut: async () => {
-      const client = await initializeClient()
-      return client?.auth.signOut() || { error: new Error('Supabase not configured') }
-    }
-  },
-  from: (table: string) => {
-    return {
-      select: async (columns?: string) => {
-        const client = await initializeClient()
-        if (!client) {
-          return { data: null, error: new Error('Supabase not configured') }
-        }
-        return client.from(table).select(columns)
-      },
-      insert: async (data: any) => {
-        const client = await initializeClient()
-        if (!client) {
-          return { data: null, error: new Error('Supabase not configured') }
-        }
-        return client.from(table).insert(data)
-      },
-      update: async (data: any) => {
-        const client = await initializeClient()
-        if (!client) {
-          return { data: null, error: new Error('Supabase not configured') }
-        }
-        return client.from(table).update(data)
-      },
-      delete: async () => {
-        const client = await initializeClient()
-        if (!client) {
-          return { data: null, error: new Error('Supabase not configured') }
-        }
-        return client.from(table).delete()
-      }
-    }
-  },
-  rpc: async (functionName: string, params?: any) => {
-    const client = await initializeClient()
-    if (!client) {
-      return { data: null, error: new Error('Supabase not configured') }
-    }
-    return client.rpc(functionName, params)
-  }
-}
+// Initialize the client immediately
+createSupabaseClient().then(client => {
+  supabaseClient = client
+})
+
+// Export the client
+export const supabase = supabaseClient
 
 // Helper function to check if we can use Supabase features
 export function requireSupabase() {
-  if (!supabase) {
+  if (!supabaseClient) {
     console.warn('Supabase not configured - falling back to demo mode')
     return false
   }
@@ -124,8 +66,7 @@ export function requireSupabase() {
 
 // Check if Supabase is configured
 export function isSupabaseConfigured(): boolean {
-  // This will be determined at runtime when the client is initialized
-  return true // We'll check this dynamically
+  return !!supabaseClient
 }
 
 // Database types for better TypeScript support

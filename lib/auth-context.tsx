@@ -45,18 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Get initial session
-      supabase.auth.getSession().then(({ data: { session }, error }) => {
+      supabase.auth.getSession().then(({ data, error }) => {
         if (error) {
           console.error('Error getting session:', error)
         }
-        console.log('Initial session:', session)
-        setSession(session)
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          fetchProfile(session.user.id)
-        } else {
-          setLoading(false)
-        }
+        const session = data?.session
+        setUser(session?.user || null)
+        setLoading(false)
       })
 
       // Listen for auth changes

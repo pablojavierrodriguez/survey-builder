@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase, requireSupabase, isSupabaseConfigured } from "@/lib/supabase"
+import { supabase, requireSupabase, isSupabaseConfigured, createSupabaseClient } from "@/lib/supabase"
 import { getCurrentUserPermissions, getUserRole, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -188,17 +188,20 @@ export default function SettingsPage() {
   }
 
   const fetchUsers = async () => {
-    if (!requireSupabase()) {
-      setLoadingUsers(false)
-      return
-    }
-
     setLoadingUsers(true)
     try {
       console.log('Fetching users from Supabase...')
       
+      // Wait for Supabase client to be initialized
+      const client = await createSupabaseClient()
+      if (!client) {
+        console.error('Supabase client not available')
+        setUsers([])
+        return
+      }
+
       // Try to fetch from user_management view first
-      const { data: viewData, error: viewError } = await supabase!
+      const { data: viewData, error: viewError } = await client
         .from('user_management')
         .select('*')
         .order('created_at', { ascending: false })
@@ -208,7 +211,7 @@ export default function SettingsPage() {
         setUsers(viewData || [])
       } else {
         // Fallback to profiles table
-        const { data: profileData, error: profileError } = await supabase!
+        const { data: profileData, error: profileError } = await client
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false })
@@ -241,13 +244,14 @@ export default function SettingsPage() {
     try {
       console.log('Creating user with Supabase Auth:', newUser.email)
       
-      // Create user with Supabase Auth
-      if (!supabase) {
+      // Get Supabase client
+      const client = await createSupabaseClient()
+      if (!client) {
         alert('❌ Supabase client not initialized')
         return
       }
       
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await client.auth.signUp({
         email: newUser.email,
         password: newUser.password,
         options: {
@@ -765,8 +769,8 @@ export default function SettingsPage() {
               {userRole === 'admin' && (
                 <li>• <strong>Private Users:</strong> collaborator/collab456, admin/admin789</li>
               )}
-              <li>• <strong>Google OAuth:</strong> {isSupabaseConfigured ? 'Available on login page' : 'Requires Supabase config'}</li>
-              <li>• <strong>Email/Password:</strong> {isSupabaseConfigured ? 'Created via form below' : 'Requires Supabase config'}</li>
+              <li>• <strong>Google OAuth:</strong> {isSupabaseConfigured() ? 'Available on login page' : 'Requires Supabase config'}</li>
+              <li>• <strong>Email/Password:</strong> {isSupabaseConfigured() ? 'Created via form below' : 'Requires Supabase config'}</li>
             </ul>
           </div>
           
