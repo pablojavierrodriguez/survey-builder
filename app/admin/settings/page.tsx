@@ -72,6 +72,7 @@ export default function SettingsPage() {
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<"success" | "error" | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
+  const [debugMode, setDebugMode] = useState(false)
 
   // User Management State
   const [users, setUsers] = useState<any[]>([])
@@ -100,102 +101,115 @@ export default function SettingsPage() {
 
   const loadSettings = async () => {
     try {
+      // Debug: Check what's available
+      console.log('🔍 Debug - window.__ENV__:', (window as any).__ENV__)
+      console.log('🔍 Debug - process.env (client):', typeof window !== 'undefined' ? 'Available' : 'Not available')
+      
       const response = await fetch('/api/admin/settings')
       if (response.ok) {
         const data = await response.json()
+        console.log('🔍 Debug - API response:', data)
+        
+        // Get environment variables from window.__ENV__
+        const env = (window as any).__ENV__ || {}
         
         // Transform API data to local settings format
         const apiSettings = {
           database: {
-            url: data.settings?.supabase_url || (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || "" : ""),
-            apiKey: data.settings?.supabase_anon_key || (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || "" : ""),
-            tableName: data.survey_table_name || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
+            url: data.settings?.supabase_url || env.POSTGRES_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || "",
+            apiKey: data.settings?.supabase_anon_key || env.POSTGRES_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            tableName: data.survey_table_name || env.NEXT_PUBLIC_DB_TABLE || "",
             connectionTimeout: 30,
           },
           security: {
-            sessionTimeout: Math.floor((data.session_timeout || parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600" : "3600")) / 1000), // Convert from ms to seconds
-            maxLoginAttempts: data.max_login_attempts || Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10" : "10"),
+            sessionTimeout: Math.floor((data.session_timeout || parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600")) / 1000),
+            maxLoginAttempts: data.max_login_attempts || parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
             requireHttps: true,
             enableRateLimit: true,
             enforceStrongPasswords: false,
             enableTwoFactor: false,
           },
           notifications: {
-            emailAlerts: data.enable_email_notifications ?? (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false),
+            emailAlerts: data.enable_email_notifications ?? (env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true"),
             adminEmail: "",
             responseThreshold: 10,
           },
           general: {
-            appName: data.app_name || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : ""),
-            publicUrl: data.app_url || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || window.location.origin : ''),
+            appName: data.app_name || env.NEXT_PUBLIC_APP_NAME || "",
+            publicUrl: data.app_url || env.NEXT_PUBLIC_APP_URL || window.location.origin,
             maintenanceMode: data.maintenance_mode || false,
-            analyticsEnabled: data.enable_analytics ?? (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false),
+            analyticsEnabled: data.enable_analytics ?? (env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true"),
           },
         }
 
+        console.log('🔍 Debug - Final settings:', apiSettings)
         setSettings(apiSettings)
       } else {
         console.error('Failed to load settings from API')
-        // Fallback to environment variables
+        // Fallback to environment variables only
+        const env = (window as any).__ENV__ || {}
         const envSettings = {
           database: {
-            url: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || "" : ""),
-            apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || "" : ""),
-            tableName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
+            url: env.POSTGRES_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || "",
+            apiKey: env.POSTGRES_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            tableName: env.NEXT_PUBLIC_DB_TABLE || "",
             connectionTimeout: 30,
           },
           security: {
-            sessionTimeout: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600" : "3600"),
-            maxLoginAttempts: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10" : "10"),
+            sessionTimeout: parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
+            maxLoginAttempts: parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
             requireHttps: true,
             enableRateLimit: true,
             enforceStrongPasswords: false,
             enableTwoFactor: false,
           },
           notifications: {
-            emailAlerts: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false),
+            emailAlerts: env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
             adminEmail: "",
             responseThreshold: 10,
           },
           general: {
-            appName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : ""),
-            publicUrl: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || window.location.origin : ''),
+            appName: env.NEXT_PUBLIC_APP_NAME || "",
+            publicUrl: env.NEXT_PUBLIC_APP_URL || window.location.origin,
             maintenanceMode: false,
-            analyticsEnabled: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false),
+            analyticsEnabled: env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
           },
         }
+        console.log('🔍 Debug - Fallback settings:', envSettings)
         setSettings(envSettings)
       }
     } catch (error) {
       console.error('Error loading settings:', error)
-      // Fallback to environment variables
+      // Final fallback
+      const env = (window as any).__ENV__ || {}
       const envSettings = {
         database: {
-          url: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || "" : ""),
-          apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || "" : ""),
-          tableName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
+          url: env.POSTGRES_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || "",
+          apiKey: env.POSTGRES_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+          tableName: env.NEXT_PUBLIC_DB_TABLE || "",
           connectionTimeout: 30,
         },
         security: {
-          sessionTimeout: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600" : "3600"),
-          maxLoginAttempts: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10" : "10"),
+          sessionTimeout: parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
+          maxLoginAttempts: parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
           requireHttps: true,
           enableRateLimit: true,
           enforceStrongPasswords: false,
           enableTwoFactor: false,
         },
         notifications: {
-          emailAlerts: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false),
+          emailAlerts: env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
           adminEmail: "",
           responseThreshold: 10,
         },
         general: {
-          appName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : ""),
-          publicUrl: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || window.location.origin : ''),
+          appName: env.NEXT_PUBLIC_APP_NAME || "",
+          publicUrl: env.NEXT_PUBLIC_APP_URL || window.location.origin,
           maintenanceMode: false,
-          analyticsEnabled: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false),
+          analyticsEnabled: env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
         },
       }
+      console.log('🔍 Debug - Final fallback settings:', envSettings)
       setSettings(envSettings)
     }
   }
@@ -430,6 +444,14 @@ export default function SettingsPage() {
     }
   }
 
+  // Debug function to show environment variables
+  const showDebugInfo = () => {
+    const env = (window as any).__ENV__ || {}
+    console.log('🔍 Debug - Environment Variables:', env)
+    console.log('🔍 Debug - Current Settings:', settings)
+    alert(`Environment Variables:\n${JSON.stringify(env, null, 2)}\n\nCurrent Settings:\n${JSON.stringify(settings, null, 2)}`)
+  }
+
   // Sanitize sensitive data for demo users
   const getSafeSettings = (settings: AppSettings): AppSettings => {
     if (permissions.canViewSensitiveData) {
@@ -487,13 +509,22 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
-        <Button 
-          onClick={saveSettings} 
-          disabled={isSaving || !permissions.canEditSettings}
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {isSaving ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={showDebugInfo} 
+            variant="outline"
+          >
+            <Info className="w-4 h-4 mr-2" />
+            Debug
+          </Button>
+          <Button 
+            onClick={saveSettings} 
+            disabled={isSaving || !permissions.canEditSettings}
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
 
       {/* Database Settings */}

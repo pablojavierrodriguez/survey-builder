@@ -30,6 +30,11 @@ const envVars = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 }
 
+// Debug: Log environment variables (server-side only)
+if (typeof window === 'undefined') {
+  console.log('🔍 Server-side envVars:', envVars)
+}
+
 export default function RootLayout({
   children,
 }: {
