@@ -192,8 +192,8 @@ export default function SettingsPage() {
     try {
       console.log('Fetching users from Supabase...')
       
-      // Wait for Supabase client to be initialized
-      const client = await supabase
+      // Get Supabase client
+      const client = supabase
       if (!client) {
         console.error('Supabase client not available')
         setUsers([])
@@ -245,7 +245,7 @@ export default function SettingsPage() {
       console.log('Creating user with Supabase Auth:', newUser.email)
       
       // Get Supabase client
-      const client = await supabase
+      const client = supabase
       if (!client) {
         alert('❌ Supabase client not initialized')
         return

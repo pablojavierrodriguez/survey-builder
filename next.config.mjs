@@ -13,9 +13,9 @@ const nextConfig = {
     NEXT_PUBLIC_ENABLE_EXPORT: process.env.NEXT_PUBLIC_ENABLE_EXPORT,
     NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS,
     NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
-    // Supabase variables (these are public and safe to expose)
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    // Supabase variables - map from Vercel's POSTGRES_* variables to NEXT_PUBLIC_*
+    NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_SUPABASE_ANON_KEY,
   },
   images: {
     domains: ['localhost', '127.0.0.1'],
