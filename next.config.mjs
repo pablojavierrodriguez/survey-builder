@@ -1,79 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Security headers
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains'
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY'
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin'
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
-          }
-        ]
-      }
-    ]
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
   },
-  
-  // Redirect HTTP to HTTPS in production
-  async redirects() {
-    if (process.env.NODE_ENV === 'production') {
-      return [
-        {
-          source: '/(.*)',
-          has: [
-            {
-              type: 'header',
-              key: 'x-forwarded-proto',
-              value: 'http'
-            }
-          ],
-          destination: 'https://your-domain.com/$1',
-          permanent: true
-        }
-      ]
-    }
-    return []
-  },
-
-  // Environment variables validation
   env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
+    // Expose environment variables to the client
+    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_NODE_ENV: process.env.NEXT_PUBLIC_NODE_ENV,
+    NEXT_PUBLIC_DB_TABLE: process.env.NEXT_PUBLIC_DB_TABLE,
+    NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
+    NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS,
+    NEXT_PUBLIC_ENABLE_EXPORT: process.env.NEXT_PUBLIC_ENABLE_EXPORT,
+    NEXT_PUBLIC_SESSION_TIMEOUT: process.env.NEXT_PUBLIC_SESSION_TIMEOUT,
+    NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS: process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS,
+    NEXT_PUBLIC_DEBUG: process.env.NEXT_PUBLIC_DEBUG,
+    POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL,
+    POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
   },
-
-  // Performance optimizations
-  compress: true,
-  poweredByHeader: false,
-  
-  // Image optimization
   images: {
-    domains: ['qaauhwulohxeeacexrav.supabase.co'],
-    formats: ['image/webp', 'image/avif'],
-    unoptimized: true,
-  },
-
-  // ESLint and TypeScript configurations
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
+    domains: ['localhost', '127.0.0.1'],
   },
 }
 

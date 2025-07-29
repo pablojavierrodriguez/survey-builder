@@ -1,83 +1,61 @@
 import type { Metadata } from "next"
-import { Inter as FontSans } from "next/font/google"
-import "./globals.css" // Importa CSS global aquí y SOLO AQUÍ
-
-import { cn } from "@/lib/utils"
-import { ThemeProvider } from "@/components/theme-provider"
+import { Inter } from "next/font/google"
+import "./globals.css"
 import { AuthProvider } from "@/lib/auth-context"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
 
-const fontSans = FontSans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Product Community Survey",
-  description: "Manage product community surveys and analytics.",
-  generator: 'Next.js',
-  authors: [{ name: 'Pablo Javier Rodriguez' }],
-  keywords: ['survey', 'product management', 'community', 'analytics'],
+  title: process.env.NEXT_PUBLIC_APP_NAME || "Product Community Survey",
+  description: "A comprehensive survey for product community insights",
+}
+
+// Expose environment variables to the client
+const envVars = {
+  NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_NODE_ENV: process.env.NEXT_PUBLIC_NODE_ENV,
+  NEXT_PUBLIC_DB_TABLE: process.env.NEXT_PUBLIC_DB_TABLE,
+  NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
+  NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS,
+  NEXT_PUBLIC_ENABLE_EXPORT: process.env.NEXT_PUBLIC_ENABLE_EXPORT,
+  NEXT_PUBLIC_SESSION_TIMEOUT: process.env.NEXT_PUBLIC_SESSION_TIMEOUT,
+  NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS: process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS,
+  NEXT_PUBLIC_DEBUG: process.env.NEXT_PUBLIC_DEBUG,
+  POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL,
+  POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head />
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable
-        )}
-      >
-        {/*
-          Script para prevenir FOUC (Flash of Unstyled Content) al cargar la página.
-          Debe ir justo después de la etiqueta <body> de apertura.
-          Este script lee el tema guardado y lo aplica antes de la hidratación de React.
-        */}
+      <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  const theme = localStorage.getItem('theme');
-                  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                  // Default to light mode unless explicitly set to dark
-                  if (theme === 'dark' || (theme === 'system' && systemPrefersDark)) {
-                    document.documentElement.classList.add('dark');
-                    document.documentElement.style.setProperty('color-scheme', 'dark');
-                  } else {
-                    // Explicitly set light mode as default
-                    document.documentElement.classList.remove('dark');
-                    document.documentElement.style.setProperty('color-scheme', 'light');
-                  }
-                } catch (e) {
-                  // Fallback to light mode on error
-                  document.documentElement.classList.remove('dark');
-                  document.documentElement.style.setProperty('color-scheme', 'light');
-                  console.error("Failed to set theme on initial load:", e);
-                }
-              })();
-            `,
+            __html: `window.__ENV__ = ${JSON.stringify(envVars)};`,
           }}
         />
-        {/*
-          ThemeProvider de next-themes debe envolver todo el contenido (children)
-          para proporcionar el contexto del tema a todos los componentes.
-          'attribute="class"' asegura que next-themes añada o quite la clase 'dark' del <html>.
-        */}
+      </head>
+      <body className={inter.className}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children} {/* Aquí se renderiza TODO el contenido de tu aplicación, incluyendo /admin */}
+            {children}
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>

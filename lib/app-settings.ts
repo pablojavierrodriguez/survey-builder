@@ -58,9 +58,22 @@ function getCurrentEnvironment(): 'dev' | 'prod' {
 
 // Get Supabase configuration
 function getSupabaseConfig() {
+  // Server-side environment variables
+  if (typeof window === 'undefined') {
+    return {
+      supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+      anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    }
+  }
+  
+  // Client-side environment variables
   return {
-    supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-    anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    supabaseUrl: (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
+                 (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL ||
+                 (window as any).__ENV__?.SUPABASE_URL || "",
+    anonKey: (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+             (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+             (window as any).__ENV__?.SUPABASE_ANON_KEY || ""
   }
 }
 

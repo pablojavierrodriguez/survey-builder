@@ -89,42 +89,116 @@ export default function SettingsPage() {
     setUserRole(currentRole)
     setPermissions(getCurrentUserPermissions())
 
-    // Load settings from environment variables first
-    const envSettings = {
-      database: {
-        url: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-        apiKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "",
-        tableName: process.env.NEXT_PUBLIC_DB_TABLE || "",
-        connectionTimeout: 30,
-      },
-      security: {
-        sessionTimeout: Number.parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
-        maxLoginAttempts: Number.parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
-        requireHttps: true,
-        enableRateLimit: true,
-        enforceStrongPasswords: false,
-        enableTwoFactor: false,
-      },
-      notifications: {
-        emailAlerts: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
-        adminEmail: "",
-        responseThreshold: 10,
-      },
-      general: {
-        appName: process.env.NEXT_PUBLIC_APP_NAME || "",
-        publicUrl: process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
-        maintenanceMode: false,
-        analyticsEnabled: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
-      },
-    }
-
-    setSettings(envSettings)
+    // Load settings from API
+    loadSettings()
     
     // Load users if permitted
     if (permissions.canViewUsers) {
       fetchUsers()
     }
   }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/settings')
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Transform API data to local settings format
+        const apiSettings = {
+          database: {
+            url: data.settings?.supabase_url || (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
+            apiKey: data.settings?.supabase_anon_key || (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
+            tableName: data.survey_table_name || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
+            connectionTimeout: 30,
+          },
+          security: {
+            sessionTimeout: Math.floor((data.session_timeout || parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600" : "3600")) / 1000), // Convert from ms to seconds
+            maxLoginAttempts: data.max_login_attempts || Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10" : "10"),
+            requireHttps: true,
+            enableRateLimit: true,
+            enforceStrongPasswords: false,
+            enableTwoFactor: false,
+          },
+          notifications: {
+            emailAlerts: data.enable_email_notifications ?? (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false),
+            adminEmail: "",
+            responseThreshold: 10,
+          },
+          general: {
+            appName: data.app_name || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : ""),
+            publicUrl: data.app_url || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || window.location.origin : ''),
+            maintenanceMode: data.maintenance_mode || false,
+            analyticsEnabled: data.enable_analytics ?? (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false),
+          },
+        }
+
+        setSettings(apiSettings)
+      } else {
+        console.error('Failed to load settings from API')
+        // Fallback to environment variables
+        const envSettings = {
+          database: {
+            url: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
+            apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
+            tableName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
+            connectionTimeout: 30,
+          },
+          security: {
+            sessionTimeout: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600" : "3600"),
+            maxLoginAttempts: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10" : "10"),
+            requireHttps: true,
+            enableRateLimit: true,
+            enforceStrongPasswords: false,
+            enableTwoFactor: false,
+          },
+          notifications: {
+            emailAlerts: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false),
+            adminEmail: "",
+            responseThreshold: 10,
+          },
+          general: {
+            appName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : ""),
+            publicUrl: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || window.location.origin : ''),
+            maintenanceMode: false,
+            analyticsEnabled: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false),
+          },
+        }
+        setSettings(envSettings)
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      // Fallback to environment variables
+      const envSettings = {
+        database: {
+          url: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
+          apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
+          tableName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
+          connectionTimeout: 30,
+        },
+        security: {
+          sessionTimeout: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600" : "3600"),
+          maxLoginAttempts: Number.parseInt(typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10" : "10"),
+          requireHttps: true,
+          enableRateLimit: true,
+          enforceStrongPasswords: false,
+          enableTwoFactor: false,
+        },
+        notifications: {
+          emailAlerts: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false),
+          adminEmail: "",
+          responseThreshold: 10,
+        },
+        general: {
+          appName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : ""),
+          publicUrl: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || window.location.origin : ''),
+          maintenanceMode: false,
+          analyticsEnabled: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false),
+        },
+      }
+      setSettings(envSettings)
+    }
+  }
 
   const fetchUsers = async () => {
     if (!requireSupabase()) {
@@ -266,20 +340,62 @@ export default function SettingsPage() {
     
     setIsSaving(true)
 
-    // Simulate save delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      // Transform local settings to API format
+      const apiSettings = {
+        survey_table_name: settings.database.tableName,
+        app_name: settings.general.appName,
+        app_url: settings.general.publicUrl,
+        maintenance_mode: settings.general.maintenanceMode,
+        enable_analytics: settings.general.analyticsEnabled,
+        enable_email_notifications: settings.notifications.emailAlerts,
+        enable_export: true, // Default to true
+        session_timeout: settings.security.sessionTimeout * 1000, // Convert to milliseconds
+        max_login_attempts: settings.security.maxLoginAttempts,
+        theme_default: 'system',
+        language_default: 'en',
+        settings: {
+          supabase_url: settings.database.url,
+          supabase_anon_key: settings.database.apiKey,
+          connection_timeout: settings.database.connectionTimeout,
+          require_https: settings.security.requireHttps,
+          enable_rate_limit: settings.security.enableRateLimit,
+          enforce_strong_passwords: settings.security.enforceStrongPasswords,
+          enable_two_factor: settings.security.enableTwoFactor,
+          admin_email: settings.notifications.adminEmail,
+          response_threshold: settings.notifications.responseThreshold
+        }
+      }
 
-    // Save to localStorage (in production, this would be saved to backend)
-    localStorage.setItem("app_settings", JSON.stringify(settings))
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('app_settings_changed', { 
-      detail: settings 
-    }))
-    console.log('Settings saved and event dispatched')
+      const response = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiSettings)
+      })
 
-    setIsSaving(false)
-    alert("Settings saved successfully!")
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Settings saved successfully:', result)
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('app_settings_changed', { 
+          detail: settings 
+        }))
+        
+        alert("Settings saved successfully!")
+      } else {
+        const error = await response.json()
+        console.error('Failed to save settings:', error)
+        alert(`Failed to save settings: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      alert('Error saving settings. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const testDatabaseConnection = async () => {

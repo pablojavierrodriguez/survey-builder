@@ -43,11 +43,27 @@ export default function DatabasePage() {
     try {
       setConnectionStatus("testing")
       
+      // First, try to get current settings from API
+      let currentSettings = null
+      try {
+        const settingsResponse = await fetch('/api/admin/settings')
+        if (settingsResponse.ok) {
+          currentSettings = await settingsResponse.json()
+        }
+      } catch (error) {
+        console.warn('Could not fetch current settings:', error)
+      }
+      
       // Get environment-specific config
       const config = getDatabaseConfigSync()
       
+      // Use settings from API if available, otherwise fall back to config
+      const tableName = currentSettings?.survey_table_name || config.tableName
+      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
+      const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
+      
       // Check if configured table exists
-      const tableExists = await ensureTableExists(config.tableName)
+      const tableExists = await ensureTableExists(tableName)
       setDevTableExists(tableExists)
       if (!tableExists) {
         setConnectionStatus("disconnected")
@@ -55,8 +71,12 @@ export default function DatabasePage() {
       }
       
       // Test connection to the appropriate table
-      const response = await fetch(getDatabaseEndpointSync("?limit=1"), {
-        headers: getDatabaseHeadersSync()
+      const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}?limit=1`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        }
       })
       
       if (response.ok) {
@@ -77,11 +97,34 @@ export default function DatabasePage() {
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
-      // Try to fetch from environment-specific database first
+      // First, try to get current settings from API
+      let currentSettings = null
+      try {
+        const settingsResponse = await fetch('/api/admin/settings')
+        if (settingsResponse.ok) {
+          currentSettings = await settingsResponse.json()
+        }
+      } catch (error) {
+        console.warn('Could not fetch current settings:', error)
+      }
+      
+      // Get environment-specific config
+      const config = getDatabaseConfigSync()
+      
+      // Use settings from API if available, otherwise fall back to config
+      const tableName = currentSettings?.survey_table_name || config.tableName
+      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
+      const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
+      
+      // Try to fetch from current database configuration
       const response = await fetch(
-        getDatabaseEndpointSync("?select=*&order=created_at.desc"),
+        `${supabaseUrl}/rest/v1/${tableName}?select=*&order=created_at.desc`,
         {
-          headers: getDatabaseHeadersSync()
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+          }
         }
       )
 
@@ -221,39 +264,51 @@ export default function DatabasePage() {
   const handleAutoSetup = async () => {
     setSetupLoading(true)
     try {
+      // First, try to get current settings from API
+      let currentSettings = null
+      try {
+        const settingsResponse = await fetch('/api/admin/settings')
+        if (settingsResponse.ok) {
+          currentSettings = await settingsResponse.json()
+        }
+      } catch (error) {
+        console.warn('Could not fetch current settings:', error)
+      }
+      
       const config = getDatabaseConfigSync()
       const environment = config.environment
       
-      const response = await fetch('/api/admin/setup-environment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ environment })
-      })
+      // Use settings from API if available, otherwise fall back to config
+      const tableName = currentSettings?.survey_table_name || config.tableName
+      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
+      
+      // Show manual setup instructions with current configuration
+      const manualInstructions = `📋 MANUAL SETUP REQUIRED:
 
-      const result = await response.json()
+Current Configuration:
+- Environment: ${environment}
+- Table Name: ${tableName}
+- Supabase URL: ${supabaseUrl}
 
-      if (result.success) {
-        setDevTableExists(true)
-        setConnectionStatus("connected")
-        // Refetch responses after setup
-        await fetchResponses()
-        alert(`✅ ${result.environment.toUpperCase()} environment setup completed successfully!\n\nTable: ${result.details.tableName}\nSample Data: ${result.details.sampleData}\nFeatures: ${result.details.features.join(', ')}`)
-      } else {
-        console.error('Setup failed:', result.error)
-        
-        // Show detailed instructions for manual setup
-        const manualInstructions = `❌ Auto-setup failed: ${result.error}
-
-📋 MANUAL SETUP REQUIRED:
-
+Steps:
 1. Go to your Supabase Dashboard
 2. Open the SQL Editor
-3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
+3. Copy and run the database schema script
 4. The script will create all necessary tables and sample data
 
-        🔗 Direct link: ${process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""}/project/default/sql
+🔗 Direct link: ${supabaseUrl}/project/default/sql
+
+Note: Auto-setup is not available. Please configure the database manually using the settings panel.`
+
+      alert(manualInstructions)
+      
+    } catch (error) {
+      console.error('Setup error:', error)
+      alert('Error during setup. Please try again.')
+    } finally {
+      setSetupLoading(false)
+    }
+  }
 
 After running the SQL script, refresh this page to see your data.`
         

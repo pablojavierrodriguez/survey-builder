@@ -26,11 +26,62 @@ export const env = {
   DEBUG: process.env.NEXT_PUBLIC_DEBUG === "true",
 }
 
+// Client-side environment variables (for browser access)
+export const clientEnv = {
+  // Supabase Configuration
+  SUPABASE_URL: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
+    (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL ||
+    (window as any).__ENV__?.SUPABASE_URL || "" : "",
+  SUPABASE_ANON_KEY: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : "",
+
+  // App Configuration
+  APP_NAME: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_APP_NAME || "" : "",
+  APP_URL: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_APP_URL || "" : "",
+
+  // Database Configuration
+  DB_TABLE: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : "",
+
+  // Security Configuration
+  SESSION_TIMEOUT: typeof window !== 'undefined' ? 
+    Number.parseInt((window as any).__ENV__?.NEXT_PUBLIC_SESSION_TIMEOUT || "3600") : 3600,
+  MAX_LOGIN_ATTEMPTS: typeof window !== 'undefined' ? 
+    Number.parseInt((window as any).__ENV__?.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10") : 10,
+
+  // Feature Flags
+  ENABLE_ANALYTICS: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" : false,
+  ENABLE_EMAIL_NOTIFICATIONS: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true" : false,
+  ENABLE_EXPORT: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_ENABLE_EXPORT === "true" : false,
+
+  // Development
+  NODE_ENV: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_NODE_ENV || "development" : "development",
+  IS_PRODUCTION: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_NODE_ENV === "production" : false,
+  DEBUG: typeof window !== 'undefined' ? 
+    (window as any).__ENV__?.NEXT_PUBLIC_DEBUG === "true" : false,
+}
+
+// Get environment variables (server-side or client-side)
+export function getEnv() {
+  return typeof window !== 'undefined' ? clientEnv : env
+}
+
 // Validate required environment variables
 export function validateEnv() {
+  const currentEnv = getEnv()
   const required = ["SUPABASE_URL", "SUPABASE_ANON_KEY"]
 
-  const missing = required.filter((key) => !env[key as keyof typeof env])
+  const missing = required.filter((key) => !currentEnv[key as keyof typeof currentEnv])
 
   if (missing.length > 0) {
     console.warn(`Missing required environment variables: ${missing.join(", ")}`)

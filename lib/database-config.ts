@@ -44,9 +44,22 @@ function getCurrentEnvironment(): 'dev' | 'prod' {
 
 // Get Supabase configuration
 function getSupabaseConfig() {
+  // Server-side environment variables
+  if (typeof window === 'undefined') {
+    return {
+      supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+      anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    }
+  }
+  
+  // Client-side environment variables
   return {
-    supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-    anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    supabaseUrl: (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
+                 (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL ||
+                 (window as any).__ENV__?.SUPABASE_URL || "",
+    anonKey: (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+             (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+             (window as any).__ENV__?.SUPABASE_ANON_KEY || ""
   }
 }
 
@@ -205,12 +218,15 @@ export function getDatabaseConfigSync(): DatabaseConfig {
   const environment = getCurrentEnvironment()
   const baseConfig = getSupabaseConfig()
   
-  // Use environment variables for table names
-  const devTableName = process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev'
-  const prodTableName = process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data'
-  
-  // Select table name based on environment
-  const tableName = environment === 'dev' ? devTableName : prodTableName
+  // Use environment variables for table names (server-side or client-side)
+  let tableName: string
+  if (typeof window === 'undefined') {
+    // Server-side
+    tableName = process.env.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data')
+  } else {
+    // Client-side
+    tableName = (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data')
+  }
   
   return {
     ...baseConfig,
