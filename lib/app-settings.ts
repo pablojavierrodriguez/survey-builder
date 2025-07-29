@@ -23,7 +23,7 @@ let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 // Get Supabase configuration
-function getSupabaseConfig() {
+async function getSupabaseConfig() {
   // Server-side environment variables
   if (typeof window === 'undefined') {
     return {
@@ -32,10 +32,24 @@ function getSupabaseConfig() {
     }
   }
   
-  // Client-side environment variables - POSTGRES_* are server-side only
-  return {
-    supabaseUrl: "",
-    anonKey: ""
+  // Client-side: fetch from API
+  try {
+    const response = await fetch('/api/config/supabase')
+    if (!response.ok) {
+      throw new Error('Failed to fetch Supabase config')
+    }
+    
+    const config = await response.json()
+    return {
+      supabaseUrl: config.supabaseUrl,
+      anonKey: config.supabaseAnonKey
+    }
+  } catch (error) {
+    console.error('Error fetching Supabase config:', error)
+    return {
+      supabaseUrl: "",
+      anonKey: ""
+    }
   }
 }
 
@@ -66,7 +80,7 @@ function resolveSetting(manualValue: any, envValue: any, defaultValue: any) {
 
 // Fetch app settings from Supabase
 export async function fetchAppSettings(): Promise<AppSettings | null> {
-  const config = getSupabaseConfig()
+  const config = await getSupabaseConfig()
   
   // Check cache first
   const now = Date.now()
@@ -176,7 +190,7 @@ export function clearSettingsCache() {
 
 // Update app settings in Supabase (admin only)
 export async function updateAppSettings(updates: Partial<AppSettings>): Promise<{ success: boolean; error?: string }> {
-  const config = getSupabaseConfig()
+  const config = await getSupabaseConfig()
   
   if (!config.supabaseUrl || !config.anonKey) {
     return { success: false, error: 'No valid Supabase configuration found' }

@@ -68,6 +68,8 @@ export default function SettingsPage() {
     },
   })
 
+  const [loading, setLoading] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   const [isSaving, setIsSaving] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<"success" | "error" | null>(null)
@@ -100,15 +102,13 @@ export default function SettingsPage() {
   }, [])
 
   const loadSettings = async () => {
+    setLoading(true)
     try {
-      // Debug: Check what's available
-      console.log('🔍 Debug - window.__ENV__:', (window as any).__ENV__)
-      console.log('🔍 Debug - process.env (client):', typeof window !== 'undefined' ? 'Available' : 'Not available')
       
+      // First try to get settings from API
       const response = await fetch('/api/admin/settings')
       if (response.ok) {
         const data = await response.json()
-        console.log('🔍 Debug - API response:', data)
         
         // Get environment variables from window.__ENV__
         const env = (window as any).__ENV__ || {}
@@ -122,65 +122,36 @@ export default function SettingsPage() {
             connectionTimeout: 30,
           },
           security: {
-            sessionTimeout: Math.floor((data.session_timeout || parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600")) / 1000),
-            maxLoginAttempts: data.max_login_attempts || parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
+            sessionTimeout: data.session_timeout || 28800,
+            maxLoginAttempts: data.max_login_attempts || 10,
             requireHttps: true,
             enableRateLimit: true,
             enforceStrongPasswords: false,
             enableTwoFactor: false,
           },
           notifications: {
-            emailAlerts: data.enable_email_notifications ?? (env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true"),
+            emailAlerts: data.enable_email_notifications || false,
             adminEmail: "",
             responseThreshold: 10,
           },
           general: {
             appName: data.app_name || env.NEXT_PUBLIC_APP_NAME || "",
-            publicUrl: data.app_url || env.NEXT_PUBLIC_APP_URL || window.location.origin,
+            publicUrl: data.app_url || env.NEXT_PUBLIC_APP_URL || "",
             maintenanceMode: data.maintenance_mode || false,
-            analyticsEnabled: data.enable_analytics ?? (env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true"),
+            analyticsEnabled: data.enable_analytics || false,
           },
         }
-
-        console.log('🔍 Debug - Final settings:', apiSettings)
+        
         setSettings(apiSettings)
+        console.log('🔍 Debug - API response:', data)
+        console.log('🔍 Debug - Final settings:', apiSettings)
       } else {
-        console.error('Failed to load settings from API')
-        // Fallback to environment variables only
-        const env = (window as any).__ENV__ || {}
-        const envSettings = {
-          database: {
-            url: "",
-            apiKey: "",
-            tableName: env.NEXT_PUBLIC_DB_TABLE || "",
-            connectionTimeout: 30,
-          },
-          security: {
-            sessionTimeout: parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
-            maxLoginAttempts: parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
-            requireHttps: true,
-            enableRateLimit: true,
-            enforceStrongPasswords: false,
-            enableTwoFactor: false,
-          },
-          notifications: {
-            emailAlerts: env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
-            adminEmail: "",
-            responseThreshold: 10,
-          },
-          general: {
-            appName: env.NEXT_PUBLIC_APP_NAME || "",
-            publicUrl: env.NEXT_PUBLIC_APP_URL || window.location.origin,
-            maintenanceMode: false,
-            analyticsEnabled: env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
-          },
-        }
-        console.log('🔍 Debug - Fallback settings:', envSettings)
-        setSettings(envSettings)
+        throw new Error('Failed to fetch settings')
       }
     } catch (error) {
       console.error('Error loading settings:', error)
-      // Final fallback
+      
+      // Fallback to environment variables only
       const env = (window as any).__ENV__ || {}
       const envSettings = {
         database: {
@@ -190,8 +161,8 @@ export default function SettingsPage() {
           connectionTimeout: 30,
         },
         security: {
-          sessionTimeout: parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
-          maxLoginAttempts: parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
+          sessionTimeout: Number.parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
+          maxLoginAttempts: Number.parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
           requireHttps: true,
           enableRateLimit: true,
           enforceStrongPasswords: false,
@@ -204,13 +175,15 @@ export default function SettingsPage() {
         },
         general: {
           appName: env.NEXT_PUBLIC_APP_NAME || "",
-          publicUrl: env.NEXT_PUBLIC_APP_URL || window.location.origin,
+          publicUrl: env.NEXT_PUBLIC_APP_URL || "",
           maintenanceMode: false,
           analyticsEnabled: env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
         },
       }
-      console.log('🔍 Debug - Final fallback settings:', envSettings)
+      
       setSettings(envSettings)
+    } finally {
+      setLoading(false)
     }
   }
 

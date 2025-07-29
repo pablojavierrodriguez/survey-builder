@@ -9,7 +9,7 @@ export interface DatabaseConfig {
 }
 
 // Get Supabase configuration from environment variables
-export function getSupabaseConfig(): DatabaseConfig {
+export async function getSupabaseConfig(): Promise<DatabaseConfig> {
   // Server-side environment variables
   if (typeof window === 'undefined') {
     return {
@@ -20,7 +20,39 @@ export function getSupabaseConfig(): DatabaseConfig {
     }
   }
   
-  // Client-side environment variables - POSTGRES_* are server-side only
+  // Client-side: fetch from API
+  try {
+    const response = await fetch('/api/config/supabase')
+    if (!response.ok) {
+      throw new Error('Failed to fetch Supabase config')
+    }
+    
+    const config = await response.json()
+    return {
+      supabaseUrl: config.supabaseUrl,
+      anonKey: config.supabaseAnonKey,
+      tableName: config.tableName,
+      environment: config.environment
+    }
+  } catch (error) {
+    console.error('Error fetching Supabase config:', error)
+    return {
+      supabaseUrl: "",
+      anonKey: "",
+      tableName: (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "survey_data",
+      environment: "production"
+    }
+  }
+}
+
+// Get database configuration
+export async function getDatabaseConfig(): Promise<DatabaseConfig> {
+  return await getSupabaseConfig()
+}
+
+// Get database configuration synchronously (for backward compatibility)
+export function getDatabaseConfigSync(): DatabaseConfig {
+  // This is a fallback for synchronous contexts
   return {
     supabaseUrl: "",
     anonKey: "",
@@ -29,19 +61,9 @@ export function getSupabaseConfig(): DatabaseConfig {
   }
 }
 
-// Get database configuration synchronously (for immediate use)
-export function getDatabaseConfigSync(): DatabaseConfig {
-  return getSupabaseConfig()
-}
-
-// Get database configuration asynchronously (for API calls)
-export async function getDatabaseConfig(): Promise<DatabaseConfig> {
-  return getSupabaseConfig()
-}
-
 // Get database endpoint for API calls
 export async function getDatabaseEndpoint(): Promise<string> {
-  const config = getSupabaseConfig()
+  const config = await getSupabaseConfig()
   return `${config.supabaseUrl}/rest/v1/${config.tableName}`
 }
 
@@ -53,7 +75,7 @@ export function getDatabaseEndpointSync(): string {
 
 // Get database headers for API calls
 export async function getDatabaseHeaders(): Promise<Record<string, string>> {
-  const config = getSupabaseConfig()
+  const config = await getSupabaseConfig()
   return {
     'apikey': config.anonKey,
     'Authorization': `Bearer ${config.anonKey}`,
@@ -78,7 +100,7 @@ export function validateDatabaseConfig(config: DatabaseConfig): boolean {
 
 // Function to check if any table exists
 export async function ensureTableExists(tableName?: string): Promise<boolean> {
-  const config = getSupabaseConfig()
+  const config = await getSupabaseConfig()
   const targetTable = tableName || config.tableName
   
   try {
@@ -108,7 +130,7 @@ export async function ensureDevTableExists(): Promise<boolean> {
 
 // Function to submit survey data to Supabase
 export async function submitSurveyToDatabase(surveyData: any): Promise<{ success: boolean; error?: string; data?: any }> {
-  const config = getSupabaseConfig()
+  const config = await getSupabaseConfig()
   
   try {
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}`, {
@@ -150,7 +172,7 @@ export async function checkDatabaseConnection(): Promise<{
   tableName: string; 
   error?: string 
 }> {
-  const config = getSupabaseConfig()
+  const config = await getSupabaseConfig()
   
   try {
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}?limit=1`, {
