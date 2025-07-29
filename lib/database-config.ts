@@ -205,12 +205,16 @@ export function getDatabaseConfigSync(): DatabaseConfig {
   const environment = getCurrentEnvironment()
   const baseConfig = getSupabaseConfig()
   
-  // Fallback configuration
-  const fallbackTableName = environment === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data'
+  // Use environment variables for table names
+  const devTableName = process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev'
+  const prodTableName = process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data'
+  
+  // Select table name based on environment
+  const tableName = environment === 'dev' ? devTableName : prodTableName
   
   return {
     ...baseConfig,
-    tableName: fallbackTableName,
+    tableName: tableName,
     environment: environment
   }
 }

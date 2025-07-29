@@ -60,7 +60,8 @@ export class SupabaseManager {
   // Check if dev table exists
   static async checkDevTableExists(): Promise<boolean> {
     try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/information_schema.tables?table_schema=eq.public&table_name=eq.pc_survey_data_dev&select=table_name`, {
+      const devTableName = process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev'
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/information_schema.tables?table_schema=eq.public&table_name=eq.${devTableName}&select=table_name`, {
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
@@ -91,7 +92,8 @@ export class SupabaseManager {
       // Try to create a simple table structure first
       // Since exec_sql RPC is not available by default, we'll use an alternative approach
       // Try to insert a test record to see if table exists, if not it will fail
-      const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/pc_survey_data_dev?limit=1`, {
+      const devTableName = process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev'
+      const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/${devTableName}?limit=1`, {
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
@@ -169,7 +171,8 @@ export class SupabaseManager {
         }
       ]
 
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/pc_survey_data_dev`, {
+      const devTableName = process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev'
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/${devTableName}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -193,7 +196,8 @@ export class SupabaseManager {
   // Check if main table exists
   static async checkMainTableExists(): Promise<boolean> {
     try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/information_schema.tables?table_schema=eq.public&table_name=eq.pc_survey_data&select=table_name`, {
+      const prodTableName = process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data'
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/information_schema.tables?table_schema=eq.public&table_name=eq.${prodTableName}&select=table_name`, {
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
@@ -222,7 +226,8 @@ export class SupabaseManager {
       }
 
       // Try to test if table exists
-      const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/pc_survey_data?limit=1`, {
+      const prodTableName = process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data'
+      const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/${prodTableName}?limit=1`, {
         headers: {
           'apikey': SUPABASE_SERVICE_KEY!,
           'Authorization': `Bearer ${SUPABASE_SERVICE_KEY!}`
