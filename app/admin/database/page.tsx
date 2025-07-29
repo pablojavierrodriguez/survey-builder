@@ -49,6 +49,31 @@ export default function DatabasePage() {
     filterResponses()
   }, [responses, searchTerm, selectedRole])
 
+  // Listen for settings changes and refresh database info
+  useEffect(() => {
+    const handleSettingsChange = () => {
+      console.log('Settings changed, refreshing database info...')
+      testConnection()
+      fetchResponses()
+    }
+
+    // Listen for custom events when settings are saved
+    window.addEventListener('app_settings_changed', handleSettingsChange)
+    window.addEventListener('settingsUpdated', handleSettingsChange)
+    
+    // Also listen for storage changes (fallback)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'survey_settings' || e.key === 'app_settings') {
+        handleSettingsChange()
+      }
+    })
+
+    return () => {
+      window.removeEventListener('app_settings_changed', handleSettingsChange)
+      window.removeEventListener('settingsUpdated', handleSettingsChange)
+    }
+  }, [])
+
   const testConnection = async () => {
     try {
       setConnectionStatus("testing")
@@ -337,7 +362,10 @@ Note: Auto-setup is not available. Please configure the database manually using 
             )}
             <span className="text-sm text-muted-foreground capitalize">{connectionStatus}</span>
           </div>
-          <Button onClick={fetchResponses} variant="outline">
+          <Button onClick={() => {
+            testConnection()
+            fetchResponses()
+          }} variant="outline">
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
@@ -349,13 +377,28 @@ Note: Auto-setup is not available. Please configure the database manually using 
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Environment</p>
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Current Configuration</p>
               <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
                 {getDatabaseConfigSync().environment.toUpperCase()} - Table: {getDatabaseConfigSync().tableName}
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                URL: {getDatabaseConfigSync().supabaseUrl?.substring(0, 30)}...
               </p>
             </div>
             <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Configuration Info */}
+      <Card className="bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800">
+        <CardContent className="p-4">
+          <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+            ℹ️ Configuration Management
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Database configuration is managed in the Settings tab. Changes made there will automatically update this view.
+          </p>
         </CardContent>
       </Card>
 

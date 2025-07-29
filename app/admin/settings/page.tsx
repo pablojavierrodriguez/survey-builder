@@ -389,8 +389,11 @@ export default function SettingsPage() {
         const result = await response.json()
         console.log('Settings saved successfully:', result)
         
-        // Dispatch custom event to notify other components
+        // Dispatch custom events to notify other components
         window.dispatchEvent(new CustomEvent('app_settings_changed', { 
+          detail: settings 
+        }))
+        window.dispatchEvent(new CustomEvent('settingsUpdated', { 
           detail: settings 
         }))
         
