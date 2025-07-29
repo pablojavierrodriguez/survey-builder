@@ -226,7 +226,7 @@ export default function ProductSurvey() {
             enableExport: true
           },
           database: {
-            tableName: isDev ? 'pc_survey_data_dev' : 'pc_survey_data',
+            tableName: process.env.NEXT_PUBLIC_DB_TABLE || (isDev ? 'pc_survey_data_dev' : 'pc_survey_data'),
             environment: isDev ? 'dev' : 'prod'
           }
         })
@@ -250,7 +250,7 @@ export default function ProductSurvey() {
             enableExport: true
           },
           database: {
-            tableName: 'pc_survey_data_dev',
+            tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
             environment: 'dev'
           }
         })

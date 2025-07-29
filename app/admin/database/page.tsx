@@ -198,7 +198,9 @@ export default function DatabasePage() {
     if (!confirm("Are you sure you want to delete this response?")) return
 
     try {
-      const response = await fetch(`https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?id=eq.${id}`, {
+              const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""
+        const tableName = process.env.NEXT_PUBLIC_DB_TABLE || "pc_survey_data"
+        const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}?id=eq.${id}`, {
         method: "DELETE",
         headers: {
           apikey:
@@ -251,7 +253,7 @@ export default function DatabasePage() {
 3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
 4. The script will create all necessary tables and sample data
 
-🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
+        🔗 Direct link: ${process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""}/project/default/sql
 
 After running the SQL script, refresh this page to see your data.`
         
@@ -264,12 +266,12 @@ After running the SQL script, refresh this page to see your data.`
 
 📋 MANUAL SETUP REQUIRED:
 
-1. Go to your Supabase Dashboard: https://qaauhwulohxeeacexrav.supabase.co
+1. Go to your Supabase Dashboard: ${process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""}
 2. Open the SQL Editor
 3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
 4. The script will create all necessary tables and sample data
 
-🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
+🔗 Direct link: ${process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""}/project/default/sql
 
 The auto-setup feature requires custom SQL functions that may not be enabled.
 Manual setup is the recommended approach for production environments.`

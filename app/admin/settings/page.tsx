@@ -42,30 +42,29 @@ interface AppSettings {
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>({
     database: {
-      url: "https://qaauhwulohxeeacexrav.supabase.co",
-      apiKey:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-      tableName: "pc_survey_data",
+      url: "",
+      apiKey: "",
+      tableName: "",
       connectionTimeout: 30,
     },
     security: {
-      sessionTimeout: 480, // 8 hours in minutes
-      maxLoginAttempts: 5,
+      sessionTimeout: 3600,
+      maxLoginAttempts: 10,
       requireHttps: true,
       enableRateLimit: true,
-      enforceStrongPasswords: false, // Demo mode
-      enableTwoFactor: false, // Demo mode
+      enforceStrongPasswords: false,
+      enableTwoFactor: false,
     },
     notifications: {
       emailAlerts: false,
-      adminEmail: "admin@example.com",
+      adminEmail: "",
       responseThreshold: 10,
     },
     general: {
-      appName: "Product Survey Builder",
+      appName: "",
       publicUrl: typeof window !== 'undefined' ? window.location.origin : '',
       maintenanceMode: false,
-      analyticsEnabled: true,
+      analyticsEnabled: false,
     },
   })
 
@@ -90,15 +89,36 @@ export default function SettingsPage() {
     setUserRole(currentRole)
     setPermissions(getCurrentUserPermissions())
 
-    // Load settings from localStorage
-    const savedSettings = localStorage.getItem("app_settings")
-    if (savedSettings) {
-      try {
-        setSettings({ ...settings, ...JSON.parse(savedSettings) })
-      } catch (error) {
-        console.error("Error loading settings:", error)
-      }
+    // Load settings from environment variables first
+    const envSettings = {
+      database: {
+        url: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+        apiKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "",
+        tableName: process.env.NEXT_PUBLIC_DB_TABLE || "",
+        connectionTimeout: 30,
+      },
+      security: {
+        sessionTimeout: Number.parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
+        maxLoginAttempts: Number.parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
+        requireHttps: true,
+        enableRateLimit: true,
+        enforceStrongPasswords: false,
+        enableTwoFactor: false,
+      },
+      notifications: {
+        emailAlerts: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
+        adminEmail: "",
+        responseThreshold: 10,
+      },
+      general: {
+        appName: process.env.NEXT_PUBLIC_APP_NAME || "",
+        publicUrl: process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
+        maintenanceMode: false,
+        analyticsEnabled: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
+      },
     }
+
+    setSettings(envSettings)
     
     // Load users if permitted
     if (permissions.canViewUsers) {
