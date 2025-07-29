@@ -389,7 +389,7 @@ export default function AnalyticsPage() {
                   salaryDataByRole[response.role] = { ARS: [], USD: [] }
                 }
                 if (currency === 'ARS' || currency === 'USD') {
-                  salaryDataByRole[response.role][currency].push(salaryValue)
+                  salaryDataByRole[response.role][currency as 'ARS' | 'USD'].push(salaryValue)
                 }
               }
 
@@ -399,7 +399,7 @@ export default function AnalyticsPage() {
                   salaryDataByIndustry[response.industry] = { ARS: [], USD: [] }
                 }
                 if (currency === 'ARS' || currency === 'USD') {
-                  salaryDataByIndustry[response.industry][currency].push(salaryValue)
+                  salaryDataByIndustry[response.industry][currency as 'ARS' | 'USD'].push(salaryValue)
                 }
               }
 
