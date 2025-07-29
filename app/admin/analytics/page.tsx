@@ -11,21 +11,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 interface AnalyticsData {
   roleDistribution: { [key: string]: number }
-  seniorityDistribution: { [key: string]: number }
-  industryDistribution: { [key: string]: number }
-  productTypeDistribution: { [key: string]: number }
-  customerSegmentDistribution: { [key: string]: number }
   companyTypeDistribution: { [key: string]: number }
   toolsUsage: { [key: string]: number }
   learningMethodsUsage: { [key: string]: number }
   responsesByDate: { [key: string]: number }
   mainChallenges: string[]
-  salaryData: {
-    averageByCurrency: { [key: string]: number }
-    averageByRole: { [key: string]: { ARS: number; USD: number } }
-    averageByIndustry: { [key: string]: { ARS: number; USD: number } }
-    rangeDistribution: { [key: string]: number }
-  }
   totalResponses: number
 }
 
@@ -236,21 +226,7 @@ const getNGrams = (text: string, n: number) => {
 }
 
 // Helper function to categorize salaries into ranges
-const getSalaryRange = (salary: number, currency: string): string => {
-  if (currency === "USD") {
-    if (salary < 50000) return "< $50K USD"
-    if (salary < 80000) return "$50K - $80K USD" 
-    if (salary < 120000) return "$80K - $120K USD"
-    if (salary < 180000) return "$120K - $180K USD"
-    return "> $180K USD"
-  } else { // ARS
-    if (salary < 1000000) return "< $1M ARS"
-    if (salary < 2000000) return "$1M - $2M ARS"
-    if (salary < 3500000) return "$2M - $3.5M ARS"
-    if (salary < 5000000) return "$3.5M - $5M ARS"
-    return "> $5M ARS"
-  }
-}
+// Salary range function removed - salary fields don't exist in current schema
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
@@ -291,19 +267,11 @@ export default function AnalyticsPage() {
 
         // Process data for analytics
         const roleDistribution: { [key: string]: number } = {}
-        const seniorityDistribution: { [key: string]: number } = {}
-        const industryDistribution: { [key: string]: number } = {}
-        const productTypeDistribution: { [key: string]: number } = {}
-        const customerSegmentDistribution: { [key: string]: number } = {}
         const companyTypeDistribution: { [key: string]: number } = {}
         const toolsUsage: { [key: string]: number } = {}
         const learningMethodsUsage: { [key: string]: number } = {}
         const responsesByDate: { [key: string]: number } = {}
         const mainChallenges: string[] = []
-        const salaryDataByRole: { [key: string]: { ARS: number[], USD: number[] } } = {}
-        const salaryDataByIndustry: { [key: string]: { ARS: number[], USD: number[] } } = {}
-        const salaryRanges: { [key: string]: number } = {}
-        const salaryByCurrency: { [key: string]: number[] } = { ARS: [], USD: [] }
 
         responses.forEach((response: any) => {
           // Role distribution
@@ -311,32 +279,8 @@ export default function AnalyticsPage() {
             roleDistribution[response.role] = (roleDistribution[response.role] || 0) + 1
           }
 
-          // Seniority distribution
-          if (response.seniority) {
-            seniorityDistribution[response.seniority] = (seniorityDistribution[response.seniority] || 0) + 1
-          }
-
-          // Industry distribution
-          if (response.industry) {
-            industryDistribution[response.industry] = (industryDistribution[response.industry] || 0) + 1
-          }
-
-          // Product type distribution
-          if (response.product_type) {
-            productTypeDistribution[response.product_type] = (productTypeDistribution[response.product_type] || 0) + 1
-          }
-
-          // Customer segment distribution
-          if (response.customer_segment) {
-            customerSegmentDistribution[response.customer_segment] =
-              (customerSegmentDistribution[response.customer_segment] || 0) + 1
-          }
-
-          // Company type distribution (using company_size as primary)
-          if (response.company_size) {
-            companyTypeDistribution[response.company_size] = (companyTypeDistribution[response.company_size] || 0) + 1
-          } else if (response.company_type) {
-            // Fallback to company_type if company_size is null
+          // Company type distribution
+          if (response.company_type) {
             companyTypeDistribution[response.company_type] = (companyTypeDistribution[response.company_type] || 0) + 1
           }
 
@@ -364,108 +308,17 @@ export default function AnalyticsPage() {
           if (response.main_challenge && response.main_challenge.trim()) {
             mainChallenges.push(response.main_challenge.trim())
           }
-
-          // Salary data processing
-          if (response.salary_currency && (response.salary_average || (response.salary_min && response.salary_max))) {
-            const currency = response.salary_currency
-            let salaryValue = 0
-
-            if (response.salary_average) {
-              salaryValue = parseInt(response.salary_average)
-            } else if (response.salary_min && response.salary_max) {
-              salaryValue = (parseInt(response.salary_min) + parseInt(response.salary_max)) / 2
-            }
-
-            if (salaryValue > 0) {
-              // Salary by currency
-              if (!salaryByCurrency[currency]) {
-                salaryByCurrency[currency] = []
-              }
-              salaryByCurrency[currency].push(salaryValue)
-
-              // Salary by role
-              if (response.role) {
-                if (!salaryDataByRole[response.role]) {
-                  salaryDataByRole[response.role] = { ARS: [], USD: [] }
-                }
-                if (currency === 'ARS' || currency === 'USD') {
-                  salaryDataByRole[response.role][currency as 'ARS' | 'USD'].push(salaryValue)
-                }
-              }
-
-              // Salary by industry
-              if (response.industry) {
-                if (!salaryDataByIndustry[response.industry]) {
-                  salaryDataByIndustry[response.industry] = { ARS: [], USD: [] }
-                }
-                if (currency === 'ARS' || currency === 'USD') {
-                  salaryDataByIndustry[response.industry][currency as 'ARS' | 'USD'].push(salaryValue)
-                }
-              }
-
-              // Salary range distribution
-              const range = getSalaryRange(salaryValue, currency)
-              salaryRanges[range] = (salaryRanges[range] || 0) + 1
-            }
-          }
         })
 
-        // Calculate salary averages
-        const averageByCurrency: { [key: string]: number } = {}
-        const averageByRole: { [key: string]: { ARS: number; USD: number } } = {}
-        const averageByIndustry: { [key: string]: { ARS: number; USD: number } } = {}
-
-        // Average by currency
-        Object.keys(salaryByCurrency).forEach(currency => {
-          const salaries = salaryByCurrency[currency]
-          if (salaries.length > 0) {
-            averageByCurrency[currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
-          }
-        })
-
-        // Average by role
-        Object.keys(salaryDataByRole).forEach(role => {
-          averageByRole[role] = { ARS: 0, USD: 0 }
-          Object.keys(salaryDataByRole[role]).forEach(currency => {
-            if (currency === 'ARS' || currency === 'USD') {
-              const salaries = salaryDataByRole[role][currency as 'ARS' | 'USD']
-              if (salaries.length > 0) {
-                averageByRole[role][currency as 'ARS' | 'USD'] = salaries.reduce((a, b) => a + b, 0) / salaries.length
-              }
-            }
-          })
-        })
-
-        // Average by industry
-        Object.keys(salaryDataByIndustry).forEach(industry => {
-          averageByIndustry[industry] = { ARS: 0, USD: 0 }
-          Object.keys(salaryDataByIndustry[industry]).forEach(currency => {
-            if (currency === 'ARS' || currency === 'USD') {
-              const salaries = salaryDataByIndustry[industry][currency as 'ARS' | 'USD']
-              if (salaries.length > 0) {
-                averageByIndustry[industry][currency as 'ARS' | 'USD'] = salaries.reduce((a, b) => a + b, 0) / salaries.length
-              }
-            }
-          })
-        })
+        // No salary data processing needed - fields don't exist in current schema
 
         setData({
           roleDistribution,
-          seniorityDistribution,
-          industryDistribution,
-          productTypeDistribution,
-          customerSegmentDistribution,
           companyTypeDistribution,
           toolsUsage,
           learningMethodsUsage,
           responsesByDate,
           mainChallenges,
-          salaryData: {
-            averageByCurrency,
-            averageByRole,
-            averageByIndustry,
-            rangeDistribution: salaryRanges
-          },
           totalResponses: responses.length,
         })
       }
@@ -518,11 +371,7 @@ export default function AnalyticsPage() {
     }
 
     addDistributionToRows(data.roleDistribution, "Role Distribution", data.totalResponses)
-    addDistributionToRows(data.seniorityDistribution, "Seniority Distribution", data.totalResponses)
-    addDistributionToRows(data.industryDistribution, "Industry Distribution", data.totalResponses)
-    addDistributionToRows(data.productTypeDistribution, "Product Type Distribution", data.totalResponses)
-    addDistributionToRows(data.customerSegmentDistribution, "Customer Segment Distribution", data.totalResponses)
-    addDistributionToRows(data.companyTypeDistribution, "Company Size Distribution", data.totalResponses)
+    addDistributionToRows(data.companyTypeDistribution, "Company Type Distribution", data.totalResponses)
 
     const totalTools = Object.values(data.toolsUsage).reduce((sum, count) => sum + count, 0)
     addDistributionToRows(data.toolsUsage, "Tools Usage", totalTools)
@@ -702,9 +551,9 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tools Mentioned</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Company Types</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.toolsUsage).length : 0}
+                  {data ? Object.keys(data.companyTypeDistribution).length : 0}
                 </p>
               </div>
               <BarChart3 className="w-8 h-8 text-purple-500" />
@@ -716,12 +565,26 @@ export default function AnalyticsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Industries</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Unique Tools</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.industryDistribution).length : 0}
+                  {data ? Object.keys(data.toolsUsage).length : 0}
                 </p>
               </div>
               <TrendingUp className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Learning Methods</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
+                  {data ? Object.keys(data.learningMethodsUsage).length : 0}
+                </p>
+              </div>
+              <MessageSquare className="w-8 h-8 text-indigo-500" />
             </div>
           </CardContent>
         </Card>
@@ -730,28 +593,7 @@ export default function AnalyticsPage() {
       {/* Analytics Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {data && renderRankingChart(data.roleDistribution, "Role Distribution", <Users className="w-5 h-5" />)}
-        {data &&
-          renderRankingChart(data.seniorityDistribution, "Seniority Distribution", <TrendingUp className="w-5 h-5" />)}
-        {data &&
-          renderRankingChart(data.industryDistribution, "Industry Distribution", <BarChart3 className="w-5 h-5" />)}
-        {data &&
-          renderRankingChart(
-            data.productTypeDistribution,
-            "Product Type Distribution",
-            <PieChart className="w-5 h-5" />,
-          )}
-        {data &&
-          renderRankingChart(
-            data.customerSegmentDistribution,
-            "Customer Segment Distribution",
-            <Users className="w-5 h-5" />,
-          )}
-        {data &&
-          renderRankingChart(
-            data.companyTypeDistribution,
-            "Company Size Distribution",
-            <BarChart3 className="w-5 h-5" />,
-          )}
+        {data && renderRankingChart(data.companyTypeDistribution, "Company Type Distribution", <BarChart3 className="w-5 h-5" />)}
       </div>
 
       {/* Tools Ranking and Learning Methods */}
@@ -761,15 +603,31 @@ export default function AnalyticsPage() {
           renderRankingChart(data.learningMethodsUsage, "Learning Methods Ranking", <BarChart3 className="w-5 h-5" />)}
       </div>
 
-      {/* Salary Analytics */}
-      {data && Object.keys(data.salaryData.averageByCurrency).length > 0 && Object.values(data.salaryData.averageByCurrency).some(val => val > 0) && (
-        <>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-            {/* Average Salary by Currency */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
-                  <TrendingUp className="w-5 h-5" />
+      {/* Main Challenges Analysis */}
+      {data && data.mainChallenges.length > 0 && (
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+              <MessageSquare className="w-5 h-5" />
+              Main Challenges Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Top challenges mentioned by survey respondents:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {data.mainChallenges.slice(0, 10).map((challenge, index) => (
+                  <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <p className="text-sm text-gray-800 dark:text-gray-200">"{challenge}"</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
                   Average Salary by Currency
                 </CardTitle>
               </CardHeader>
@@ -789,53 +647,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            {/* Salary Range Distribution */}
-            {data && renderRankingChart(data.salaryData.rangeDistribution, "Salary Range Distribution", <BarChart3 className="w-5 h-5" />)}
-          </div>
 
-          {/* Salary by Role */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
-                <Users className="w-5 h-5" />
-                Average Salary by Role
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {Object.entries(data.salaryData.averageByRole)
-                  .filter(([role, salaries]) => salaries.ARS > 0 || salaries.USD > 0)
-                  .sort((a, b) => (b[1].USD + b[1].ARS/300) - (a[1].USD + a[1].ARS/300)) // Sort by USD equivalent
-                  .map(([role, salaries]) => (
-                    <div key={role} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-50">{role}</h4>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {salaries.ARS > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">🇦🇷 ARS:</span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400">
-                              ${Math.round(salaries.ARS).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                        {salaries.USD > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">🇺🇸 USD:</span>
-                            <span className="font-bold text-green-600 dark:text-green-400">
-                              ${Math.round(salaries.USD).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
 
       {/* Main Challenges - Actual Responses */}
       {data && data.mainChallenges.length > 0 && (
