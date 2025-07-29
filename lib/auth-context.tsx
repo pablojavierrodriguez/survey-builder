@@ -2,11 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase, requireSupabase, isSupabaseConfigured } from './supabase'
+import { supabase } from './supabase'
 import { Profile } from './supabase'
-
-// Get Supabase URL for validation
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
 
 interface AuthContextType {
   user: User | null
@@ -30,14 +27,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Only initialize Supabase auth if configured
-    if (!isSupabaseConfigured || !supabase) {
+    if (!supabase) {
       console.log('Supabase not configured - auth features disabled')
       setLoading(false)
       return
     }
 
     // Check if Supabase URL is not a placeholder
-    if (supabaseUrl === 'https://your-project.supabase.co' || !supabaseUrl) {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://your-project.supabase.co' || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
       console.log('Supabase URL is placeholder - auth features disabled')
       setLoading(false)
       return
@@ -75,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const fetchProfile = async (userId: string) => {
-    if (!requireSupabase()) return
+    if (!supabase) return
 
     try {
       const { data, error } = await supabase!
@@ -97,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    if (!requireSupabase()) {
+    if (!supabase) {
       return { error: new Error('Supabase not configured') }
     }
     
@@ -109,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    if (!requireSupabase()) {
+    if (!supabase) {
       return { error: new Error('Supabase not configured') }
     }
     
@@ -126,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
-    if (!requireSupabase()) {
+    if (!supabase) {
       return { error: new Error('Supabase not configured - Google OAuth not available') }
     }
     
@@ -140,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    if (!requireSupabase()) {
+    if (!supabase) {
       return { error: new Error('Supabase not configured') }
     }
     
@@ -150,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') }
-    if (!requireSupabase()) {
+    if (!supabase) {
       return { error: new Error('Supabase not configured') }
     }
 

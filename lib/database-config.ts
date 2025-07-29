@@ -13,7 +13,7 @@ export function getSupabaseConfig(): DatabaseConfig {
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
     anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
     tableName: process.env.NEXT_PUBLIC_DB_TABLE || "survey_data",
-    environment: process.env.NODE_ENV || "production"
+    environment: process.env.NEXT_PUBLIC_NODE_ENV || "production"
   }
 }
 

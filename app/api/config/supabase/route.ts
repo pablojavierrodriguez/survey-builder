@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       supabaseUrl,
       supabaseAnonKey,
       tableName: process.env.NEXT_PUBLIC_DB_TABLE || "survey_data",
-      environment: process.env.NODE_ENV || "production"
+      environment: process.env.NEXT_PUBLIC_NODE_ENV || "production"
     })
   } catch (error) {
     console.error('Error fetching Supabase config:', error)
