@@ -107,8 +107,8 @@ export default function SettingsPage() {
         // Transform API data to local settings format
         const apiSettings = {
           database: {
-            url: data.settings?.supabase_url || (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
-            apiKey: data.settings?.supabase_anon_key || (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
+            url: data.settings?.supabase_url || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
+            apiKey: data.settings?.supabase_anon_key || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
             tableName: data.survey_table_name || (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
             connectionTimeout: 30,
           },
@@ -139,8 +139,8 @@ export default function SettingsPage() {
         // Fallback to environment variables
         const envSettings = {
           database: {
-            url: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
-            apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
+            url: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
+            apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
             tableName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
             connectionTimeout: 30,
           },
@@ -171,8 +171,8 @@ export default function SettingsPage() {
       // Fallback to environment variables
       const envSettings = {
         database: {
-          url: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
-          apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
+          url: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || (window as any).__ENV__?.SUPABASE_URL || "" : ""),
+          apiKey: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || (window as any).__ENV__?.SUPABASE_ANON_KEY || "" : ""),
           tableName: (typeof window !== 'undefined' ? (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "" : ""),
           connectionTimeout: 30,
         },
@@ -518,13 +518,13 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Table Name</label>
-                             <Input
-                 value={safeSettings.database.tableName}
-                 onChange={(e) => updateSettings("database", "tableName", e.target.value)}
-                 placeholder="pc_survey_data"
-                 className="bg-background text-foreground border-border"
-                 disabled={!permissions.canEditSettings}
-               />
+              <Input
+                value={safeSettings.database.tableName}
+                onChange={(e) => updateSettings("database", "tableName", e.target.value)}
+                placeholder="Enter table name (e.g., survey_data)"
+                className="bg-background text-foreground border-border"
+                disabled={!permissions.canEditSettings}
+              />
             </div>
           </div>
 

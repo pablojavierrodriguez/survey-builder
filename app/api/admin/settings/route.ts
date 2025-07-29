@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 // Get Supabase configuration from environment variables
 function getSupabaseConfig() {
   return {
-    supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
-    anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "",
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""
   }
 }
 
@@ -53,7 +53,7 @@ export async function GET() {
     if (!data) {
       const defaultSettings = {
         environment,
-        survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data'),
+        survey_table_name: process.env.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'survey_data_dev' : 'survey_data'),
         app_name: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
         app_url: process.env.NEXT_PUBLIC_APP_URL || '',
         maintenance_mode: false,
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Prepare settings data
     const settingsData = {
       environment,
-      survey_table_name: body.survey_table_name || process.env.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data'),
+      survey_table_name: body.survey_table_name || process.env.NEXT_PUBLIC_DB_TABLE || (environment === 'dev' ? 'survey_data_dev' : 'survey_data'),
       app_name: body.app_name || process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
       app_url: body.app_url || process.env.NEXT_PUBLIC_APP_URL || '',
       maintenance_mode: body.maintenance_mode || false,
