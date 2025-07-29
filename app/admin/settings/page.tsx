@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase, requireSupabase, isSupabaseConfigured, createSupabaseClient } from "@/lib/supabase"
+import { supabase, requireSupabase, isSupabaseConfigured } from "@/lib/supabase"
 import { getCurrentUserPermissions, getUserRole, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -193,7 +193,7 @@ export default function SettingsPage() {
       console.log('Fetching users from Supabase...')
       
       // Wait for Supabase client to be initialized
-      const client = await createSupabaseClient()
+      const client = await supabase
       if (!client) {
         console.error('Supabase client not available')
         setUsers([])
@@ -245,7 +245,7 @@ export default function SettingsPage() {
       console.log('Creating user with Supabase Auth:', newUser.email)
       
       // Get Supabase client
-      const client = await createSupabaseClient()
+      const client = await supabase
       if (!client) {
         alert('❌ Supabase client not initialized')
         return
@@ -769,8 +769,8 @@ export default function SettingsPage() {
               {userRole === 'admin' && (
                 <li>• <strong>Private Users:</strong> collaborator/collab456, admin/admin789</li>
               )}
-              <li>• <strong>Google OAuth:</strong> {isSupabaseConfigured() ? 'Available on login page' : 'Requires Supabase config'}</li>
-              <li>• <strong>Email/Password:</strong> {isSupabaseConfigured() ? 'Created via form below' : 'Requires Supabase config'}</li>
+              <li>• <strong>Google OAuth:</strong> {isSupabaseConfigured ? 'Available on login page' : 'Requires Supabase config'}</li>
+              <li>• <strong>Email/Password:</strong> {isSupabaseConfigured ? 'Created via form below' : 'Requires Supabase config'}</li>
             </ul>
           </div>
           

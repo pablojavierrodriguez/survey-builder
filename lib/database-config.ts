@@ -1,5 +1,4 @@
-// Database Configuration
-// Centralized database configuration management
+import { supabase } from './supabase'
 
 export interface DatabaseConfig {
   supabaseUrl: string
@@ -9,7 +8,7 @@ export interface DatabaseConfig {
 }
 
 // Get Supabase configuration from environment variables
-export async function getSupabaseConfig(): Promise<DatabaseConfig> {
+export function getSupabaseConfig(): DatabaseConfig {
   // Server-side environment variables
   if (typeof window === 'undefined') {
     return {
@@ -20,185 +19,140 @@ export async function getSupabaseConfig(): Promise<DatabaseConfig> {
     }
   }
   
-  // Client-side: fetch from API
-  try {
-    const response = await fetch('/api/config/supabase')
-    if (!response.ok) {
-      throw new Error('Failed to fetch Supabase config')
-    }
-    
-    const config = await response.json()
-    return {
-      supabaseUrl: config.supabaseUrl,
-      anonKey: config.supabaseAnonKey,
-      tableName: config.tableName,
-      environment: config.environment
-    }
-  } catch (error) {
-    console.error('Error fetching Supabase config:', error)
-    return {
-      supabaseUrl: "",
-      anonKey: "",
-      tableName: (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "survey_data",
-      environment: "production"
-    }
-  }
-}
-
-// Get database configuration
-export async function getDatabaseConfig(): Promise<DatabaseConfig> {
-  return await getSupabaseConfig()
-}
-
-// Get database configuration synchronously (for backward compatibility)
-export function getDatabaseConfigSync(): DatabaseConfig {
-  // This is a fallback for synchronous contexts
+  // Client-side: use window.__ENV__ or fallback
+  const env = (window as any).__ENV__ || {}
   return {
     supabaseUrl: "",
     anonKey: "",
-    tableName: (window as any).__ENV__?.NEXT_PUBLIC_DB_TABLE || "survey_data",
+    tableName: env.NEXT_PUBLIC_DB_TABLE || "survey_data",
     environment: "production"
   }
 }
 
-// Get database endpoint for API calls
-export async function getDatabaseEndpoint(): Promise<string> {
-  const config = await getSupabaseConfig()
-  return `${config.supabaseUrl}/rest/v1/${config.tableName}`
+// Get database configuration
+export function getDatabaseConfig(): DatabaseConfig {
+  return getSupabaseConfig()
 }
 
-// Get database endpoint synchronously
+// Get database configuration synchronously (for backward compatibility)
+export function getDatabaseConfigSync(): DatabaseConfig {
+  return getSupabaseConfig()
+}
+
+// Get database endpoint for API calls
 export function getDatabaseEndpointSync(): string {
   const config = getSupabaseConfig()
   return `${config.supabaseUrl}/rest/v1/${config.tableName}`
 }
 
-// Get database headers for API calls
-export async function getDatabaseHeaders(): Promise<Record<string, string>> {
-  const config = await getSupabaseConfig()
-  return {
-    'apikey': config.anonKey,
-    'Authorization': `Bearer ${config.anonKey}`,
-    'Content-Type': 'application/json'
-  }
+// Get database endpoint for API calls (async version)
+export async function getDatabaseEndpoint(): Promise<string> {
+  return getDatabaseEndpointSync()
 }
 
-// Get database headers synchronously
+// Get database headers for API calls
 export function getDatabaseHeadersSync(): Record<string, string> {
   const config = getSupabaseConfig()
   return {
     'apikey': config.anonKey,
     'Authorization': `Bearer ${config.anonKey}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal'
   }
 }
 
-// Validate database configuration
-export function validateDatabaseConfig(config: DatabaseConfig): boolean {
-  return !!(config.supabaseUrl && config.anonKey && config.tableName)
+// Get database headers for API calls (async version)
+export async function getDatabaseHeaders(): Promise<Record<string, string>> {
+  return getDatabaseHeadersSync()
 }
 
 // Function to check if any table exists
 export async function ensureTableExists(tableName?: string): Promise<boolean> {
-  const config = await getSupabaseConfig()
+  const config = getSupabaseConfig()
   const targetTable = tableName || config.tableName
   
   try {
-    // Try to fetch from the specified table
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${targetTable}?limit=1`, {
-      headers: await getDatabaseHeaders()
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${config.anonKey}`
+      }
     })
     
-    if (response.ok) {
-      return true // Table exists
-    }
-    
-    // If table doesn't exist, log warning
-    console.warn(`Table ${targetTable} may not exist. Status: ${response.status}`)
-    return false
-    
+    return response.ok
   } catch (error) {
-    console.error(`Error checking table ${targetTable}:`, error)
+    console.error('Error checking table existence:', error)
     return false
   }
 }
 
-// Function to create dev table if it doesn't exist (backward compatibility)
+// Function to ensure dev table exists (for development)
 export async function ensureDevTableExists(): Promise<boolean> {
   return ensureTableExists('pc_survey_data_dev')
 }
 
 // Function to submit survey data to Supabase
 export async function submitSurveyToDatabase(surveyData: any): Promise<{ success: boolean; error?: string; data?: any }> {
-  const config = await getSupabaseConfig()
+  const config = getSupabaseConfig()
   
   try {
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}`, {
       method: 'POST',
-      headers: await getDatabaseHeaders(),
-      body: JSON.stringify({
-        ...surveyData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${config.anonKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(surveyData)
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Survey submission failed:', errorText)
-      return { 
-        success: false, 
-        error: `HTTP ${response.status}: ${errorText}` 
-      }
+      console.error('Database submission error:', response.status, errorText)
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` }
     }
 
-    const data = await response.json()
-    console.log('✅ Survey submitted to database:', data)
-    return { success: true, data }
-    
+    return { success: true }
   } catch (error) {
-    console.error('❌ Error submitting survey to database:', error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    }
+    console.error('Database submission exception:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Network error' }
   }
 }
 
-// Function to get database connection status
-export async function checkDatabaseConnection(): Promise<{ 
+// Function to check database connection
+export async function checkDatabaseConnection(): Promise<{
   connected: boolean; 
-  environment: string; 
   tableName: string; 
   error?: string 
 }> {
-  const config = await getSupabaseConfig()
+  const config = getSupabaseConfig()
   
   try {
     const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}?limit=1`, {
-      headers: await getDatabaseHeaders()
-    })
-    
-    if (response.ok) {
-      return {
-        connected: true,
-        environment: config.environment,
-        tableName: config.tableName
+      headers: {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${config.anonKey}`
       }
+    })
+
+    if (response.ok) {
+      return { connected: true, tableName: config.tableName }
     } else {
-      return {
-        connected: false,
-        environment: config.environment,
-        tableName: config.tableName,
-        error: `HTTP ${response.status}: ${await response.text()}`
+      const errorText = await response.text()
+      console.error('Database connection failed:', response.status, errorText)
+      return { 
+        connected: false, 
+        tableName: config.tableName, 
+        error: `HTTP ${response.status}: ${errorText}` 
       }
     }
   } catch (error) {
-    return {
-      connected: false,
-      environment: config.environment,
-      tableName: config.tableName,
-      error: error instanceof Error ? error.message : 'Connection failed'
+    console.error('Database connection exception:', error)
+    return { 
+      connected: false, 
+      tableName: config.tableName, 
+      error: error instanceof Error ? error.message : 'Network error' 
     }
   }
 }

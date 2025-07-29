@@ -45,34 +45,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Get initial session
-      supabase.auth.getSession().then(({ data, error }) => {
-        if (error) {
-          console.error('Error getting session:', error)
-        }
-        const session = data?.session
-        setUser(session?.user || null)
-        setLoading(false)
-      })
-
-      // Listen for auth changes
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state change:', event, session)
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
+      if (supabase) {
+        supabase.auth.getSession().then(({ data, error }) => {
+          if (error) {
+            console.error('Error getting session:', error)
+          }
+          const session = data?.session
+          setUser(session?.user || null)
           setLoading(false)
-        }
-      })
+        })
 
-      return () => subscription.unsubscribe()
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event, session?.user?.email)
+            setUser(session?.user || null)
+            setLoading(false)
+          }
+        )
+
+        return () => subscription.unsubscribe()
+      } else {
+        setLoading(false)
+      }
     } catch (error) {
-      console.error('Error initializing auth:', error)
+      console.error('Auth context error:', error)
       setLoading(false)
     }
   }, [])
