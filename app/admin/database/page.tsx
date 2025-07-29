@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle, Loader2 } from "lucide-react"
-import { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
+import { getDatabaseConfigSync, getDatabaseEndpointSync, getDatabaseHeadersSync, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
 
 interface SurveyResponse {
   id: string
@@ -44,7 +44,7 @@ export default function DatabasePage() {
       setConnectionStatus("testing")
       
       // Get environment-specific config
-      const config = getDatabaseConfig()
+      const config = getDatabaseConfigSync()
       
       // Check if configured table exists
       const tableExists = await ensureTableExists(config.tableName)
@@ -55,8 +55,8 @@ export default function DatabasePage() {
       }
       
       // Test connection to the appropriate table
-      const response = await fetch(getDatabaseEndpoint("?limit=1"), {
-        headers: getDatabaseHeaders()
+      const response = await fetch(getDatabaseEndpointSync("?limit=1"), {
+        headers: getDatabaseHeadersSync()
       })
       
       if (response.ok) {
@@ -79,9 +79,9 @@ export default function DatabasePage() {
     try {
       // Try to fetch from environment-specific database first
       const response = await fetch(
-        getDatabaseEndpoint("?select=*&order=created_at.desc"),
+        getDatabaseEndpointSync("?select=*&order=created_at.desc"),
         {
-          headers: getDatabaseHeaders()
+          headers: getDatabaseHeadersSync()
         }
       )
 
@@ -219,7 +219,7 @@ export default function DatabasePage() {
   const handleAutoSetup = async () => {
     setSetupLoading(true)
     try {
-      const config = getDatabaseConfig()
+      const config = getDatabaseConfigSync()
       const environment = config.environment
       
       const response = await fetch('/api/admin/setup-environment', {
@@ -311,7 +311,7 @@ Manual setup is the recommended approach for production environments.`
             <div>
               <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Environment</p>
               <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                {getDatabaseConfig().environment.toUpperCase()} - Table: {getDatabaseConfig().tableName}
+                {getDatabaseConfigSync().environment.toUpperCase()} - Table: {getDatabaseConfigSync().tableName}
               </p>
             </div>
             <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -327,7 +327,7 @@ Manual setup is the recommended approach for production environments.`
               🚀 Auto-Setup Available
             </h3>
                           <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                The table `{getDatabaseConfig().tableName}` doesn't exist yet. 
+                The table `{getDatabaseConfigSync().tableName}` doesn't exist yet. 
                 You can create it automatically or manually using SQL.
               </p>
             <div className="flex gap-2">
@@ -345,7 +345,7 @@ Manual setup is the recommended approach for production environments.`
                  ) : (
                    <>
                      <Database className="w-4 h-4 mr-2" />
-                     Auto-Setup {getDatabaseConfig().environment.toUpperCase()} Environment
+                     Auto-Setup {getDatabaseConfigSync().environment.toUpperCase()} Environment
                    </>
                  )}
                </Button>
