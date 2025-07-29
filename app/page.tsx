@@ -263,9 +263,6 @@ export default function ProductSurvey() {
 
     loadSettings()
   }, [user, profile])
-    
-    loadSettings()
-  }, [])
 
   // Show loading state
   if (isLoading) {
