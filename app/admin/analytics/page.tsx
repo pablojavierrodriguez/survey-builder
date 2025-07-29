@@ -11,11 +11,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 interface AnalyticsData {
   roleDistribution: { [key: string]: number }
+  seniorityDistribution: { [key: string]: number }
+  industryDistribution: { [key: string]: number }
+  productTypeDistribution: { [key: string]: number }
+  customerSegmentDistribution: { [key: string]: number }
   companyTypeDistribution: { [key: string]: number }
+  companySizeDistribution: { [key: string]: number }
   toolsUsage: { [key: string]: number }
   learningMethodsUsage: { [key: string]: number }
   responsesByDate: { [key: string]: number }
   mainChallenges: string[]
+  salaryData: {
+    averageByCurrency: { [key: string]: number }
+    averageByRole: { [key: string]: { ARS: number; USD: number } }
+    averageByIndustry: { [key: string]: { ARS: number; USD: number } }
+    rangeDistribution: { [key: string]: number }
+  }
   totalResponses: number
 }
 
@@ -226,7 +237,21 @@ const getNGrams = (text: string, n: number) => {
 }
 
 // Helper function to categorize salaries into ranges
-// Salary range function removed - salary fields don't exist in current schema
+const getSalaryRange = (salary: number, currency: string): string => {
+  if (currency === "USD") {
+    if (salary < 50000) return "< $50K USD"
+    if (salary < 80000) return "$50K - $80K USD"
+    if (salary < 120000) return "$80K - $120K USD"
+    if (salary < 180000) return "$120K - $180K USD"
+    return "> $180K USD"
+  } else { // ARS
+    if (salary < 1000000) return "< $1M ARS"
+    if (salary < 2000000) return "$1M - $2M ARS"
+    if (salary < 3500000) return "$2M - $3.5M ARS"
+    if (salary < 5000000) return "$3.5M - $5M ARS"
+    return "> $5M ARS"
+  }
+}
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
@@ -267,11 +292,20 @@ export default function AnalyticsPage() {
 
         // Process data for analytics
         const roleDistribution: { [key: string]: number } = {}
+        const seniorityDistribution: { [key: string]: number } = {}
+        const industryDistribution: { [key: string]: number } = {}
+        const productTypeDistribution: { [key: string]: number } = {}
+        const customerSegmentDistribution: { [key: string]: number } = {}
         const companyTypeDistribution: { [key: string]: number } = {}
+        const companySizeDistribution: { [key: string]: number } = {}
         const toolsUsage: { [key: string]: number } = {}
         const learningMethodsUsage: { [key: string]: number } = {}
         const responsesByDate: { [key: string]: number } = {}
-        const mainChallenges: string[] = []
+        const mainChallenges: string[] = {}
+        const salaryDataByRole: { [key: string]: { ARS: number[], USD: number[] } } = {}
+        const salaryDataByIndustry: { [key: string]: { ARS: number[], USD: number[] } } = {}
+        const salaryRanges: { [key: string]: number } = {}
+        const salaryByCurrency: { [key: string]: number[] } = { ARS: [], USD: [] }
 
         responses.forEach((response: any) => {
           // Role distribution
@@ -336,10 +370,6 @@ export default function AnalyticsPage() {
       generatedAt: new Date().toISOString(),
       totalResponses: data.totalResponses,
       roleDistribution: data.roleDistribution,
-      seniorityDistribution: data.seniorityDistribution,
-      industryDistribution: data.industryDistribution,
-      productTypeDistribution: data.productTypeDistribution,
-      customerSegmentDistribution: data.customerSegmentDistribution,
       companyTypeDistribution: data.companyTypeDistribution,
       toolsUsage: data.toolsUsage,
       learningMethodsUsage: data.learningMethodsUsage,

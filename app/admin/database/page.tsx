@@ -12,10 +12,20 @@ interface SurveyResponse {
   id: string
   role: string
   other_role?: string
+  seniority: string
   company_type: string
+  company_size: string
+  industry: string
+  product_type: string
+  customer_segment: string
   main_challenge: string
   daily_tools: string[]
+  other_tool?: string
   learning_methods: string[]
+  salary_currency: string
+  salary_min?: string
+  salary_max?: string
+  salary_average?: string
   email?: string
   created_at: string
 }
