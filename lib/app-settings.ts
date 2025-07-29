@@ -27,15 +27,15 @@ function getSupabaseConfig() {
   // Server-side environment variables
   if (typeof window === 'undefined') {
     return {
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+      supabaseUrl: process.env.POSTGRES_SUPABASE_URL || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
+      anonKey: process.env.POSTGRES_SUPABASE_ANON_KEY || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
     }
   }
   
   // Client-side environment variables
   return {
-    supabaseUrl: (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL || "",
-    anonKey: (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    supabaseUrl: (window as any).__ENV__?.POSTGRES_SUPABASE_URL || (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
+    anonKey: (window as any).__ENV__?.POSTGRES_SUPABASE_ANON_KEY || (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   }
 }
 

@@ -116,8 +116,8 @@ export default function SettingsPage() {
         // Transform API data to local settings format
         const apiSettings = {
           database: {
-            url: data.settings?.supabase_url || env.NEXT_PUBLIC_SUPABASE_URL || "",
-            apiKey: data.settings?.supabase_anon_key || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            url: data.settings?.supabase_url || env.POSTGRES_SUPABASE_URL || env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
+            apiKey: data.settings?.supabase_anon_key || env.POSTGRES_SUPABASE_ANON_KEY || env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
             tableName: data.survey_table_name || env.NEXT_PUBLIC_DB_TABLE || "",
             connectionTimeout: 30,
           },
@@ -150,8 +150,8 @@ export default function SettingsPage() {
         const env = (window as any).__ENV__ || {}
         const envSettings = {
           database: {
-            url: env.NEXT_PUBLIC_SUPABASE_URL || "",
-            apiKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            url: env.POSTGRES_SUPABASE_URL || env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
+            apiKey: env.POSTGRES_SUPABASE_ANON_KEY || env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
             tableName: env.NEXT_PUBLIC_DB_TABLE || "",
             connectionTimeout: 30,
           },
@@ -184,8 +184,8 @@ export default function SettingsPage() {
       const env = (window as any).__ENV__ || {}
       const envSettings = {
         database: {
-          url: env.NEXT_PUBLIC_SUPABASE_URL || "",
-          apiKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+          url: env.POSTGRES_SUPABASE_URL || env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
+          apiKey: env.POSTGRES_SUPABASE_ANON_KEY || env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
           tableName: env.NEXT_PUBLIC_DB_TABLE || "",
           connectionTimeout: 30,
         },
