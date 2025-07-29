@@ -79,8 +79,8 @@ export default function AdminDashboard() {
       
       // Try to fetch from configured database
       try {
-        const response = await fetch(`${getDatabaseEndpoint()}?select=*&order=created_at.desc`, {
-          headers: getDatabaseHeaders()
+        const response = await fetch(`${await getDatabaseEndpoint()}?select=*&order=created_at.desc`, {
+          headers: await getDatabaseHeaders()
         })
         
         console.log('Dashboard - API response status:', response.status)
