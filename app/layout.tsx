@@ -24,11 +24,7 @@ const envVars = {
   NEXT_PUBLIC_ENABLE_EXPORT: process.env.NEXT_PUBLIC_ENABLE_EXPORT,
   NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS,
   NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
-  // Supabase variables from Vercel integration
-  POSTGRES_SUPABASE_URL: process.env.POSTGRES_SUPABASE_URL,
-  POSTGRES_SUPABASE_ANON_KEY: process.env.POSTGRES_SUPABASE_ANON_KEY,
-  POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL,
-  POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  // Note: POSTGRES_* variables are server-side only and cannot be exposed to client
 }
 
 // Debug: Log environment variables (server-side only)

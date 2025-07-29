@@ -32,10 +32,10 @@ function getSupabaseConfig() {
     }
   }
   
-  // Client-side environment variables
+  // Client-side environment variables - POSTGRES_* are server-side only
   return {
-    supabaseUrl: (window as any).__ENV__?.POSTGRES_SUPABASE_URL || (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
-    anonKey: (window as any).__ENV__?.POSTGRES_SUPABASE_ANON_KEY || (window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    supabaseUrl: "",
+    anonKey: ""
   }
 }
 
