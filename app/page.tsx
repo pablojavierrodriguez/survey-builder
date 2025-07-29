@@ -216,7 +216,7 @@ export default function ProductSurvey() {
         
         setAppSettings({
           general: {
-            maintenanceMode: status.details.isMaintenanceMode || false,
+            maintenanceMode: false, // We'll check this separately
             appName: 'Product Community Survey',
             appUrl: window.location.origin
           },

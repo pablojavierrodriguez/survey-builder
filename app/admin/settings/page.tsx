@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase, requireSupabase, isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase"
+import { supabase, requireSupabase, isSupabaseConfigured } from "@/lib/supabase"
 import { getCurrentUserPermissions, getUserRole, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -193,7 +193,7 @@ export default function SettingsPage() {
       console.log('Fetching users from Supabase...')
       
       // Wait for Supabase client to be initialized
-      const client = await getSupabaseClient()
+      const client = await supabase
       if (!client) {
         console.error('Supabase client not available')
         setUsers([])
@@ -245,7 +245,7 @@ export default function SettingsPage() {
       console.log('Creating user with Supabase Auth:', newUser.email)
       
       // Get Supabase client
-      const client = await getSupabaseClient()
+      const client = await supabase
       if (!client) {
         alert('❌ Supabase client not initialized')
         return

@@ -9,23 +9,11 @@ export interface DatabaseConfig {
 
 // Get Supabase configuration from environment variables
 export function getSupabaseConfig(): DatabaseConfig {
-  // Server-side environment variables
-  if (typeof window === 'undefined') {
-    return {
-      supabaseUrl: process.env.POSTGRES_SUPABASE_URL || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
-      anonKey: process.env.POSTGRES_SUPABASE_ANON_KEY || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-      tableName: process.env.NEXT_PUBLIC_DB_TABLE || "survey_data",
-      environment: process.env.NODE_ENV || "production"
-    }
-  }
-  
-  // Client-side: use window.__ENV__ or fallback
-  const env = (window as any).__ENV__ || {}
   return {
-    supabaseUrl: "",
-    anonKey: "",
-    tableName: env.NEXT_PUBLIC_DB_TABLE || "survey_data",
-    environment: "production"
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+    tableName: process.env.NEXT_PUBLIC_DB_TABLE || "survey_data",
+    environment: process.env.NODE_ENV || "production"
   }
 }
 

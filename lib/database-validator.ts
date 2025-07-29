@@ -1,79 +1,66 @@
 import { getDatabaseConfig, checkDatabaseConnection } from './database-config'
-import { getAppSettings, isMaintenanceMode } from './app-settings'
+import { fetchAppSettings } from './app-settings'
 
 export interface DatabaseValidationResult {
   isValid: boolean
-  isConfigured: boolean
-  isConnected: boolean
-  isMaintenanceMode: boolean
+  status: 'connected' | 'not_configured' | 'connection_failed'
+  environment: string
+  tableName: string
   error?: string
-  details: {
-    environment: string
-    tableName: string
-    supabaseUrl: string
-    hasValidConfig: boolean
+}
+
+export async function validateDatabase(): Promise<DatabaseValidationResult> {
+  try {
+    // Get database configuration
+    const config = getDatabaseConfig()
+    
+    if (!config.supabaseUrl || !config.anonKey) {
+      return {
+        isValid: false,
+        status: 'not_configured',
+        environment: config.environment,
+        tableName: config.tableName,
+        error: 'Database not configured'
+      }
+    }
+
+    // Check database connection
+    const connectionResult = await checkDatabaseConnection()
+    
+    if (connectionResult.connected) {
+      return {
+        isValid: true,
+        status: 'connected',
+        environment: config.environment,
+        tableName: connectionResult.tableName
+      }
+    } else {
+      return {
+        isValid: false,
+        status: 'connection_failed',
+        environment: config.environment,
+        tableName: connectionResult.tableName,
+        error: connectionResult.error
+      }
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      status: 'connection_failed',
+      environment: 'unknown',
+      tableName: 'unknown',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 }
 
-/**
- * Comprehensive database validation
- * Checks if database is properly configured and working
- */
-export async function validateDatabase(): Promise<DatabaseValidationResult> {
-  const result: DatabaseValidationResult = {
-    isValid: false,
-    isConfigured: false,
-    isConnected: false,
-    isMaintenanceMode: false,
-    details: {
-      environment: 'unknown',
-      tableName: 'unknown',
-      supabaseUrl: 'unknown',
-      hasValidConfig: false
-    }
-  }
-
+export async function isMaintenanceMode(): Promise<boolean> {
   try {
-    // 1. Check if maintenance mode is enabled
-    const maintenanceMode = await isMaintenanceMode()
-    result.isMaintenanceMode = maintenanceMode
-
-    // 2. Get database configuration
-    const config = await getDatabaseConfig()
-    result.details.environment = config.environment
-    result.details.tableName = config.tableName
-    result.details.supabaseUrl = config.supabaseUrl
-
-    // 3. Check if Supabase is configured
-    const hasValidConfig = !!(config.supabaseUrl && 
-                              config.anonKey && 
-                              config.supabaseUrl !== 'https://your-project.supabase.co' &&
-                              config.supabaseUrl !== '')
-    
-    result.details.hasValidConfig = hasValidConfig
-    result.isConfigured = hasValidConfig
-
-    if (!hasValidConfig) {
-      result.error = 'Database not configured. Please configure Supabase settings.'
-      return result
-    }
-
-    // 4. Test database connection
-    const connectionTest = await checkDatabaseConnection()
-    result.isConnected = connectionTest.connected
-
-    if (!connectionTest.connected) {
-      result.error = `Database connection failed: ${connectionTest.error}`
-      return result
-    }
-
-    // 5. All checks passed
-    result.isValid = true
-    return result
-
+    const settings = await fetchAppSettings()
+    return settings?.maintenance_mode || false
   } catch (error) {
-    result.error = error instanceof Error ? error.message : 'Unknown validation error'
-    return result
+    console.error('Error checking maintenance mode:', error)
+    return false
   }
 }
 
@@ -131,18 +118,18 @@ export async function getDatabaseStatus(): Promise<{
     }
   }
 
-  if (validation.isConfigured && !validation.isConnected) {
+  if (validation.status === 'not_configured') {
     return {
-      status: 'error',
-      message: 'Database configured but connection failed',
+      status: 'unconfigured',
+      message: 'Database not configured',
       details: validation
     }
   }
 
-  if (!validation.isConfigured) {
+  if (validation.status === 'connection_failed') {
     return {
-      status: 'unconfigured',
-      message: 'Database not configured',
+      status: 'error',
+      message: 'Database configured but connection failed',
       details: validation
     }
   }
