@@ -2,31 +2,37 @@
 
 ## Archivos de Variables de Entorno
 
-Se han creado dos archivos JSON con las variables de entorno para cada rama:
+Se han creado dos archivos `.env` con las variables de entorno para cada rama:
 
 ### 📁 Archivos Disponibles
 
-1. **`vercel-env-dev.json`** - Variables para la rama `dev`
-2. **`vercel-env-prod.json`** - Variables para la rama `main` (producción)
+1. **`vercel-env-dev.env`** - Variables para la rama `dev`
+2. **`vercel-env-prod.env`** - Variables para la rama `main` (producción)
 
 ## 🚀 Instrucciones de Importación
+
+### Paso 0: Descargar Archivos .env
+1. Descarga los archivos `.env` desde el repositorio:
+   - `vercel-env-dev.env` - Para rama dev
+   - `vercel-env-prod.env` - Para rama main/producción
+2. Guárdalos en tu computadora para subirlos a Vercel
 
 ### Paso 1: Ir a Vercel Dashboard
 1. Ve a tu proyecto en [Vercel Dashboard](https://vercel.com/dashboard)
 2. Selecciona tu proyecto `productcommunitysurvey`
 
-### Paso 2: Configurar Variables para DEV Branch
+### Paso 2: Subir Archivo .env para DEV Branch
 1. Ve a **Settings** > **Environment Variables**
-2. Haz clic en **"Add New"**
+2. Haz clic en **"Upload .env"**
 3. Selecciona **"Production, Preview, Development"** para que aplique a todas las ramas
-4. Copia y pega el contenido de `vercel-env-dev.json` en el campo de texto
+4. Sube el archivo `vercel-env-dev.env`
 5. Haz clic en **"Save"**
 
-### Paso 3: Configurar Variables para MAIN Branch (Producción)
+### Paso 3: Subir Archivo .env para MAIN Branch (Producción)
 1. En la misma sección de Environment Variables
-2. Haz clic en **"Add New"** nuevamente
+2. Haz clic en **"Upload .env"** nuevamente
 3. Selecciona **"Production"** para que solo aplique a la rama main
-4. Copia y pega el contenido de `vercel-env-prod.json` en el campo de texto
+4. Sube el archivo `vercel-env-prod.env`
 5. Haz clic en **"Save"**
 
 ### Paso 4: Variables de Supabase (Automáticas)
