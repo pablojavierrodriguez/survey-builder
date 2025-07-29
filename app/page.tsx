@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle } from "lucide-react"
+import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Database, Settings } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
+import { useAuth } from "@/lib/auth-context"
+import { validateDatabase, canSubmitSurvey, getDatabaseStatus } from "@/lib/database-validator"
 
 interface SurveyData {
   role: string
@@ -144,6 +146,7 @@ const toolOptions = [
 const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors", "Other"]
 
 export default function ProductSurvey() {
+  const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
@@ -154,6 +157,12 @@ export default function ProductSurvey() {
       maintenanceMode: false
     }
   })
+  const [databaseStatus, setDatabaseStatus] = useState<{
+    status: 'healthy' | 'configured' | 'unconfigured' | 'error'
+    message: string
+    details: any
+  } | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -178,8 +187,16 @@ export default function ProductSurvey() {
 
   // Check maintenance mode on component mount
   useEffect(() => {
-    const loadSettings = () => {
+    const loadSettings = async () => {
       try {
+        // Check if user is admin
+        const userIsAdmin = user && profile?.role === 'admin'
+        setIsAdmin(userIsAdmin)
+
+        // Validate database status
+        const status = await getDatabaseStatus()
+        setDatabaseStatus(status)
+
         // Check for survey configuration first
         const surveyConfig = localStorage.getItem("survey_config")
         if (surveyConfig) {
@@ -199,7 +216,7 @@ export default function ProductSurvey() {
         
         setAppSettings({
           general: {
-            maintenanceMode: false,
+            maintenanceMode: status.details.isMaintenanceMode || false,
             appName: 'Product Community Survey',
             appUrl: window.location.origin
           },
@@ -214,14 +231,16 @@ export default function ProductSurvey() {
           }
         })
         
-        console.log('✅ App loaded with simplified settings')
+        console.log('✅ App loaded with database validation')
+        console.log('Database status:', status)
+        console.log('User is admin:', userIsAdmin)
       } catch (error) {
         console.error('❌ Error loading settings:', error)
         
         // Fallback to basic defaults
         setAppSettings({
           general: {
-            maintenanceMode: false,
+            maintenanceMode: true, // Default to maintenance mode if error
             appName: 'Product Community Survey',
             appUrl: window.location.origin
           },
@@ -236,11 +255,14 @@ export default function ProductSurvey() {
           }
         })
         
-        console.log('✅ App loaded with fallback settings')
+        console.log('✅ App loaded with fallback settings (maintenance mode)')
       } finally {
         setIsLoading(false)
       }
     }
+
+    loadSettings()
+  }, [user, profile])
     
     loadSettings()
   }, [])
@@ -257,8 +279,8 @@ export default function ProductSurvey() {
     )
   }
 
-  // Show maintenance mode screen
-  if (isMaintenanceMode) {
+  // Show maintenance mode or database status screen
+  if (isMaintenanceMode || (databaseStatus && databaseStatus.status !== 'healthy')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 p-4">
         {/* Theme toggle */}
@@ -280,21 +302,58 @@ export default function ProductSurvey() {
         </div>
 
         <div className="text-center max-w-md mx-auto">
-          <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Wrench className="w-10 h-10 text-amber-600 dark:text-amber-400" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-4">
-            Under Maintenance
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">
-            We're currently performing scheduled maintenance on our survey system. 
-            Please check back later or contact the administrator if you need immediate assistance.
-          </p>
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              This maintenance mode can be disabled by administrators in the settings panel.
-            </p>
-          </div>
+          {isMaintenanceMode ? (
+            <>
+              <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Wrench className="w-10 h-10 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-4">
+                Under Maintenance
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                We're currently performing scheduled maintenance on our survey system. 
+                Please check back later or contact the administrator if you need immediate assistance.
+              </p>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  This maintenance mode can be disabled by administrators in the settings panel.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Database className="w-10 h-10 text-red-600 dark:text-red-400" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-4">
+                Database Configuration Required
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                {databaseStatus?.message || 'Database is not properly configured.'}
+              </p>
+              {databaseStatus && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+                  <div className="text-left text-sm text-red-700 dark:text-red-300">
+                    <p><strong>Status:</strong> {databaseStatus.status}</p>
+                    <p><strong>Environment:</strong> {databaseStatus.details.environment}</p>
+                    <p><strong>Table:</strong> {databaseStatus.details.tableName}</p>
+                    {databaseStatus.details.error && (
+                      <p><strong>Error:</strong> {databaseStatus.details.error}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {isAdmin && (
+                <Button 
+                  onClick={() => window.location.href = '/admin/settings'} 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configure Database
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
     )
@@ -402,6 +461,16 @@ export default function ProductSurvey() {
     setIsSubmitting(true)
     
     try {
+      // Check if survey submission is allowed
+      const submissionCheck = await canSubmitSurvey(isAdmin)
+      
+      if (!submissionCheck.allowed) {
+        console.error("❌ Survey submission blocked:", submissionCheck.reason)
+        alert(`Survey submission blocked: ${submissionCheck.reason}`)
+        setIsSubmitting(false)
+        return
+      }
+
       // Import the database function
       const { submitSurveyToDatabase } = await import('@/lib/database-config')
       
@@ -424,33 +493,37 @@ export default function ProductSurvey() {
       } else {
         console.error("❌ Database submission failed:", result.error)
         
-        // Fallback to localStorage only
-        const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-        const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-        localStorage.setItem("survey", JSON.stringify(updated))
-        console.log("✅ Survey saved to localStorage as fallback")
-        
-        alert("Survey saved locally. Database connection failed.")
-        handleNext()
+        // Only allow fallback to localStorage for admin users
+        if (isAdmin) {
+          const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+          const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+          localStorage.setItem("survey", JSON.stringify(updated))
+          console.log("✅ Survey saved to localStorage as admin fallback")
+          alert("Survey saved locally. Database connection failed.")
+          handleNext()
+        } else {
+          alert("Database connection failed. Please contact support.")
+        }
       }
     } catch (error) {
       console.error("❌ Error submitting survey:", error)
       
-      // Fallback to localStorage only
-      try {
-        const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-        const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-        localStorage.setItem("survey", JSON.stringify(updated))
-        console.log("✅ Survey saved to localStorage as fallback")
-      } catch (localError) {
-        console.error("❌ Error saving to localStorage:", localError)
-        alert("Error saving survey. Please try again.")
-        setIsSubmitting(false)
-        return
+      // Only allow fallback to localStorage for admin users
+      if (isAdmin) {
+        try {
+          const existing = JSON.parse(localStorage.getItem("survey") || "[]")
+          const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
+          localStorage.setItem("survey", JSON.stringify(updated))
+          console.log("✅ Survey saved to localStorage as admin fallback")
+          alert("Survey saved locally. Please check your connection.")
+          handleNext()
+        } catch (localError) {
+          console.error("❌ Error saving to localStorage:", localError)
+          alert("Error saving survey. Please try again.")
+        }
+      } else {
+        alert("Error submitting survey. Please contact support.")
       }
-      
-      alert("Survey saved locally. Please check your connection.")
-      handleNext()
     } finally {
       setIsSubmitting(false)
     }
