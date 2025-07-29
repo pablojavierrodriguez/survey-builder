@@ -105,6 +105,17 @@ function getEnvironmentConfig(environment: 'dev' | 'prod') {
   return config[environment]
 }
 
+// Resolve setting with manual configuration priority
+function resolveSetting(manualValue: any, envValue: any, defaultValue: any) {
+  // If manual value exists and is not empty/null, use it
+  if (manualValue !== null && manualValue !== undefined && manualValue !== '') {
+    return manualValue
+  }
+  
+  // Otherwise use environment variable or default
+  return envValue !== null && envValue !== undefined && envValue !== '' ? envValue : defaultValue
+}
+
 // Fetch app settings from Supabase
 export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<AppSettings | null> {
   const targetEnv = environment || getCurrentEnvironment()
@@ -143,15 +154,35 @@ export async function fetchAppSettings(environment?: 'dev' | 'prod'): Promise<Ap
     
     if (data && data.length > 0) {
       const settings = data[0]
+      const envConfig = getEnvironmentConfig(targetEnv)
       
-      // Cache the settings
-      settingsCache[targetEnv] = settings
+      // Merge manual settings with environment variables (manual has priority)
+      const mergedSettings = {
+        ...settings,
+        app_name: resolveSetting(settings.app_name, envConfig.app_name, 'Product Community Survey'),
+        app_url: resolveSetting(settings.app_url, envConfig.app_url, ''),
+        survey_table_name: resolveSetting(settings.survey_table_name, envConfig.survey_table_name, targetEnv === 'dev' ? 'pc_survey_data_dev' : 'pc_survey_data'),
+        enable_analytics: resolveSetting(settings.enable_analytics, envConfig.enable_analytics, true),
+        enable_email_notifications: resolveSetting(settings.enable_email_notifications, envConfig.enable_email_notifications, true),
+        enable_export: resolveSetting(settings.enable_export, envConfig.enable_export, true),
+        session_timeout: resolveSetting(settings.session_timeout, envConfig.session_timeout, 3600000),
+        max_login_attempts: resolveSetting(settings.max_login_attempts, envConfig.max_login_attempts, 10),
+        // For Supabase config, manual settings always have priority
+        settings: {
+          ...settings.settings,
+          supabase_url: resolveSetting(settings.settings?.supabase_url, config.supabaseUrl, ''),
+          supabase_anon_key: resolveSetting(settings.settings?.supabase_anon_key, config.anonKey, '')
+        }
+      }
+      
+      // Cache the merged settings
+      settingsCache[targetEnv] = mergedSettings
       cacheTimestamp[targetEnv] = now
       
-      console.log(`✅ App settings loaded from Supabase for ${targetEnv}`)
-      return settings
+      console.log(`✅ App settings loaded from Supabase for ${targetEnv} (manual config has priority)`)
+      return mergedSettings
     } else {
-      console.warn(`⚠️ No app settings found in database for ${targetEnv}, using defaults`)
+      console.warn(`⚠️ No app settings found in database for ${targetEnv}, using environment defaults`)
       return getDefaultSettings(targetEnv)
     }
     
