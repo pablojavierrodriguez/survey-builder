@@ -283,12 +283,32 @@ export default function AnalyticsPage() {
       const { getDatabaseConfig, getDatabaseEndpointSync, getDatabaseHeadersSync } = await import('@/lib/database-config')
       const config = getDatabaseConfig()
       
-      const response = await fetch(getDatabaseEndpointSync(), {
-        headers: getDatabaseHeadersSync()
+      const endpoint = getDatabaseEndpointSync()
+      const headers = getDatabaseHeadersSync()
+      
+      console.log('🔍 Analytics - Config:', config)
+      console.log('🔍 Analytics - Endpoint:', endpoint)
+      console.log('🔍 Analytics - Headers:', headers)
+      
+      const response = await fetch(endpoint, {
+        headers: headers
       })
 
+      console.log('🔍 Analytics - Response status:', response.status)
+      console.log('🔍 Analytics - Response headers:', Object.fromEntries(response.headers.entries()))
+
       if (response.ok) {
-        const responses = await response.json()
+        const responseText = await response.text()
+        console.log('🔍 Analytics - Response text (first 200 chars):', responseText.substring(0, 200))
+        
+        let responses
+        try {
+          responses = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error('🔍 Analytics - JSON parse error:', parseError)
+          console.error('🔍 Analytics - Full response text:', responseText)
+          throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`)
+        }
 
         // Process data for analytics
         const roleDistribution: { [key: string]: number } = {}
