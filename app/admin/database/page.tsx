@@ -310,33 +310,6 @@ Note: Auto-setup is not available. Please configure the database manually using 
     }
   }
 
-After running the SQL script, refresh this page to see your data.`
-        
-        alert(manualInstructions)
-      }
-    } catch (error) {
-      console.error('Auto-setup error:', error)
-      
-      const networkErrorInstructions = `❌ Auto-setup failed: Network or API error
-
-📋 MANUAL SETUP REQUIRED:
-
-1. Go to your Supabase Dashboard: ${process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""}
-2. Open the SQL Editor
-3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
-4. The script will create all necessary tables and sample data
-
-🔗 Direct link: ${process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""}/project/default/sql
-
-The auto-setup feature requires custom SQL functions that may not be enabled.
-Manual setup is the recommended approach for production environments.`
-      
-      alert(networkErrorInstructions)
-    } finally {
-      setSetupLoading(false)
-    }
-  }
-
   const uniqueRoles = [...new Set(responses.map((r) => r.role))].sort()
 
   return (

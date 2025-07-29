@@ -6,10 +6,10 @@ The application now has a comprehensive settings persistence system that stores 
 
 ## Architecture
 
-### 1. Environment Variables Priority
+### 1. Configuration Priority
 Settings are resolved in the following order:
-1. **Environment Variables** (highest priority)
-2. **Database Settings** (from `app_settings` table)
+1. **Manual Configuration** (highest priority) - Settings saved in database via Settings panel
+2. **Environment Variables** (fallback) - Variables from Vercel/process.env
 3. **Default Values** (non-functional placeholders)
 
 ### 2. Client-Side Environment Access
@@ -98,15 +98,17 @@ const supabaseUrl = env.SUPABASE_URL
 ## Configuration Flow
 
 1. **Initial Load**: App loads settings from API
-2. **Environment Variables**: Supabase URL/API Key from Vercel integration
-3. **Database Settings**: Additional configuration from `app_settings` table
-4. **User Changes**: Admin modifies settings in Settings panel
-5. **Persistence**: Changes saved to database via API
-6. **Application**: All components use current settings
+2. **Priority Resolution**: Manual settings > Environment variables > Defaults
+3. **Database Settings**: Configuration from `app_settings` table (manual settings)
+4. **Environment Variables**: Supabase URL/API Key from Vercel integration (fallback)
+5. **User Changes**: Admin modifies settings in Settings panel
+6. **Persistence**: Changes saved to database via API (manual settings take priority)
+7. **Application**: All components use current settings
 
 ## Benefits
 
-- **No Hardcoded Values**: All configuration comes from environment or database
+- **Manual Configuration Priority**: Settings saved in Settings panel override environment variables
+- **No Hardcoded Values**: All configuration comes from manual settings, environment, or defaults
 - **Environment Isolation**: Separate settings for dev/prod
 - **Admin Control**: Full configuration through Settings panel
 - **Persistence**: Settings survive all app restarts
