@@ -628,26 +628,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       )}
-                  Average Salary by Currency
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(data.salaryData.averageByCurrency).map(([currency, avg]) => (
-                    <div key={currency} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="font-medium text-gray-900 dark:text-gray-50">
-                        {currency === 'USD' ? '🇺🇸 USD' : '🇦🇷 ARS'}
-                      </span>
-                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                        {currency === 'USD' ? '$' : '$'}{Math.round(avg).toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-
 
       {/* Main Challenges - Actual Responses */}
       {data && data.mainChallenges.length > 0 && (
