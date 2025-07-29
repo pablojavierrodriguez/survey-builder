@@ -255,6 +255,11 @@ export default function SettingsPage() {
       console.log('Creating user with Supabase Auth:', newUser.email)
       
       // Create user with Supabase Auth
+      if (!supabase) {
+        alert('❌ Supabase client not initialized')
+        return
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email: newUser.email,
         password: newUser.password,
@@ -302,6 +307,11 @@ export default function SettingsPage() {
     
     try {
       console.log('Updating user role:', userId, role)
+      
+      if (!supabase) {
+        alert('❌ Supabase client not initialized')
+        return
+      }
       
       // Try using the RPC function first
       const { error: rpcError } = await supabase.rpc('update_user_role', {

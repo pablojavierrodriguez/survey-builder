@@ -23,7 +23,7 @@ import {
   AlertCircle,
   Info
 } from "lucide-react"
-import { getAppSettings, updateAppSettings, clearSettingsCache } from "@/lib/app-settings"
+import { getAppSettings, fetchAppSettings, updateAppSettings, clearSettingsCache } from "@/lib/app-settings"
 import type { AppSettings } from "@/lib/app-settings"
 
 export default function AppConfigPage() {
@@ -41,8 +41,8 @@ export default function AppConfigPage() {
     setLoading(true)
     try {
       const [dev, prod] = await Promise.all([
-        getAppSettings('dev'),
-        getAppSettings('prod')
+        fetchAppSettings('dev'),
+        fetchAppSettings('prod')
       ])
       
       setDevSettings(dev)
