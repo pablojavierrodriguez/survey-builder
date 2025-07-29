@@ -427,9 +427,11 @@ export default function AnalyticsPage() {
         Object.keys(salaryDataByRole).forEach(role => {
           averageByRole[role] = { ARS: 0, USD: 0 }
           Object.keys(salaryDataByRole[role]).forEach(currency => {
-            const salaries = salaryDataByRole[role][currency]
-            if (salaries.length > 0) {
-              averageByRole[role][currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+            if (currency === 'ARS' || currency === 'USD') {
+              const salaries = salaryDataByRole[role][currency as 'ARS' | 'USD']
+              if (salaries.length > 0) {
+                averageByRole[role][currency as 'ARS' | 'USD'] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+              }
             }
           })
         })
@@ -438,9 +440,11 @@ export default function AnalyticsPage() {
         Object.keys(salaryDataByIndustry).forEach(industry => {
           averageByIndustry[industry] = { ARS: 0, USD: 0 }
           Object.keys(salaryDataByIndustry[industry]).forEach(currency => {
-            const salaries = salaryDataByIndustry[industry][currency]
-            if (salaries.length > 0) {
-              averageByIndustry[industry][currency] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+            if (currency === 'ARS' || currency === 'USD') {
+              const salaries = salaryDataByIndustry[industry][currency as 'ARS' | 'USD']
+              if (salaries.length > 0) {
+                averageByIndustry[industry][currency as 'ARS' | 'USD'] = salaries.reduce((a, b) => a + b, 0) / salaries.length
+              }
             }
           })
         })
