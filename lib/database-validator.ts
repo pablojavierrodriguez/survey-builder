@@ -45,10 +45,10 @@ export async function validateDatabase(): Promise<DatabaseValidationResult> {
     result.details.supabaseUrl = config.supabaseUrl
 
     // 3. Check if Supabase is configured
-    const hasValidConfig = config.supabaseUrl && 
-                          config.anonKey && 
-                          config.supabaseUrl !== 'https://your-project.supabase.co' &&
-                          config.supabaseUrl !== ''
+    const hasValidConfig = !!(config.supabaseUrl && 
+                              config.anonKey && 
+                              config.supabaseUrl !== 'https://your-project.supabase.co' &&
+                              config.supabaseUrl !== '')
     
     result.details.hasValidConfig = hasValidConfig
     result.isConfigured = hasValidConfig
