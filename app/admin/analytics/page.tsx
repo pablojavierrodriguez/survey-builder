@@ -303,7 +303,7 @@ export default function AnalyticsPage() {
         const salaryDataByRole: { [key: string]: { ARS: number[], USD: number[] } } = {}
         const salaryDataByIndustry: { [key: string]: { ARS: number[], USD: number[] } } = {}
         const salaryRanges: { [key: string]: number } = {}
-        const salaryByCurrency: { ARS: number[], USD: number[] } = { ARS: [], USD: [] }
+        const salaryByCurrency: { [key: string]: number[] } = { ARS: [], USD: [] }
 
         responses.forEach((response: any) => {
           // Role distribution
@@ -378,6 +378,9 @@ export default function AnalyticsPage() {
 
             if (salaryValue > 0) {
               // Salary by currency
+              if (!salaryByCurrency[currency]) {
+                salaryByCurrency[currency] = []
+              }
               salaryByCurrency[currency].push(salaryValue)
 
               // Salary by role
@@ -385,7 +388,9 @@ export default function AnalyticsPage() {
                 if (!salaryDataByRole[response.role]) {
                   salaryDataByRole[response.role] = { ARS: [], USD: [] }
                 }
-                salaryDataByRole[response.role][currency].push(salaryValue)
+                if (currency === 'ARS' || currency === 'USD') {
+                  salaryDataByRole[response.role][currency].push(salaryValue)
+                }
               }
 
               // Salary by industry
@@ -393,7 +398,9 @@ export default function AnalyticsPage() {
                 if (!salaryDataByIndustry[response.industry]) {
                   salaryDataByIndustry[response.industry] = { ARS: [], USD: [] }
                 }
-                salaryDataByIndustry[response.industry][currency].push(salaryValue)
+                if (currency === 'ARS' || currency === 'USD') {
+                  salaryDataByIndustry[response.industry][currency].push(salaryValue)
+                }
               }
 
               // Salary range distribution
