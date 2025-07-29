@@ -13,20 +13,10 @@ import { validateDatabase, canSubmitSurvey, getDatabaseStatus } from "@/lib/data
 interface SurveyData {
   role: string
   other_role: string
-  seniority: string
   company_type: string
-  company_size: string
-  industry: string
-  product_type: string
-  customer_segment: string
   main_challenge: string
   daily_tools: string[]
-  other_tool: string
   learning_methods: string[]
-  salary_currency: string
-  salary_min: string
-  salary_max: string
-  salary_average: string
   email: string
 }
 
@@ -55,17 +45,7 @@ const roleOptions = [
   "Other",
 ]
 
-const seniorityOptions = [
-  "Junior (0-2 years)",
-  "Mid-level (2-5 years)",
-  "Senior (5-8 years)",
-  "Staff/Principal (8+ years)",
-  "Manager/Lead",
-  "Director/VP",
-  "C-level/Founder",
-]
-
-const companySizeOptions = [
+const companyTypeOptions = [
   "Early-stage Startup (Pre-seed/Seed)",
   "Growth-stage Startup (Series A-C)",
   "Scale-up (Series D+)",
@@ -75,29 +55,6 @@ const companySizeOptions = [
   "Consultancy/Agency",
   "Freelance/Independent",
 ]
-
-const industryOptions = [
-  "Technology/Software",
-  "Financial Services/Fintech",
-  "Healthcare/Medtech",
-  "E-commerce/Retail",
-  "Education/Edtech",
-  "Media/Entertainment",
-  "Manufacturing/Industrial",
-  "Consulting/Professional Services",
-  "Government/Public Sector",
-  "Non-profit/NGO",
-  "Other",
-]
-
-const productTypeOptions = [
-  "SaaS (B2B)",
-  "SaaS (B2C)",
-  "Mobile App",
-  "Web Application",
-  "E-commerce Platform",
-  "API/Developer Tools",
-  "Hardware + Software",
   "Services/Consulting",
   "Internal Tools",
   "Other",
