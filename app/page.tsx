@@ -191,7 +191,7 @@ export default function ProductSurvey() {
       try {
         // Check if user is admin
         const userIsAdmin = user && profile?.role === 'admin'
-        setIsAdmin(userIsAdmin)
+        setIsAdmin(userIsAdmin || false)
 
         // Validate database status
         const status = await getDatabaseStatus()

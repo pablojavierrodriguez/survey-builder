@@ -375,7 +375,7 @@ export default function SurveyConfigPage() {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={saveConfig}
+            onClick={() => saveConfig()}
             disabled={saveStatus === "saving"}
             className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700"
           >
