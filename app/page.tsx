@@ -178,7 +178,7 @@ export default function ProductSurvey() {
 
   // Check maintenance mode on component mount
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadSettings = () => {
       try {
         // Check for survey configuration first
         const surveyConfig = localStorage.getItem("survey_config")
@@ -192,65 +192,29 @@ export default function ProductSurvey() {
           }
         }
 
-        // Try to load settings from environment variables and Supabase
-        const { getAppSettings, getAppName, getSurveyTableName } = await import('@/lib/app-settings')
+        // Use environment-based defaults (simplified approach)
+        const isDev = window.location.hostname.includes('dev') || 
+                     window.location.hostname.includes('localhost') ||
+                     window.location.hostname.includes('127.0.0.1')
         
-        try {
-          const settings = await getAppSettings()
-          const appName = await getAppName()
-          const tableName = await getSurveyTableName()
-          
-          setAppSettings({
-            general: {
-              maintenanceMode: settings.maintenance_mode || false,
-              appName: appName,
-              appUrl: settings.app_url || window.location.origin
-            },
-            features: {
-              enableAnalytics: settings.enable_analytics || true,
-              enableEmailNotifications: settings.enable_email_notifications || false,
-              enableExport: settings.enable_export || true
-            },
-            database: {
-              tableName: tableName,
-              environment: settings.environment || 'dev'
-            }
-          })
-          
-          console.log('✅ App settings loaded successfully:', {
-            appName,
-            tableName,
-            environment: settings.environment
-          })
-        } catch (error) {
-          console.warn('⚠️ Could not load settings from Supabase, using defaults:', error)
-          
-          // Use environment-based defaults
-          const isDev = window.location.hostname.includes('dev') || 
-                       window.location.hostname.includes('localhost') ||
-                       window.location.hostname.includes('127.0.0.1')
-          
-          setAppSettings({
-            general: {
-              maintenanceMode: false,
-              appName: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
-              appUrl: window.location.origin
-            },
-            features: {
-              enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'false',
-              enableEmailNotifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
-              enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT !== 'false'
-            },
-            database: {
-              tableName: isDev ? 
-                (process.env.NEXT_PUBLIC_DB_TABLE_DEV || 'pc_survey_data_dev') :
-                (process.env.NEXT_PUBLIC_DB_TABLE_PROD || 'pc_survey_data'),
-              environment: isDev ? 'dev' : 'prod'
-            }
-          })
-          
-          console.log('✅ App loaded with environment-based defaults')
-        }
+        setAppSettings({
+          general: {
+            maintenanceMode: false,
+            appName: 'Product Community Survey',
+            appUrl: window.location.origin
+          },
+          features: {
+            enableAnalytics: true,
+            enableEmailNotifications: false,
+            enableExport: true
+          },
+          database: {
+            tableName: isDev ? 'pc_survey_data_dev' : 'pc_survey_data',
+            environment: isDev ? 'dev' : 'prod'
+          }
+        })
+        
+        console.log('✅ App loaded with simplified settings')
       } catch (error) {
         console.error('❌ Error loading settings:', error)
         

@@ -5,6 +5,9 @@ import { User, Session } from '@supabase/supabase-js'
 import { supabase, requireSupabase, isSupabaseConfigured } from './supabase'
 import { Profile } from './supabase'
 
+// Get Supabase URL for validation
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+
 interface AuthContextType {
   user: User | null
   profile: Profile | null
@@ -33,35 +36,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('Initial session:', session)
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
+    // Check if Supabase URL is not a placeholder
+    if (supabaseUrl === 'https://your-project.supabase.co' || !supabaseUrl) {
+      console.log('Supabase URL is placeholder - auth features disabled')
+      setLoading(false)
+      return
+    }
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session)
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
+    try {
+      // Get initial session
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('Error getting session:', error)
+        }
+        console.log('Initial session:', session)
+        setSession(session)
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      })
 
-    return () => subscription.unsubscribe()
+      // Listen for auth changes
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state change:', event, session)
+        setSession(session)
+        setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        } else {
+          setProfile(null)
+          setLoading(false)
+        }
+      })
+
+      return () => subscription.unsubscribe()
+    } catch (error) {
+      console.error('Error initializing auth:', error)
+      setLoading(false)
+    }
   }, [])
 
   const fetchProfile = async (userId: string) => {
