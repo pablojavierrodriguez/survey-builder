@@ -1,17 +1,24 @@
 -- =================================================================
--- SIMPLE DEMO USERS CREATION FOR PRODUCT COMMUNITY SURVEY
+-- CREATE DEMO USER PROFILES FOR PRODUCT COMMUNITY SURVEY
 -- =================================================================
--- This script creates demo user profiles in the profiles table
--- You'll need to create the actual users in Supabase Auth dashboard first
+-- 
+-- INSTRUCTIONS:
+-- 1. First run get-user-ids.sql to get the real UUIDs
+-- 2. Replace the placeholder UUIDs below with the real ones
+-- 3. Then run this script
+--
+-- Example: If get-user-ids.sql shows:
+-- admin@demo.com | 12345678-1234-1234-1234-123456789abc
+-- Then replace '00000000-0000-0000-0000-000000000004' with '12345678-1234-1234-1234-123456789abc'
 
 -- Create demo user profiles
--- Note: You need to create the actual users in Supabase Auth dashboard
--- and then update the UUIDs below with the actual user IDs
+-- Replace the UUIDs below with the actual user IDs from auth.users
 
--- 1. Create viewer profile (replace UUID with actual user ID from auth.users)
+-- 1. Create viewer profile
+-- Replace UUID with actual user ID for viewer@demo.com
 INSERT INTO profiles (id, email, role, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000001', -- Replace with actual UUID from auth.users
+  '00000000-0000-0000-0000-000000000001', -- ⚠️ REPLACE: Get UUID from get-user-ids.sql for viewer@demo.com
   'viewer@demo.com',
   'viewer',
   NOW(),
@@ -21,9 +28,10 @@ VALUES (
   updated_at = NOW();
 
 -- 2. Create admin-demo profile
+-- Replace UUID with actual user ID for admin-demo@demo.com
 INSERT INTO profiles (id, email, role, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000002', -- Replace with actual UUID from auth.users
+  '00000000-0000-0000-0000-000000000002', -- ⚠️ REPLACE: Get UUID from get-user-ids.sql for admin-demo@demo.com
   'admin-demo@demo.com',
   'admin-demo',
   NOW(),
@@ -33,9 +41,10 @@ VALUES (
   updated_at = NOW();
 
 -- 3. Create collaborator profile
+-- Replace UUID with actual user ID for collaborator@demo.com
 INSERT INTO profiles (id, email, role, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000003', -- Replace with actual UUID from auth.users
+  '00000000-0000-0000-0000-000000000003', -- ⚠️ REPLACE: Get UUID from get-user-ids.sql for collaborator@demo.com
   'collaborator@demo.com',
   'collaborator',
   NOW(),
@@ -45,9 +54,10 @@ VALUES (
   updated_at = NOW();
 
 -- 4. Create admin profile
+-- Replace UUID with actual user ID for admin@demo.com
 INSERT INTO profiles (id, email, role, created_at, updated_at)
 VALUES (
-  '00000000-0000-0000-0000-000000000004', -- Replace with actual UUID from auth.users
+  '00000000-0000-0000-0000-000000000004', -- ⚠️ REPLACE: Get UUID from get-user-ids.sql for admin@demo.com
   'admin@demo.com',
   'admin',
   NOW(),

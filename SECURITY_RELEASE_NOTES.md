@@ -31,7 +31,8 @@ This release addresses the **Immediate Actions Required** security vulnerabiliti
 ### New Files Created
 - `middleware.ts` - Server-side authentication middleware
 - `app/api/config/app/route.ts` - Secure configuration API endpoint
-- `create-demo-users.sql` - SQL script for creating demo users
+- `create-demo-profiles-auto.sql` - Automatic demo user profile creation
+- `get-user-ids.sql` - Script to get real user UUIDs
 
 ### Files Modified
 - `lib/auth-context.tsx` - Updated to use Supabase Auth properly
@@ -47,8 +48,9 @@ This release addresses the **Immediate Actions Required** security vulnerabiliti
 ### 1. **Database Setup**
 ```sql
 -- Run the database schema first
--- Then run the demo users script
-\i create-demo-users.sql
+-- Then create users manually in Supabase Auth dashboard
+-- Finally run the automatic profile creation script
+\i create-demo-profiles-auto.sql
 ```
 
 ### 2. **Environment Variables**
@@ -63,14 +65,20 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 1. Enable Email/Password authentication in Supabase Auth settings
 2. Configure Google OAuth if needed
 3. Set up Row Level Security (RLS) policies
-4. Run the demo users SQL script
+4. Create demo users manually in Supabase Auth dashboard
 
-### 4. **Demo Users**
-The following demo accounts are now created in Supabase:
-- **Viewer**: `viewer@demo.com` / `viewer123`
-- **Admin Demo**: `admin-demo@demo.com` / `demo123`
-- **Collaborator**: `collaborator@demo.com` / `collab456`
-- **Admin**: `admin@demo.com` / `admin789`
+### 4. **Demo Users Setup**
+**Step 1: Create Users in Supabase Auth Dashboard**
+- Go to Supabase Dashboard → Authentication → Users
+- Create these users manually:
+  - `viewer@demo.com` / `viewer123`
+  - `admin-demo@demo.com` / `demo123`
+  - `collaborator@demo.com` / `collab456`
+  - `admin@demo.com` / `admin789`
+
+**Step 2: Create Profiles**
+- Run `create-demo-profiles-auto.sql` in Supabase SQL editor
+- This script automatically finds the user UUIDs and creates profiles
 
 ## 🔒 **Security Improvements**
 
