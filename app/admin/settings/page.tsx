@@ -116,21 +116,21 @@ export default function SettingsPage() {
         // Transform API data to local settings format
         const apiSettings = {
           database: {
-            url: data.settings?.supabase_url || "",
-            apiKey: data.settings?.supabase_anon_key || "",
+            url: data.settings?.supabase_url || env.NEXT_PUBLIC_SUPABASE_URL || "",
+            apiKey: data.settings?.supabase_anon_key || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
             tableName: data.survey_table_name || env.NEXT_PUBLIC_DB_TABLE || "",
             connectionTimeout: 30,
           },
           security: {
-            sessionTimeout: data.session_timeout || 28800,
-            maxLoginAttempts: data.max_login_attempts || 10,
+            sessionTimeout: data.session_timeout || Number.parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
+            maxLoginAttempts: data.max_login_attempts || Number.parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
             requireHttps: true,
             enableRateLimit: true,
             enforceStrongPasswords: false,
             enableTwoFactor: false,
           },
           notifications: {
-            emailAlerts: data.enable_email_notifications || false,
+            emailAlerts: data.enable_email_notifications || env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
             adminEmail: "",
             responseThreshold: 10,
           },
@@ -138,7 +138,7 @@ export default function SettingsPage() {
             appName: data.app_name || env.NEXT_PUBLIC_APP_NAME || "",
             publicUrl: data.app_url || env.NEXT_PUBLIC_APP_URL || "",
             maintenanceMode: data.maintenance_mode || false,
-            analyticsEnabled: data.enable_analytics || false,
+            analyticsEnabled: data.enable_analytics || env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
           },
         }
         
@@ -155,8 +155,8 @@ export default function SettingsPage() {
       const env = (window as any).__ENV__ || {}
       const envSettings = {
         database: {
-          url: "",
-          apiKey: "",
+          url: env.NEXT_PUBLIC_SUPABASE_URL || "",
+          apiKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
           tableName: env.NEXT_PUBLIC_DB_TABLE || "",
           connectionTimeout: 30,
         },
