@@ -1,36 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSafeClientConfig } from '@/lib/config-manager'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Supabase configuration from server-side environment variables
-    // Try multiple possible variable names for compatibility
-    const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || 
-                       process.env.NEXT_PUBLIC_SUPABASE_URL || 
-                       ""
-    const supabaseAnonKey = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-                           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-                           ""
-    
-    console.log('🔧 API Config - Environment variables check:', {
-      POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
-      POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
-      finalUrl: supabaseUrl ? 'SET' : 'EMPTY',
-      finalKey: supabaseAnonKey ? 'SET' : 'EMPTY'
-    })
-    
-    // Return configuration (anon key is safe to expose to client)
-    return NextResponse.json({
-      supabaseUrl,
-      supabaseAnonKey,
-      tableName: process.env.NEXT_PUBLIC_DB_TABLE || "survey_data",
-      environment: process.env.NEXT_PUBLIC_NODE_ENV || "production"
-    })
+    const config = await getSafeClientConfig()
+    return NextResponse.json(config)
   } catch (error) {
-    console.error('Error fetching Supabase config:', error)
+    console.error('Error fetching app config:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch Supabase configuration' },
+      { error: 'Failed to fetch app configuration' },
       { status: 500 }
     )
   }

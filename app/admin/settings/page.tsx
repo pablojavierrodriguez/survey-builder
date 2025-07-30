@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase, requireSupabase, isSupabaseConfigured } from "@/lib/supabase"
 import { getCurrentUserPermissions, getUserRole, getRoleDisplayName, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,6 +16,7 @@ interface AppSettings {
     apiKey: string
     tableName: string
     connectionTimeout: number
+    environment: string
   }
   general: {
     appName: string
@@ -27,21 +27,7 @@ interface AppSettings {
 }
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<AppSettings>({
-    database: {
-      url: "",
-      apiKey: "",
-      tableName: "",
-      connectionTimeout: 30,
-    },
-    general: {
-      appName: "",
-      publicUrl: typeof window !== 'undefined' ? window.location.origin : '',
-      maintenanceMode: false,
-      analyticsEnabled: false,
-    },
-  })
-
+  const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   const [isSaving, setIsSaving] = useState(false)
@@ -66,35 +52,28 @@ export default function SettingsPage() {
     const currentRole = getUserRole()
     setUserRole(currentRole)
     setPermissions(getCurrentUserPermissions())
-
-    // Load settings from API
     loadSettings()
-    
-    // Load users if permitted
     if (permissions.canViewUsers) {
       fetchUsers()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadSettings = async () => {
     setLoading(true)
     try {
-      // Use the new centralized configuration manager
-      const { getConfig } = await import('@/lib/config-manager')
-      const config = await getConfig()
-      
-      // Check if Supabase is configured
-      const { isSupabaseConfigured } = await import('@/lib/supabase')
-      const configured = await isSupabaseConfigured()
-      setSupabaseConfigured(configured)
-      
-      // Transform to local settings format
-      const apiSettings = {
+      // Load config from /api/admin/settings
+      const response = await fetch('/api/admin/settings')
+      if (!response.ok) throw new Error('Failed to load settings')
+      const config = await response.json()
+      // Map to local AppSettings shape
+      const apiSettings: AppSettings = {
         database: {
           url: config.database.url,
           apiKey: config.database.apiKey,
           tableName: config.database.tableName,
           connectionTimeout: 30,
+          environment: config.database.environment || 'production',
         },
         general: {
           appName: config.general.appName,
@@ -103,35 +82,11 @@ export default function SettingsPage() {
           analyticsEnabled: config.general.analyticsEnabled,
         },
       }
-      
       setSettings(apiSettings)
-      console.log('🔍 Settings - Loaded configuration:', {
-        databaseUrl: config.database.url ? 'SET' : 'EMPTY',
-        databaseKey: config.database.apiKey ? 'SET' : 'EMPTY',
-        tableName: config.database.tableName,
-        appName: config.general.appName,
-        supabaseConfigured: configured,
-      })
+      setSupabaseConfigured(!!(config.database.url && config.database.apiKey))
     } catch (error) {
       console.error('Error loading settings:', error)
-      
-      // Fallback to empty settings
-      const emptySettings = {
-        database: {
-          url: "",
-          apiKey: "",
-          tableName: "",
-          connectionTimeout: 30,
-        },
-        general: {
-          appName: "Product Community Survey",
-          publicUrl: "",
-          maintenanceMode: false,
-          analyticsEnabled: false,
-        },
-      }
-      
-      setSettings(emptySettings)
+      setSettings(null)
     } finally {
       setLoading(false)
     }
@@ -140,37 +95,18 @@ export default function SettingsPage() {
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
-      console.log('Fetching users from Supabase...')
-      
-      // Get dynamic Supabase client
       const { getSupabaseClient } = await import('@/lib/supabase')
       const client = await getSupabaseClient()
       if (!client) {
-        console.error('Supabase client not available')
         setUsers([])
         return
       }
-
-      // Test connection first
-      const { data: testData, error: testError } = await client
-        .from('profiles')
-        .select('count')
-        .limit(1)
-
-      if (testError) {
-        console.error('Database connection failed:', testError)
-        setUsers([])
-        return
-      }
-
       // Try to fetch from user_management view first
       const { data: viewData, error: viewError } = await client
         .from('user_management')
         .select('*')
         .order('created_at', { ascending: false })
-
       if (!viewError && viewData) {
-        console.log('Users loaded from view:', viewData.length)
         setUsers(viewData || [])
       } else {
         // Fallback to profiles table
@@ -178,17 +114,13 @@ export default function SettingsPage() {
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false })
-
         if (!profileError && profileData) {
-          console.log('Users loaded from profiles:', profileData.length)
           setUsers(profileData || [])
         } else {
-          console.error('Error fetching users:', profileError || viewError)
           setUsers([])
         }
       }
     } catch (error) {
-      console.error('Failed to fetch users:', error)
       setUsers([])
     } finally {
       setLoadingUsers(false)
@@ -200,57 +132,36 @@ export default function SettingsPage() {
       alert("⚠️ Demo mode: User creation is not allowed")
       return
     }
-    
     if (!newUser.email || !newUser.password) return
-
     setCreatingUser(true)
     try {
-      console.log('Creating user with Supabase Auth:', newUser.email)
-      
-      // Get dynamic Supabase client
       const { getSupabaseClient } = await import('@/lib/supabase')
       const client = await getSupabaseClient()
       if (!client) {
         alert('❌ Supabase client not initialized')
         return
       }
-      
       const { data, error } = await client.auth.signUp({
         email: newUser.email,
         password: newUser.password,
         options: {
           data: {
             role: newUser.role,
-            full_name: newUser.email.split('@')[0] // Use email prefix as name
+            full_name: newUser.email.split('@')[0]
           }
         }
       })
-
       if (error) {
-        console.error('Create user error:', error)
         alert(`❌ Failed to create user: ${error.message}`)
       } else {
-        console.log('User created successfully:', data)
         setNewUser({ email: '', password: '', role: 'viewer' })
         await fetchUsers()
         alert('✅ User created successfully! They will receive a confirmation email.')
       }
     } catch (error) {
-      console.error('Create user exception:', error)
       alert(`❌ Failed to create user: ${error instanceof Error ? error.message : 'Network error'}`)
     } finally {
       setCreatingUser(false)
-    }
-  }
-
-  const deleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return
-
-    try {
-      // Note: Deleting auth users requires admin API
-      alert('ℹ️ User deletion requires admin privileges. Contact administrator.')
-    } catch (error) {
-      alert('❌ Failed to delete user: Network error')
     }
   }
 
@@ -259,36 +170,28 @@ export default function SettingsPage() {
       alert("⚠️ Demo mode: User role changes are not allowed")
       return
     }
-    
     try {
-      console.log('Updating user role:', userId, role)
-      
-      // Get dynamic Supabase client
       const { getSupabaseClient } = await import('@/lib/supabase')
       const client = await getSupabaseClient()
       if (!client) {
         alert('❌ Supabase client not initialized')
         return
       }
-      
       // Try using the RPC function first
       const { error: rpcError } = await client.rpc('update_user_role', {
         user_id: userId,
         new_role: role
       })
-
       if (!rpcError) {
         await fetchUsers()
         alert('✅ User role updated successfully!')
         return
       }
-
       // Fallback to direct profiles update
       const { error: updateError } = await client
         .from('profiles')
         .update({ role, updated_at: new Date().toISOString() })
         .eq('id', userId)
-
       if (updateError) {
         alert(`❌ Failed to update role: ${updateError.message}`)
       } else {
@@ -305,68 +208,25 @@ export default function SettingsPage() {
       alert("⚠️ Demo mode: Settings cannot be saved")
       return
     }
-    
+    if (!settings) return
     setIsSaving(true)
-
     try {
-      // Transform local settings to API format
-      const apiSettings = {
-        survey_table_name: settings.database.tableName,
-        app_name: settings.general.appName,
-        app_url: settings.general.publicUrl,
-        maintenance_mode: settings.general.maintenanceMode,
-        enable_analytics: settings.general.analyticsEnabled,
-        enable_email_notifications: false, // Default to false
-        enable_export: true, // Default to true
-        session_timeout: 3600 * 1000, // Default to 1 hour
-        max_login_attempts: 10, // Default to 10
-        theme_default: 'system',
-        language_default: 'en',
-        settings: {
-          supabase_url: settings.database.url,
-          supabase_anon_key: settings.database.apiKey,
-          connection_timeout: settings.database.connectionTimeout,
-          require_https: true, // Default to true
-          enable_rate_limit: true, // Default to true
-          enforce_strong_passwords: false, // Default to false
-          enable_two_factor: false, // Default to false
-          admin_email: "", // Default to empty
-          response_threshold: 10 // Default to 10
-        }
-      }
-
+      // POST to /api/admin/settings with the full AppConfig shape
       const response = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(apiSettings)
+        body: JSON.stringify(settings)
       })
-
       if (response.ok) {
-        const result = await response.json()
-        console.log('Settings saved successfully:', result)
-        
-        // Refresh the configuration manager
-        const { refreshConfig } = await import('@/lib/config-manager')
-        await refreshConfig()
-        
-        // Dispatch custom events to notify other components
-        window.dispatchEvent(new CustomEvent('app_settings_changed', { 
-          detail: settings 
-        }))
-        window.dispatchEvent(new CustomEvent('settingsUpdated', { 
-          detail: settings 
-        }))
-        
+        await loadSettings()
         alert("Settings saved successfully!")
       } else {
         const error = await response.json()
-        console.error('Failed to save settings:', error)
         alert(`Failed to save settings: ${error.error || 'Unknown error'}`)
       }
     } catch (error) {
-      console.error('Error saving settings:', error)
       alert('Error saving settings. Please try again.')
     } finally {
       setIsSaving(false)
@@ -376,14 +236,13 @@ export default function SettingsPage() {
   const testDatabaseConnection = async () => {
     setTestingConnection(true)
     setConnectionStatus(null)
-
     try {
+      if (!settings) return
       const response = await fetch(`${settings.database.url}/rest/v1/`, {
         headers: {
           apikey: settings.database.apiKey,
         },
       })
-
       setConnectionStatus(response.ok ? "success" : "error")
     } catch (error) {
       setConnectionStatus("error")
@@ -392,47 +251,24 @@ export default function SettingsPage() {
     }
   }
 
-  // Debug function to show environment variables
-  const showDebugInfo = () => {
-    const env = (window as any).__ENV__ || {}
-    console.log('🔍 Debug - Environment Variables:', env)
-    console.log('🔍 Debug - Current Settings:', settings)
-    alert(`Environment Variables:\n${JSON.stringify(env, null, 2)}\n\nCurrent Settings:\n${JSON.stringify(settings, null, 2)}`)
-  }
-
-  // Sanitize sensitive data for demo users
-  const getSafeSettings = (settings: AppSettings): AppSettings => {
-    if (permissions.canViewSensitiveData) {
-      return settings
-    }
-    
-    // Return safe/demo version for admin-demo role
-    return {
-      ...settings,
-      database: {
-        ...settings.database,
-        url: "https://your-project.supabase.co",
-        apiKey: "your_supabase_anon_key_here_••••••••••••••••",
-      }
-    }
-  }
-
   const updateSettings = (section: keyof AppSettings, key: string, value: any) => {
     if (!permissions.canEditSettings) {
       alert("⚠️ Demo mode: Settings changes are not allowed")
       return
     }
-    
-    setSettings((prev) => ({
+    if (!settings) return
+    setSettings((prev) => prev ? ({
       ...prev,
       [section]: {
         ...prev[section],
         [key]: value,
       },
-    }))
+    }) : prev)
   }
 
-  const safeSettings = getSafeSettings(settings)
+  if (loading || !settings) {
+    return <div className="p-8 text-center text-lg">Loading settings...</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -459,11 +295,11 @@ export default function SettingsPage() {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={showDebugInfo} 
+            onClick={() => setDebugMode(!debugMode)} 
             variant="outline"
           >
             <Info className="w-4 h-4 mr-2" />
-            Debug
+            {debugMode ? "Hide Debug" : "Show Debug"}
           </Button>
           <Button 
             onClick={saveSettings} 
@@ -488,7 +324,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Supabase URL</label>
                              <Input
-                 value={safeSettings.database.url}
+                 value={settings.database.url}
                  onChange={(e) => updateSettings("database", "url", e.target.value)}
                  placeholder="https://your-project.supabase.co"
                  className="bg-background text-foreground border-border"
@@ -498,7 +334,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Table Name</label>
               <Input
-                value={safeSettings.database.tableName}
+                value={settings.database.tableName}
                 onChange={(e) => updateSettings("database", "tableName", e.target.value)}
                 placeholder="Enter table name (e.g., survey_data)"
                 className="bg-background text-foreground border-border"
@@ -512,7 +348,7 @@ export default function SettingsPage() {
             <div className="flex gap-2">
                              <Input
                  type={showApiKey ? "text" : "password"}
-                 value={safeSettings.database.apiKey}
+                 value={settings.database.apiKey}
                  onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
                  placeholder="Your Supabase anon key"
                  className="flex-1 bg-background text-foreground border-border"

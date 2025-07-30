@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { getConfig } from './config-manager'
 
 // Database types for better TypeScript support
 export interface Database {
@@ -78,44 +79,40 @@ export interface Database {
   }
 }
 
-// Global Supabase client instance
+// Global Supabase client instance (server only)
 let supabaseClient: any = null
 let configLoaded = false
 
-// Function to get Supabase client with dynamic config from API
+// Function to get Supabase client with dynamic config
 export async function getSupabaseClient() {
-  // Return cached client if already loaded
-  if (supabaseClient && configLoaded) {
+  // On the server, use config-manager directly
+  if (typeof window === 'undefined') {
+    const config = await getConfig()
+    if (!config.database.url || !config.database.apiKey) {
+      console.warn('Supabase not configured (server)')
+      return null
+    }
+    if (supabaseClient && configLoaded) {
+      return supabaseClient
+    }
+    supabaseClient = createClient<Database>(config.database.url, config.database.apiKey)
+    configLoaded = true
     return supabaseClient
   }
-  
+  // On the client, fetch from /api/config
   try {
-    // Fetch config from API endpoint
-    const response = await fetch('/api/config/supabase')
+    const response = await fetch('/api/config')
     if (!response.ok) {
       throw new Error(`API responded with status: ${response.status}`)
     }
-    
     const config = await response.json()
-    
-    if (config.error) {
-      throw new Error(config.error)
-    }
-    
     if (!config.supabaseUrl || !config.supabaseAnonKey) {
-      console.warn('Supabase configuration incomplete from API')
+      console.warn('Supabase not configured (client)')
       return null
     }
-    
-    // Create client with fetched config
-    supabaseClient = createClient<Database>(config.supabaseUrl, config.supabaseAnonKey)
-    configLoaded = true
-    
-    console.log('✅ Supabase client created successfully')
-    return supabaseClient
-    
+    return createClient<Database>(config.supabaseUrl, config.supabaseAnonKey)
   } catch (error) {
-    console.error('Error fetching Supabase config from API:', error)
+    console.error('Error fetching Supabase config from /api/config:', error)
     return null
   }
 }
