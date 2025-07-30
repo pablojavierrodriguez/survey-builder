@@ -97,6 +97,13 @@ export default function DatabasePage() {
       const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
       const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
       
+      // Check if we have valid database configuration
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('No valid database configuration found')
+        setConnectionStatus("disconnected")
+        return
+      }
+      
       // Check if configured table exists
       const tableExists = await ensureTableExists(tableName)
       setDevTableExists(tableExists)
@@ -117,15 +124,12 @@ export default function DatabasePage() {
       if (response.ok) {
         setConnectionStatus("connected")
       } else {
-        // Fallback to localStorage for demo
-        const localData = localStorage.getItem("survey")
-        setConnectionStatus(localData ? "connected" : "disconnected")
+        console.error('Database connection test failed:', response.status, response.statusText)
+        setConnectionStatus("disconnected")
       }
     } catch (error) {
-      console.warn("Database connection failed, using localStorage")
-      // Check if we have local data
-      const localData = localStorage.getItem("survey")
-      setConnectionStatus(localData ? "connected" : "disconnected")
+      console.error("Database connection test failed:", error)
+      setConnectionStatus("disconnected")
     }
   }
 
@@ -151,6 +155,14 @@ export default function DatabasePage() {
       const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
       const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
       
+      // Check if we have valid database configuration
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('No valid database configuration found')
+        setResponses([])
+        setConnectionStatus("disconnected")
+        return
+      }
+      
       // Try to fetch from current database configuration
       const response = await fetch(
         `${supabaseUrl}/rest/v1/${tableName}?select=*&order=created_at.desc`,
@@ -166,49 +178,16 @@ export default function DatabasePage() {
       if (response.ok) {
         const data = await response.json()
         setResponses(data || [])
+        setConnectionStatus("connected")
       } else {
-        // Fallback to localStorage
-        const localData = localStorage.getItem("survey")
-        if (localData) {
-          const parsedData = JSON.parse(localData)
-          // Transform local data to match expected format
-          const transformedData = parsedData.map((item: any, index: number) => ({
-            id: item.id || `local-${index}`,
-            role: item.role || 'Unknown',
-            other_role: item.other_role,
-            company_type: item.company_type || item.company_size || 'Unknown',
-            main_challenge: item.main_challenge || 'No challenge provided',
-            daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
-            learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
-            email: item.email,
-            created_at: item.created_at || new Date().toISOString(),
-          }))
-          setResponses(transformedData)
-        } else {
-          setResponses([])
-        }
+        console.error('Database connection failed:', response.status, response.statusText)
+        setResponses([])
+        setConnectionStatus("disconnected")
       }
     } catch (error) {
-      console.error("Error fetching responses, using localStorage:", error)
-      // Fallback to localStorage
-      const localData = localStorage.getItem("survey")
-      if (localData) {
-        const parsedData = JSON.parse(localData)
-        const transformedData = parsedData.map((item: any, index: number) => ({
-          id: item.id || `local-${index}`,
-          role: item.role || 'Unknown',
-          other_role: item.other_role,
-          company_type: item.company_type || item.company_size || 'Unknown',
-          main_challenge: item.main_challenge || 'No challenge provided',
-          daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
-          learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
-          email: item.email,
-          created_at: item.created_at || new Date().toISOString(),
-        }))
-        setResponses(transformedData)
-      } else {
-        setResponses([])
-      }
+      console.error("Error fetching responses:", error)
+      setResponses([])
+      setConnectionStatus("disconnected")
     } finally {
       setIsLoading(false)
     }
@@ -275,24 +254,55 @@ export default function DatabasePage() {
   const deleteResponse = async (id: string) => {
     if (!confirm("Are you sure you want to delete this response?")) return
 
+    // Check if we're connected to the database
+    if (connectionStatus !== "connected") {
+      alert("❌ Cannot delete response: Not connected to database")
+      return
+    }
+
     try {
-              const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ""
-        const tableName = process.env.NEXT_PUBLIC_DB_TABLE || "pc_survey_data"
-        const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}?id=eq.${id}`, {
+      // Get current settings from API
+      let currentSettings = null
+      try {
+        const settingsResponse = await fetch('/api/admin/settings')
+        if (settingsResponse.ok) {
+          currentSettings = await settingsResponse.json()
+        }
+      } catch (error) {
+        console.warn('Could not fetch current settings:', error)
+      }
+      
+      // Get environment-specific config
+      const config = getDatabaseConfigSync()
+      
+      // Use settings from API if available, otherwise fall back to config
+      const tableName = currentSettings?.survey_table_name || config.tableName
+      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
+      const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
+      
+      if (!supabaseUrl || !supabaseKey) {
+        alert("❌ Cannot delete response: No valid database configuration")
+        return
+      }
+
+      const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}?id=eq.${id}`, {
         method: "DELETE",
         headers: {
-          apikey:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
         },
       })
 
       if (response.ok) {
         fetchResponses()
+        alert("✅ Response deleted successfully")
+      } else {
+        alert(`❌ Failed to delete response: ${response.status} ${response.statusText}`)
       }
     } catch (error) {
       console.error("Error deleting response:", error)
+      alert("❌ Error deleting response: Network error")
     }
   }
 

@@ -201,6 +201,18 @@ export default function SettingsPage() {
         return
       }
 
+      // Test connection first
+      const { data: testData, error: testError } = await client
+        .from('profiles')
+        .select('count')
+        .limit(1)
+
+      if (testError) {
+        console.error('Database connection failed:', testError)
+        setUsers([])
+        return
+      }
+
       // Try to fetch from user_management view first
       const { data: viewData, error: viewError } = await client
         .from('user_management')
