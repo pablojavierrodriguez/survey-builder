@@ -157,9 +157,9 @@ class Logger {
   // Authentication logging
   logAuthEvent(
     event: string,
+    success: boolean,
     userId?: string,
     email?: string,
-    success: boolean,
     error?: Error
   ) {
     const context = {

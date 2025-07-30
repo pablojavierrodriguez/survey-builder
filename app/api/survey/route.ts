@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateSurveyResponse, sanitizeInput } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { submitSurveyToDatabase } from '@/lib/database-config'
-import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
@@ -12,9 +11,10 @@ export async function POST(request: NextRequest) {
     // Rate limiting
     const rateLimitResult = await rateLimit(clientIP, '/api/survey', 'SURVEY_SUBMISSION')
     if (!rateLimitResult.allowed) {
+      console.warn(`Rate limit exceeded for IP ${clientIP}: ${rateLimitResult.error}`)
       return NextResponse.json({
         success: false,
-        error: rateLimitResult.error || 'Rate limit exceeded',
+        error: rateLimitResult.error,
         timestamp: new Date().toISOString()
       }, { status: 429 })
     }
@@ -33,10 +33,11 @@ export async function POST(request: NextRequest) {
     // Validate survey response
     const validation = validateSurveyResponse(body)
     if (!validation.success) {
+      console.warn(`Survey validation failed for IP ${clientIP}:`, validation.error)
       return NextResponse.json({
         success: false,
         error: 'Invalid survey data',
-        details: validation.details || validation.error,
+        details: validation.details,
         timestamp: new Date().toISOString()
       }, { status: 400 })
     }
@@ -45,34 +46,27 @@ export async function POST(request: NextRequest) {
     const result = await submitSurveyToDatabase(validation.data)
     
     if (!result.success) {
+      console.error(`Survey submission failed for IP ${clientIP}:`, result.error)
       return NextResponse.json({
         success: false,
-        error: result.error || 'Failed to save survey response',
+        error: 'Failed to save survey response',
         timestamp: new Date().toISOString()
       }, { status: 500 })
     }
 
-    const responseTime = Date.now() - startTime
-    
+    const duration = Date.now() - startTime
+    console.log(`Survey submitted successfully in ${duration}ms for IP ${clientIP}`)
+
     return NextResponse.json({
       success: true,
       message: 'Survey submitted successfully',
-      data: { id: result.id },
-      timestamp: new Date().toISOString(),
-      metadata: {
-        responseTime: `${responseTime}ms`,
-        rateLimitRemaining: rateLimitResult.remaining
-      }
+      timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    const responseTime = Date.now() - startTime
-    logger.error('Survey submission failed', {
-      clientIP,
-      responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, error instanceof Error ? error : undefined)
-
+    const duration = Date.now() - startTime
+    console.error(`Survey API error for IP ${clientIP} after ${duration}ms:`, error)
+    
     return NextResponse.json({
       success: false,
       error: 'Internal server error',

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminSettings } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { getSupabaseClient } from '@/lib/supabase'
-import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -12,16 +11,17 @@ export async function GET(request: NextRequest) {
     // Rate limiting
     const rateLimitResult = await rateLimit(clientIP, '/api/admin/settings', 'ADMIN')
     if (!rateLimitResult.allowed) {
+      console.warn(`Admin settings rate limit exceeded for IP ${clientIP}: ${rateLimitResult.error}`)
       return NextResponse.json({
         success: false,
-        error: rateLimitResult.error || 'Rate limit exceeded',
+        error: rateLimitResult.error,
         timestamp: new Date().toISOString()
       }, { status: 429 })
     }
 
-    // Get Supabase client
     const client = await getSupabaseClient()
     if (!client) {
+      console.error(`Supabase client not available for admin settings request from IP ${clientIP}`)
       return NextResponse.json({
         success: false,
         error: 'Database service unavailable',
@@ -37,34 +37,28 @@ export async function GET(request: NextRequest) {
       .limit(1)
       .single()
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (error) {
+      console.error(`Failed to fetch admin settings for IP ${clientIP}:`, error.message)
       return NextResponse.json({
         success: false,
-        error: 'Failed to fetch settings',
+        error: 'Failed to load settings',
         timestamp: new Date().toISOString()
       }, { status: 500 })
     }
 
-    const responseTime = Date.now() - startTime
-    
+    const duration = Date.now() - startTime
+    console.log(`Admin settings fetched successfully in ${duration}ms for IP ${clientIP}`)
+
     return NextResponse.json({
       success: true,
-      data: data || null,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        responseTime: `${responseTime}ms`,
-        rateLimitRemaining: rateLimitResult.remaining
-      }
+      data,
+      timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    const responseTime = Date.now() - startTime
-    logger.error('Settings fetch failed', {
-      clientIP,
-      responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, error instanceof Error ? error : undefined)
-
+    const duration = Date.now() - startTime
+    console.error(`Admin settings GET error for IP ${clientIP} after ${duration}ms:`, error)
+    
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
@@ -81,9 +75,10 @@ export async function POST(request: NextRequest) {
     // Rate limiting
     const rateLimitResult = await rateLimit(clientIP, '/api/admin/settings', 'ADMIN')
     if (!rateLimitResult.allowed) {
+      console.warn(`Admin settings update rate limit exceeded for IP ${clientIP}: ${rateLimitResult.error}`)
       return NextResponse.json({
         success: false,
-        error: rateLimitResult.error || 'Rate limit exceeded',
+        error: rateLimitResult.error,
         timestamp: new Date().toISOString()
       }, { status: 429 })
     }
@@ -91,20 +86,21 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json()
     
-    // Validate settings data
+    // Validate admin settings
     const validation = validateAdminSettings(body)
     if (!validation.success) {
+      console.warn(`Admin settings validation failed for IP ${clientIP}:`, validation.error)
       return NextResponse.json({
         success: false,
         error: 'Invalid settings data',
-        details: validation.details || validation.error,
+        details: validation.details,
         timestamp: new Date().toISOString()
       }, { status: 400 })
     }
 
-    // Get Supabase client
     const client = await getSupabaseClient()
     if (!client) {
+      console.error(`Supabase client not available for admin settings update from IP ${clientIP}`)
       return NextResponse.json({
         success: false,
         error: 'Database service unavailable',
@@ -112,33 +108,22 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Prepare settings data
+    // Prepare settings data (validation.data is guaranteed to exist if validation.success is true)
+    const validatedData = validation.data!
     const settingsData = {
-      survey_table_name: validation.data.database.tableName,
-      app_name: validation.data.general.appName,
-      app_url: validation.data.general.publicUrl,
-      maintenance_mode: validation.data.general.maintenanceMode,
-      enable_analytics: validation.data.general.analyticsEnabled,
-      enable_email_notifications: false, // Default to false
-      enable_export: true, // Default to true
-      session_timeout: 3600 * 1000, // Default to 1 hour
-      max_login_attempts: 10, // Default to 10
-      theme_default: 'system',
-      language_default: 'en',
+      survey_table_name: validatedData.database.tableName,
+      app_name: validatedData.general.appName,
+      app_url: validatedData.general.publicUrl,
+      maintenance_mode: validatedData.general.maintenanceMode,
+      enable_analytics: validatedData.general.analyticsEnabled,
       settings: {
-        supabase_url: validation.data.database.url,
-        supabase_anon_key: validation.data.database.apiKey,
+        supabase_url: validatedData.database.url,
+        supabase_anon_key: validatedData.database.apiKey,
         connection_timeout: 30,
-        require_https: true, // Default to true
-        enable_rate_limit: true, // Default to true
-        enforce_strong_passwords: false, // Default to false
-        enable_two_factor: false, // Default to false
-        admin_email: "", // Default to empty
-        response_threshold: 10 // Default to 10
       }
     }
 
-    // Insert or update settings
+    // Update or insert settings
     const { data, error } = await client
       .from('app_settings')
       .upsert(settingsData, { onConflict: 'id' })
@@ -146,6 +131,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
+      console.error(`Failed to update admin settings for IP ${clientIP}:`, error.message)
       return NextResponse.json({
         success: false,
         error: 'Failed to save settings',
@@ -153,27 +139,20 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const responseTime = Date.now() - startTime
-    
+    const duration = Date.now() - startTime
+    console.log(`Admin settings updated successfully in ${duration}ms for IP ${clientIP}`)
+
     return NextResponse.json({
       success: true,
-      message: 'Settings saved successfully',
+      message: 'Settings updated successfully',
       data,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        responseTime: `${responseTime}ms`,
-        rateLimitRemaining: rateLimitResult.remaining
-      }
+      timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    const responseTime = Date.now() - startTime
-    logger.error('Settings save failed', {
-      clientIP,
-      responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, error instanceof Error ? error : undefined)
-
+    const duration = Date.now() - startTime
+    console.error(`Admin settings POST error for IP ${clientIP} after ${duration}ms:`, error)
+    
     return NextResponse.json({
       success: false,
       error: 'Internal server error',

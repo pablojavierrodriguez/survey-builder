@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateLogin } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { getSupabaseClient } from '@/lib/supabase'
-import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
@@ -12,9 +11,10 @@ export async function POST(request: NextRequest) {
     // Rate limiting
     const rateLimitResult = await rateLimit(clientIP, '/api/auth/login', 'LOGIN')
     if (!rateLimitResult.allowed) {
+      console.warn(`Login rate limit exceeded for IP ${clientIP}: ${rateLimitResult.error}`)
       return NextResponse.json({
         success: false,
-        error: rateLimitResult.error || 'Too many login attempts',
+        error: rateLimitResult.error,
         timestamp: new Date().toISOString()
       }, { status: 429 })
     }
@@ -25,10 +25,11 @@ export async function POST(request: NextRequest) {
     // Validate login data
     const validation = validateLogin(body)
     if (!validation.success) {
+      console.warn(`Login validation failed for IP ${clientIP}:`, validation.error)
       return NextResponse.json({
         success: false,
         error: 'Invalid login data',
-        details: validation.details || validation.error,
+        details: validation.details,
         timestamp: new Date().toISOString()
       }, { status: 400 })
     }
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
     // Attempt login
     const client = await getSupabaseClient()
     if (!client) {
+      console.error(`Supabase client not available for login attempt from IP ${clientIP}`)
       return NextResponse.json({
         success: false,
         error: 'Authentication service unavailable',
@@ -43,12 +45,15 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
+    // validation.data is guaranteed to exist if validation.success is true
+    const validatedData = validation.data!
     const { data, error } = await client.auth.signInWithPassword({
-      email: validation.data.email,
-      password: validation.data.password,
+      email: validatedData.email,
+      password: validatedData.password,
     })
 
     if (error) {
+      console.warn(`Login failed for IP ${clientIP}:`, error.message)
       return NextResponse.json({
         success: false,
         error: 'Invalid credentials',
@@ -56,38 +61,19 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
-    const responseTime = Date.now() - startTime
-    
+    const duration = Date.now() - startTime
+    console.log(`Login successful in ${duration}ms for IP ${clientIP}, user: ${data.user?.email}`)
+
     return NextResponse.json({
       success: true,
       message: 'Login successful',
-      data: {
-        user: {
-          id: data.user?.id,
-          email: data.user?.email,
-          role: data.user?.user_metadata?.role || 'user'
-        },
-        session: data.session ? {
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-          expires_at: data.session.expires_at
-        } : null
-      },
-      timestamp: new Date().toISOString(),
-      metadata: {
-        responseTime: `${responseTime}ms`,
-        rateLimitRemaining: rateLimitResult.remaining
-      }
+      timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    const responseTime = Date.now() - startTime
-    logger.error('Login failed', {
-      clientIP,
-      responseTime,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, error instanceof Error ? error : undefined)
-
+    const duration = Date.now() - startTime
+    console.error(`Login API error for IP ${clientIP} after ${duration}ms:`, error)
+    
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
