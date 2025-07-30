@@ -56,12 +56,6 @@ function LoginForm() {
       return
     }
 
-    if (!supabaseConfigured) {
-      setError("Authentication system not configured. Please contact support.")
-      setIsLoading(false)
-      return
-    }
-
     try {
       const { error } = await signInWithPassword(email, password)
       
@@ -82,12 +76,6 @@ function LoginForm() {
   const handleGoogleLogin = async () => {
     setIsLoading(true)
     setError("")
-
-    if (!supabaseConfigured) {
-      setError("Authentication system not configured. Please contact support.")
-      setIsLoading(false)
-      return
-    }
 
     try {
       const { error } = await signInWithGoogle()
@@ -198,7 +186,7 @@ function LoginForm() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading || !supabaseConfigured}
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <>
@@ -227,7 +215,7 @@ function LoginForm() {
             <Button
               variant="outline"
               onClick={handleGoogleLogin}
-              disabled={isLoading || !supabaseConfigured}
+              disabled={isLoading}
               className="w-full"
             >
               <ExternalLink className="mr-2 h-4 w-4" />
