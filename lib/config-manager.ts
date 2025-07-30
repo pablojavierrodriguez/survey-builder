@@ -46,7 +46,7 @@ class ConfigManager {
       console.error('Error fetching app config:', error)
       
       // Return fallback config
-      return {
+      const fallbackConfig: AppConfig = {
         appName: 'Product Community Survey',
         appUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
         enableExport: true,
@@ -55,6 +55,12 @@ class ConfigManager {
         environment: 'development',
         isProduction: false
       }
+      
+      // Cache the fallback config
+      this.appConfig = fallbackConfig
+      this.lastFetch = now
+      
+      return fallbackConfig
     }
   }
 
