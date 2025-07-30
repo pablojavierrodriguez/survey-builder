@@ -1,6 +1,6 @@
 // Comprehensive error handling system with consistent error responses
 import { NextRequest, NextResponse } from 'next/server'
-import logger, { LogLevel } from './logger'
+import { logger, LogLevel } from './logger'
 import { rateLimit, getClientIP, RATE_LIMITS } from './rate-limit'
 import { validateSurveyResponse, validateLogin, validateSignUp, validateAdminSettings } from './validation'
 
