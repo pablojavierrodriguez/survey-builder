@@ -122,15 +122,16 @@ export async function handleApiError(
   request: NextRequest,
   userId?: string
 ): Promise<NextResponse> {
-  const requestLogger = logger.createRequestLogger(request, userId)
-  const requestId = requestLogger.requestId
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
   // Log the error
-  await requestLogger.error('API Error occurred', {
+  await logger.error('API Error occurred', {
+    requestId,
     error: error.message,
     stack: error.stack,
     url: request.url,
-    method: request.method
+    method: request.method,
+    userId
   }, error)
 
   // Format error response
@@ -212,9 +213,8 @@ export async function withDatabaseConnection(
     await logger.logDatabaseOperation(
       'query',
       'unknown',
-      duration,
       true,
-      { url: request.url, method: request.method }
+      duration
     )
 
     return { success: true, data: result }
@@ -224,13 +224,9 @@ export async function withDatabaseConnection(
     await logger.logDatabaseOperation(
       'query',
       'unknown',
-      duration,
       false,
-      { 
-        url: request.url, 
-        method: request.method,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+      duration,
+      error instanceof Error ? error : undefined
     )
 
     const message = error instanceof Error ? error.message : 'Database operation failed'

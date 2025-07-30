@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BarChart3, PieChart, TrendingUp, Users, RefreshCw, Download, Trophy, MessageSquare } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/lib/auth-context"
 
 interface AnalyticsData {
   roleDistribution: { [key: string]: number }
@@ -256,20 +257,21 @@ const getSalaryRange = (salary: number, currency: string): string => {
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [userRole, setUserRole] = useState(getUserRole())
-  const [permissions, setPermissions] = useState(getCurrentUserPermissions())
+  const { user, profile } = useAuth()
+  const userRole = profile?.role || 'viewer'
+  const permissions = getCurrentUserPermissions(userRole as any)
 
   useEffect(() => {
     // Get user role from auth
-    const authStr = localStorage.getItem("survey_auth")
-    if (authStr) {
-      try {
-        const auth = JSON.parse(authStr)
-        setUserRole(auth.role)
-      } catch (error) {
-        console.error("Error getting user role:", error)
-      }
-    }
+    // const authStr = localStorage.getItem("survey_auth")
+    // if (authStr) {
+    //   try {
+    //     const auth = JSON.parse(authStr)
+    //     setUserRole(auth.role)
+    //   } catch (error) {
+    //     console.error("Error getting user role:", error)
+    //   }
+    // }
   }, [])
 
   useEffect(() => {

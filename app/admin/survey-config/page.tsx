@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Edit, Trash2, Save, Eye, EyeOff, AlertCircle } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 
 interface SurveyQuestion {
   id: string
@@ -243,19 +244,12 @@ export default function SurveyConfigPage() {
   const [editingQuestion, setEditingQuestion] = useState<SurveyQuestion | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
-  const [userRole, setUserRole] = useState<string>("viewer")
+  const { user, profile } = useAuth()
+  const userRole = profile?.role || "viewer"
 
-  // Get user role from localStorage
+  // Get user role from auth context
   useEffect(() => {
-    const authStr = localStorage.getItem("survey_auth")
-    if (authStr) {
-      try {
-        const auth = JSON.parse(authStr)
-        setUserRole(auth.role || "viewer")
-      } catch (error) {
-        console.error("Error parsing auth:", error)
-      }
-    }
+    // User role is now managed by Supabase Auth
   }, [])
 
   useEffect(() => {

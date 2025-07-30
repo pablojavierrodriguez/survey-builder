@@ -19,6 +19,8 @@ import {
   PieChart,
   Calendar
 } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
+import { UserRole } from "@/lib/permissions"
 
 interface DashboardStats {
   totalResponses: number
@@ -35,8 +37,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [userRole, setUserRole] = useState(getUserRole())
-  const [permissions, setPermissions] = useState(getCurrentUserPermissions())
+  const { user, profile } = useAuth()
+  const userRole = profile?.role || 'viewer'
+  const permissions = getCurrentUserPermissions(userRole as any)
 
   useEffect(() => {
     fetchDashboardData()
@@ -251,7 +254,7 @@ export default function AdminDashboard() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your survey responses and analytics • {getRoleDisplayName(userRole)}
+            Overview of your survey responses and analytics • {getRoleDisplayName(userRole as UserRole)}
           </p>
         </div>
         <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading}>

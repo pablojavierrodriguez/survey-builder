@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Settings, Database, Shield, Bell, Save, TestTube, Lock, Eye, Users, Plus, Trash2, Loader2, UserPlus, Info } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 
 interface AppSettings {
   database: {
@@ -28,30 +29,24 @@ interface AppSettings {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
-  const [isSaving, setIsSaving] = useState(false)
-  const [testingConnection, setTestingConnection] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<"success" | "error" | null>(null)
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [debugMode, setDebugMode] = useState(false)
-
-  // User Management State
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [creatingUser, setCreatingUser] = useState(false)
-  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer' })
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer' as UserRole })
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [debugMode, setDebugMode] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
 
   // Permissions and role management
-  const [userRole, setUserRole] = useState<UserRole>('viewer')
-  const [permissions, setPermissions] = useState(getCurrentUserPermissions())
+  const { user, profile } = useAuth()
+  const userRole = profile?.role || 'viewer'
+  const permissions = getCurrentUserPermissions(userRole as any)
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
 
   useEffect(() => {
     // Load user role and permissions
-    const currentRole = getUserRole()
-    setUserRole(currentRole)
-    setPermissions(getCurrentUserPermissions())
     loadSettings()
     if (permissions.canViewUsers) {
       fetchUsers()
@@ -209,7 +204,7 @@ export default function SettingsPage() {
       return
     }
     if (!settings) return
-    setIsSaving(true)
+    setSaving(true)
     try {
       // POST to /api/admin/settings with the full AppConfig shape
       const response = await fetch('/api/admin/settings', {
@@ -229,13 +224,13 @@ export default function SettingsPage() {
     } catch (error) {
       alert('Error saving settings. Please try again.')
     } finally {
-      setIsSaving(false)
+      setSaving(false)
     }
   }
 
   const testDatabaseConnection = async () => {
-    setTestingConnection(true)
-    setConnectionStatus(null)
+    setSaving(true) // Use saving state for testing
+    setTestResult(null)
     try {
       if (!settings) return
       const response = await fetch(`${settings.database.url}/rest/v1/`, {
@@ -243,11 +238,11 @@ export default function SettingsPage() {
           apikey: settings.database.apiKey,
         },
       })
-      setConnectionStatus(response.ok ? "success" : "error")
+      setTestResult({ success: response.ok, message: response.ok ? "Connected" : "Failed" })
     } catch (error) {
-      setConnectionStatus("error")
+      setTestResult({ success: false, message: "Network error" })
     } finally {
-      setTestingConnection(false)
+      setSaving(false)
     }
   }
 
@@ -287,7 +282,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Settings</h1>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline">{getRoleDisplayName(userRole)}</Badge>
+            <Badge variant="outline">{getRoleDisplayName(userRole as UserRole)}</Badge>
             {!permissions.canEditSettings && (
               <Badge variant="secondary" className="text-xs">Read-Only</Badge>
             )}
@@ -303,10 +298,10 @@ export default function SettingsPage() {
           </Button>
           <Button 
             onClick={saveSettings} 
-            disabled={isSaving || !permissions.canEditSettings}
+            disabled={saving || !permissions.canEditSettings}
           >
             <Save className="w-4 h-4 mr-2" />
-            {isSaving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
@@ -361,13 +356,13 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <Button onClick={testDatabaseConnection} disabled={testingConnection} variant="outline">
+            <Button onClick={testDatabaseConnection} disabled={saving} variant="outline">
               <TestTube className="w-4 h-4 mr-2" />
-              {testingConnection ? "Testing..." : "Test Connection"}
+              {saving ? "Testing..." : "Test Connection"}
             </Button>
-            {connectionStatus && (
-              <Badge variant={connectionStatus === "success" ? "default" : "destructive"}>
-                {connectionStatus === "success" ? "Connected" : "Failed"}
+            {testResult && (
+              <Badge variant={testResult.success ? "default" : "destructive"}>
+                {testResult.message}
               </Badge>
             )}
           </div>
@@ -493,7 +488,7 @@ export default function SettingsPage() {
                 />
                 <select
                   value={newUser.role}
-                  onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value as UserRole})}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-900 dark:text-gray-50"
                 >
                   <option value="viewer">Viewer</option>

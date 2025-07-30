@@ -50,9 +50,9 @@ export function StatusChecker() {
       const settingsData = await settingsResponse.json()
 
       // Check client-side environment
-      const windowEnv = typeof window !== 'undefined' && (window as any).__ENV__
+      const windowEnv = false // window.__ENV__ was removed for security
       const processEnv = typeof process !== 'undefined' && process.env
-      const supabaseClient = !!(window as any).__ENV__?.POSTGRES_NEXT_PUBLIC_SUPABASE_URL
+      const supabaseClient = false // window.__ENV__ was removed for security
 
       setStatus({
         environment: envData.environment,

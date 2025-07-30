@@ -1,10 +1,10 @@
 import { supabase } from './supabase'
 
-// Get environment variables safely
+// Simple environment variable getter (server-side only)
 function getEnvVar(key: string): string {
   if (typeof window !== 'undefined') {
-    // Client-side: try window.__ENV__ first, then process.env
-    return (window as any).__ENV__?.[key] || process.env[key] || ''
+    // Client-side: only use process.env for public variables
+    return process.env[key] || ''
   } else {
     // Server-side: use process.env
     return process.env[key] || ''

@@ -109,23 +109,19 @@ export function hasPermission(role: UserRole, permission: keyof UserPermissions)
 }
 
 // Get user role from auth data
-export function getUserRole(): UserRole {
+export function getUserRole(role?: UserRole): UserRole {
   if (typeof window === 'undefined') return 'viewer'
   
-  try {
-    const authData = localStorage.getItem('survey_auth')
-    if (!authData) return 'viewer'
-    
-    const parsed = JSON.parse(authData)
-    return parsed.role || 'viewer'
-  } catch {
-    return 'viewer'
-  }
+  // If role is provided, use it (from Supabase Auth)
+  if (role) return role
+  
+  // Fallback to viewer if no role provided
+  return 'viewer'
 }
 
 // Get current user permissions
-export function getCurrentUserPermissions(): UserPermissions {
-  return getPermissions(getUserRole())
+export function getCurrentUserPermissions(role?: UserRole): UserPermissions {
+  return getPermissions(getUserRole(role))
 }
 
 // Role display helpers

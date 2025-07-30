@@ -115,7 +115,7 @@ class Logger {
     this.log(level, `Database operation: ${operation}`, context, error)
   }
 
-  logAuthEvent(event: string, userId?: string, success: boolean, error?: Error) {
+  logAuthEvent(event: string, success: boolean, userId?: string, error?: Error) {
     const level = success ? LogLevel.INFO : LogLevel.WARN
     const context = {
       event,
