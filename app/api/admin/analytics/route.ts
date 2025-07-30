@@ -1,138 +1,161 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { logger, generateRequestId, withLogging } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
 
-async function handleGetAnalytics(request: NextRequest) {
-  const requestId = generateRequestId()
+export async function GET(request: NextRequest) {
+  const startTime = Date.now()
   const clientIP = getClientIP(request)
-  const requestLogger = logger.request(requestId, 'GET /api/admin/analytics')
-
+  
   try {
     // Rate limiting
     const rateLimitResult = await rateLimit(clientIP, '/api/admin/analytics', 'ADMIN')
     if (!rateLimitResult.allowed) {
-      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
-      return NextResponse.json(
-        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
-        { status: 429 }
-      )
+      console.warn(`Rate limit exceeded for IP ${clientIP} on /api/admin/analytics`)
+      return NextResponse.json({
+        success: false,
+        error: rateLimitResult.error || 'Rate limit exceeded',
+        timestamp: new Date().toISOString()
+      }, { status: 429 })
     }
 
     // Check if Supabase is configured
     if (!supabase) {
-      requestLogger.error('Supabase not configured', { ip: clientIP })
-      return NextResponse.json(
-        { success: false, error: 'Analytics service unavailable' },
-        { status: 503 }
-      )
+      console.error(`Supabase not configured for IP ${clientIP}`)
+      return NextResponse.json({
+        success: false,
+        error: 'Database not configured',
+        timestamp: new Date().toISOString()
+      }, { status: 503 })
     }
 
     // Get table name from query params or use default
     const { searchParams } = new URL(request.url)
     const tableName = searchParams.get('table') || 'survey_data'
 
-    requestLogger.info('Fetching analytics data', { 
-      ip: clientIP,
-      tableName 
-    })
-
-    // Fetch survey data
-    const { data: surveyData, error: surveyError } = await supabase
+    // Fetch analytics data
+    const { data: responses, error: responsesError } = await supabase
       .from(tableName)
       .select('*')
+      .order('created_at', { ascending: false })
 
-    if (surveyError) {
-      requestLogger.error('Failed to fetch survey data', surveyError, { 
-        ip: clientIP,
-        tableName 
-      })
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch analytics data' },
-        { status: 500 }
-      )
+    if (responsesError) {
+      console.error(`Failed to fetch analytics data for IP ${clientIP}:`, responsesError)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch analytics data',
+        timestamp: new Date().toISOString()
+      }, { status: 500 })
     }
 
-    // Process analytics data
-    const analytics = {
-      totalResponses: surveyData.length,
-      roles: {} as Record<string, number>,
-      seniorityLevels: {} as Record<string, number>,
-      companyTypes: {} as Record<string, number>,
-      industries: {} as Record<string, number>,
-      productTypes: {} as Record<string, number>,
-      customerSegments: {} as Record<string, number>,
-      tools: {} as Record<string, number>,
-      learningMethods: {} as Record<string, number>,
-      salaryRanges: {} as Record<string, number>,
-      challenges: [] as string[],
-      recentResponses: surveyData.slice(-10).reverse()
-    }
+    // Calculate analytics
+    const totalResponses = responses?.length || 0
+    
+    // Role distribution
+    const roleDistribution = responses?.reduce((acc: any, response: any) => {
+      acc[response.role] = (acc[response.role] || 0) + 1
+      return acc
+    }, {}) || {}
 
-    // Aggregate data
-    surveyData.forEach(response => {
-      // Count roles
-      analytics.roles[response.role] = (analytics.roles[response.role] || 0) + 1
-      
-      // Count seniority levels
-      analytics.seniorityLevels[response.seniority_level] = (analytics.seniorityLevels[response.seniority_level] || 0) + 1
-      
-      // Count company types
-      analytics.companyTypes[response.company_type] = (analytics.companyTypes[response.company_type] || 0) + 1
-      
-      // Count industries
-      analytics.industries[response.industry] = (analytics.industries[response.industry] || 0) + 1
-      
-      // Count product types
-      analytics.productTypes[response.product_type] = (analytics.productTypes[response.product_type] || 0) + 1
-      
-      // Count customer segments
-      analytics.customerSegments[response.customer_segment] = (analytics.customerSegments[response.customer_segment] || 0) + 1
-      
-      // Count tools
+    // Seniority distribution
+    const seniorityDistribution = responses?.reduce((acc: any, response: any) => {
+      acc[response.seniority_level] = (acc[response.seniority_level] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Company type distribution
+    const companyTypeDistribution = responses?.reduce((acc: any, response: any) => {
+      acc[response.company_type] = (acc[response.company_type] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Industry distribution
+    const industryDistribution = responses?.reduce((acc: any, response: any) => {
+      acc[response.industry] = (acc[response.industry] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Product type distribution
+    const productTypeDistribution = responses?.reduce((acc: any, response: any) => {
+      acc[response.product_type] = (acc[response.product_type] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Customer segment distribution
+    const customerSegmentDistribution = responses?.reduce((acc: any, response: any) => {
+      acc[response.customer_segment] = (acc[response.customer_segment] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Tools usage
+    const toolsUsage = responses?.reduce((acc: any, response: any) => {
       if (response.tools && Array.isArray(response.tools)) {
-        response.tools.forEach(tool => {
-          analytics.tools[tool] = (analytics.tools[tool] || 0) + 1
+        response.tools.forEach((tool: string) => {
+          acc[tool] = (acc[tool] || 0) + 1
         })
       }
-      
-      // Count learning methods
-      if (response.learning_methods && Array.isArray(response.learning_methods)) {
-        response.learning_methods.forEach(method => {
-          analytics.learningMethods[method] = (analytics.learningMethods[method] || 0) + 1
-        })
-      }
-      
-      // Count salary ranges
-      if (response.salary_range) {
-        analytics.salaryRanges[response.salary_range] = (analytics.salaryRanges[response.salary_range] || 0) + 1
-      }
-      
-      // Collect challenges
-      if (response.main_challenge) {
-        analytics.challenges.push(response.main_challenge)
-      }
-    })
+      return acc
+    }, {}) || {}
 
-    requestLogger.info('Analytics data processed successfully', { 
-      ip: clientIP,
-      totalResponses: analytics.totalResponses,
-      tableName 
-    })
+    // Learning methods
+    const learningMethods = responses?.reduce((acc: any, response: any) => {
+      if (response.learning_methods && Array.isArray(response.learning_methods)) {
+        response.learning_methods.forEach((method: string) => {
+          acc[method] = (acc[method] || 0) + 1
+        })
+      }
+      return acc
+    }, {}) || {}
+
+    // Salary range distribution
+    const salaryDistribution = responses?.reduce((acc: any, response: any) => {
+      if (response.salary_range) {
+        acc[response.salary_range] = (acc[response.salary_range] || 0) + 1
+      }
+      return acc
+    }, {}) || {}
+
+    // Recent activity (last 7 days)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    
+    const recentResponses = responses?.filter((response: any) => 
+      new Date(response.created_at) > sevenDaysAgo
+    ) || []
+
+    const analyticsData = {
+      totalResponses,
+      roleDistribution,
+      seniorityDistribution,
+      companyTypeDistribution,
+      industryDistribution,
+      productTypeDistribution,
+      customerSegmentDistribution,
+      toolsUsage,
+      learningMethods,
+      salaryDistribution,
+      recentActivity: {
+        last7Days: recentResponses.length,
+        responses: recentResponses.slice(0, 10) // Last 10 responses
+      }
+    }
+
+    const duration = Date.now() - startTime
+    console.log(`Analytics fetched successfully for IP ${clientIP} in ${duration}ms`)
 
     return NextResponse.json({
       success: true,
-      data: analytics
+      data: analyticsData,
+      timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    requestLogger.error('Unexpected error fetching analytics', error as Error, { ip: clientIP })
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    const duration = Date.now() - startTime
+    console.error(`Analytics API error for IP ${clientIP} after ${duration}ms:`, error)
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
 }
-
-// Export the wrapped handler
-export const GET = withLogging(handleGetAnalytics)

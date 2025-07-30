@@ -1,30 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateSurveyResponse, sanitizeInput } from '@/lib/validation'
-import { rateLimit, getClientIP, RATE_LIMITS } from '@/lib/rate-limit'
-import { logger, generateRequestId, withLogging } from '@/lib/logger'
-import { supabase } from '@/lib/supabase'
+import { rateLimit, getClientIP } from '@/lib/rate-limit'
+import { submitSurveyToDatabase } from '@/lib/database-config'
 
-async function handleSurveySubmission(request: NextRequest) {
-  const requestId = generateRequestId()
+export async function POST(request: NextRequest) {
+  const startTime = Date.now()
   const clientIP = getClientIP(request)
-  const requestLogger = logger.request(requestId, 'POST /api/survey')
-
+  
   try {
     // Rate limiting
     const rateLimitResult = await rateLimit(clientIP, '/api/survey', 'SURVEY_SUBMISSION')
     if (!rateLimitResult.allowed) {
-      requestLogger.warn('Rate limit exceeded', { 
-        ip: clientIP, 
-        remaining: rateLimitResult.remaining,
-        resetTime: rateLimitResult.resetTime 
-      })
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Rate limit exceeded' 
-        },
-        { status: 429 }
-      )
+      console.warn(`Rate limit exceeded for IP ${clientIP} on /api/survey`)
+      return NextResponse.json({
+        success: false,
+        error: rateLimitResult.error || 'Rate limit exceeded',
+        timestamp: new Date().toISOString()
+      }, { status: 429 })
     }
 
     // Parse and validate request body
@@ -41,71 +33,44 @@ async function handleSurveySubmission(request: NextRequest) {
     // Validate survey response
     const validation = validateSurveyResponse(body)
     if (!validation.success) {
-      requestLogger.warn('Survey validation failed', { 
-        errors: validation.details,
-        ip: clientIP 
-      })
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid survey data',
-          details: validation.details 
-        },
-        { status: 400 }
-      )
-    }
-
-    // Check if Supabase is configured
-    if (!supabase) {
-      requestLogger.error('Supabase not configured', { ip: clientIP })
-      return NextResponse.json(
-        { success: false, error: 'Survey submission temporarily unavailable' },
-        { status: 503 }
-      )
+      console.warn(`Survey validation failed for IP ${clientIP}:`, validation.error)
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid survey data',
+        details: validation.details,
+        timestamp: new Date().toISOString()
+      }, { status: 400 })
     }
 
     // Submit to database
-    const { data, error } = await supabase
-      .from('survey_data')
-      .insert([validation.data])
-      .select()
-
-    if (error) {
-      requestLogger.error('Database submission failed', error, { 
-        ip: clientIP,
-        surveyData: { ...validation.data, email: '[REDACTED]' }
-      })
-      return NextResponse.json(
-        { success: false, error: 'Failed to submit survey' },
-        { status: 500 }
-      )
+    const result = await submitSurveyToDatabase(validation.data)
+    
+    if (!result.success) {
+      console.error(`Survey submission failed for IP ${clientIP}:`, result.error)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to save survey response',
+        timestamp: new Date().toISOString()
+      }, { status: 500 })
     }
 
-    requestLogger.info('Survey submitted successfully', { 
-      ip: clientIP,
-      surveyId: data[0]?.id,
-      hasEmail: !!validation.data.email
-    })
+    const duration = Date.now() - startTime
+    console.log(`Survey submitted successfully for IP ${clientIP} in ${duration}ms`)
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Survey submitted successfully',
-        data: { id: data[0]?.id }
-      },
-      { status: 201 }
-    )
+    return NextResponse.json({
+      success: true,
+      message: 'Survey submitted successfully',
+      timestamp: new Date().toISOString()
+    })
 
   } catch (error) {
-    requestLogger.error('Unexpected error in survey submission', error as Error, { 
-      ip: clientIP 
-    })
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    const duration = Date.now() - startTime
+    console.error(`Survey API error for IP ${clientIP} after ${duration}ms:`, error)
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
 }
-
-// Export the wrapped handler
-export const POST = withLogging(handleSurveySubmission)

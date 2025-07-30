@@ -1,23 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateLogin } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { logger, generateRequestId, withLogging } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
 
-async function handleLogin(request: NextRequest) {
-  const requestId = generateRequestId()
+export async function POST(request: NextRequest) {
+  const startTime = Date.now()
   const clientIP = getClientIP(request)
-  const requestLogger = logger.request(requestId, 'POST /api/auth/login')
-
+  
   try {
     // Rate limiting
     const rateLimitResult = await rateLimit(clientIP, '/api/auth/login', 'LOGIN')
     if (!rateLimitResult.allowed) {
-      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
-      return NextResponse.json(
-        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
-        { status: 429 }
-      )
+      console.warn(`Rate limit exceeded for IP ${clientIP} on /api/auth/login`)
+      return NextResponse.json({
+        success: false,
+        error: rateLimitResult.error || 'Rate limit exceeded',
+        timestamp: new Date().toISOString()
+      }, { status: 429 })
     }
 
     // Parse and validate request body
@@ -26,79 +25,57 @@ async function handleLogin(request: NextRequest) {
     // Validate login data
     const validation = validateLogin(body)
     if (!validation.success) {
-      requestLogger.warn('Login validation failed', { 
-        errors: validation.details,
-        ip: clientIP 
-      })
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid login data',
-          details: validation.details 
-        },
-        { status: 400 }
-      )
+      console.warn(`Login validation failed for IP ${clientIP}:`, validation.error)
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid login data',
+        details: validation.details,
+        timestamp: new Date().toISOString()
+      }, { status: 400 })
     }
 
     // Check if Supabase is configured
     if (!supabase) {
-      requestLogger.error('Supabase not configured', { ip: clientIP })
-      return NextResponse.json(
-        { success: false, error: 'Authentication service unavailable' },
-        { status: 503 }
-      )
+      console.error(`Supabase not configured for IP ${clientIP}`)
+      return NextResponse.json({
+        success: false,
+        error: 'Authentication service unavailable',
+        timestamp: new Date().toISOString()
+      }, { status: 503 })
     }
-
-    const { email, password } = validation.data
-
-    requestLogger.info('Login attempt', { 
-      ip: clientIP,
-      email: email // Log email for security tracking
-    })
 
     // Attempt login
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: validation.data!.email,
+      password: validation.data!.password,
     })
 
     if (error) {
-      requestLogger.warn('Login failed', error, { 
-        ip: clientIP,
-        email 
-      })
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: error.message || 'Invalid credentials' 
-        },
-        { status: 401 }
-      )
+      console.warn(`Login failed for IP ${clientIP}:`, error.message)
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid credentials',
+        timestamp: new Date().toISOString()
+      }, { status: 401 })
     }
 
-    requestLogger.info('Login successful', { 
-      ip: clientIP,
-      userId: data.user?.id,
-      email 
-    })
+    const duration = Date.now() - startTime
+    console.log(`Login successful for IP ${clientIP} in ${duration}ms`)
 
     return NextResponse.json({
       success: true,
       message: 'Login successful',
-      data: {
-        user: data.user,
-        session: data.session
-      }
+      timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    requestLogger.error('Unexpected error during login', error as Error, { ip: clientIP })
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    const duration = Date.now() - startTime
+    console.error(`Login API error for IP ${clientIP} after ${duration}ms:`, error)
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
 }
-
-// Export the wrapped handler
-export const POST = withLogging(handleLogin)

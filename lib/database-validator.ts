@@ -1,11 +1,11 @@
-import { getDatabaseConfig, checkDatabaseConnection } from './database-config'
+import { checkDatabaseConnection } from './database-config'
 import { getConfig } from './config-manager'
 
 // Check if database is properly configured and accessible
 export async function isDatabaseConfigured(): Promise<boolean> {
   try {
     const connection = await checkDatabaseConnection()
-    return connection.connected
+    return connection.success
   } catch (error) {
     console.error('Error checking database configuration:', error)
     return false
@@ -17,8 +17,7 @@ export async function isUserAdmin(userId?: string): Promise<boolean> {
   if (!userId) return false
   
   try {
-    const { getSupabaseClient } = await import('./supabase')
-    const supabase = await getSupabaseClient()
+    const { supabase } = await import('./supabase')
     if (!supabase) return false
 
     const { data, error } = await supabase
@@ -42,8 +41,8 @@ export async function isUserAdmin(userId?: string): Promise<boolean> {
 // Check if app is in maintenance mode
 export async function isMaintenanceMode(): Promise<boolean> {
   try {
-    const config = await getConfig() // Use getConfig
-    return config.general.maintenanceMode // Access maintenanceMode from general config
+    const config = await getConfig()
+    return config.general.maintenanceMode
   } catch (error) {
     console.error('Error checking maintenance mode:', error)
     return false
@@ -62,9 +61,9 @@ export async function validateDatabaseStatus(): Promise<{
     
     return {
       configured: true,
-      connected: connection.connected,
+      connected: connection.success,
       error: connection.error,
-      tableName: connection.tableName
+      tableName: 'survey_data' // Default table name
     }
   } catch (error) {
     return {
