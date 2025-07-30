@@ -1,11 +1,12 @@
-// Structured logging for better error tracking and monitoring
+// Structured logging system with external service integration
+// In production, integrate with services like Sentry, LogRocket, or DataDog
 
 export enum LogLevel {
   DEBUG = 'debug',
   INFO = 'info',
   WARN = 'warn',
   ERROR = 'error',
-  FATAL = 'fatal'
+  CRITICAL = 'critical'
 }
 
 export interface LogEntry {
@@ -14,218 +15,271 @@ export interface LogEntry {
   message: string
   context?: Record<string, any>
   error?: Error
-  requestId?: string
   userId?: string
+  sessionId?: string
+  requestId?: string
   endpoint?: string
   method?: string
   ip?: string
   userAgent?: string
+  duration?: number
+}
+
+export interface LoggerConfig {
+  level: LogLevel
+  enableConsole: boolean
+  enableExternal: boolean
+  externalService?: 'sentry' | 'logrocket' | 'datadog'
+  externalConfig?: Record<string, any>
 }
 
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development'
+  private config: LoggerConfig
+  private requestIdCounter = 0
 
-  private formatLog(entry: LogEntry): string {
-    const base = `[${entry.timestamp}] ${entry.level.toUpperCase()}: ${entry.message}`
-    
-    if (entry.context && Object.keys(entry.context).length > 0) {
-      return `${base} | Context: ${JSON.stringify(entry.context)}`
-    }
-    
-    return base
+  constructor(config: LoggerConfig) {
+    this.config = config
   }
 
-  private createEntry(
-    level: LogLevel,
-    message: string,
-    context?: Record<string, any>,
-    error?: Error
-  ): LogEntry {
+  private generateRequestId(): string {
+    return `req_${Date.now()}_${++this.requestIdCounter}`
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    const levels = Object.values(LogLevel)
+    const configLevelIndex = levels.indexOf(this.config.level)
+    const messageLevelIndex = levels.indexOf(level)
+    return messageLevelIndex >= configLevelIndex
+  }
+
+  private formatLogEntry(entry: Omit<LogEntry, 'timestamp'>): LogEntry {
     return {
-      timestamp: new Date().toISOString(),
+      ...entry,
+      timestamp: new Date().toISOString()
+    }
+  }
+
+  private async sendToExternalService(entry: LogEntry): Promise<void> {
+    if (!this.config.enableExternal || !this.config.externalService) {
+      return
+    }
+
+    try {
+      switch (this.config.externalService) {
+        case 'sentry':
+          // Integration with Sentry
+          if (typeof window !== 'undefined' && (window as any).Sentry) {
+            (window as any).Sentry.captureMessage(entry.message, {
+              level: entry.level,
+              extra: entry.context,
+              tags: {
+                endpoint: entry.endpoint,
+                method: entry.method,
+                userId: entry.userId
+              }
+            })
+          }
+          break
+
+        case 'logrocket':
+          // Integration with LogRocket
+          if (typeof window !== 'undefined' && (window as any).LogRocket) {
+            (window as any).LogRocket.track(entry.level, {
+              message: entry.message,
+              ...entry.context
+            })
+          }
+          break
+
+        case 'datadog':
+          // Integration with DataDog
+          if (typeof window !== 'undefined' && (window as any).DD_LOGS) {
+            (window as any).DD_LOGS.logger.log(entry.message, entry.context, entry.level)
+          }
+          break
+      }
+    } catch (error) {
+      // Fallback to console if external service fails
+      console.error('Failed to send log to external service:', error)
+    }
+  }
+
+  private logToConsole(entry: LogEntry): void {
+    if (!this.config.enableConsole) {
+      return
+    }
+
+    const prefix = `[${entry.timestamp}] [${entry.level.toUpperCase()}]`
+    const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : ''
+    const errorStr = entry.error ? `\nError: ${entry.error.stack || entry.error.message}` : ''
+
+    const message = `${prefix} ${entry.message}${contextStr}${errorStr}`
+
+    switch (entry.level) {
+      case LogLevel.DEBUG:
+        console.debug(message)
+        break
+      case LogLevel.INFO:
+        console.info(message)
+        break
+      case LogLevel.WARN:
+        console.warn(message)
+        break
+      case LogLevel.ERROR:
+      case LogLevel.CRITICAL:
+        console.error(message)
+        break
+    }
+  }
+
+  private async log(level: LogLevel, message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+    if (!this.shouldLog(level)) {
+      return
+    }
+
+    const entry = this.formatLogEntry({
       level,
       message,
       context,
-      error,
-      requestId: context?.requestId,
-      userId: context?.userId,
-      endpoint: context?.endpoint,
-      method: context?.method,
-      ip: context?.ip,
-      userAgent: context?.userAgent,
-    }
+      error
+    })
+
+    // Log to console
+    this.logToConsole(entry)
+
+    // Send to external service
+    await this.sendToExternalService(entry)
   }
 
-  debug(message: string, context?: Record<string, any>) {
-    if (this.isDevelopment) {
-      const entry = this.createEntry(LogLevel.DEBUG, message, context)
-      console.log(this.formatLog(entry))
-    }
+  // Public logging methods
+  async debug(message: string, context?: Record<string, any>): Promise<void> {
+    await this.log(LogLevel.DEBUG, message, context)
   }
 
-  info(message: string, context?: Record<string, any>) {
-    const entry = this.createEntry(LogLevel.INFO, message, context)
-    console.log(this.formatLog(entry))
+  async info(message: string, context?: Record<string, any>): Promise<void> {
+    await this.log(LogLevel.INFO, message, context)
   }
 
-  warn(message: string, context?: Record<string, any>, error?: Error) {
-    const entry = this.createEntry(LogLevel.WARN, message, context, error)
-    console.warn(this.formatLog(entry))
-    if (error && this.isDevelopment) {
-      console.warn('Stack trace:', error.stack)
-    }
+  async warn(message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+    await this.log(LogLevel.WARN, message, context, error)
   }
 
-  error(message: string, context?: Record<string, any>, error?: Error) {
-    const entry = this.createEntry(LogLevel.ERROR, message, context, error)
-    console.error(this.formatLog(entry))
-    if (error && this.isDevelopment) {
-      console.error('Stack trace:', error.stack)
-    }
+  async error(message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+    await this.log(LogLevel.ERROR, message, context, error)
   }
 
-  fatal(message: string, context?: Record<string, any>, error?: Error) {
-    const entry = this.createEntry(LogLevel.FATAL, message, context, error)
-    console.error(this.formatLog(entry))
-    if (error) {
-      console.error('Stack trace:', error.stack)
-    }
+  async critical(message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+    await this.log(LogLevel.CRITICAL, message, context, error)
   }
 
   // Request-specific logging
-  logRequest(
-    method: string,
-    endpoint: string,
-    ip: string,
-    userAgent: string,
-    requestId: string,
-    userId?: string
-  ) {
-    this.info('Request received', {
-      method,
-      endpoint,
-      ip,
-      userAgent,
+  createRequestLogger(request: Request, userId?: string, sessionId?: string) {
+    const requestId = this.generateRequestId()
+    const startTime = Date.now()
+
+    return {
       requestId,
-      userId
-    })
+      startTime,
+      
+      async log(level: LogLevel, message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+        const duration = Date.now() - startTime
+        const entry = this.formatLogEntry({
+          level,
+          message,
+          context,
+          error,
+          userId,
+          sessionId,
+          requestId,
+          endpoint: new URL(request.url).pathname,
+          method: request.method,
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+          userAgent: request.headers.get('user-agent') || 'unknown',
+          duration
+        })
+
+        if (this.shouldLog(level)) {
+          this.logToConsole(entry)
+          await this.sendToExternalService(entry)
+        }
+      },
+
+      async debug(message: string, context?: Record<string, any>): Promise<void> {
+        await this.log(LogLevel.DEBUG, message, context)
+      },
+
+      async info(message: string, context?: Record<string, any>): Promise<void> {
+        await this.log(LogLevel.INFO, message, context)
+      },
+
+      async warn(message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+        await this.log(LogLevel.WARN, message, context, error)
+      },
+
+      async error(message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+        await this.log(LogLevel.ERROR, message, context, error)
+      },
+
+      async critical(message: string, context?: Record<string, any>, error?: Error): Promise<void> {
+        await this.log(LogLevel.CRITICAL, message, context, error)
+      }
+    }
   }
 
-  logResponse(
-    method: string,
-    endpoint: string,
-    statusCode: number,
-    responseTime: number,
-    requestId: string,
-    userId?: string
-  ) {
-    const level = statusCode >= 400 ? LogLevel.WARN : LogLevel.INFO
-    const entry = this.createEntry(level, 'Response sent', {
-      method,
-      endpoint,
-      statusCode,
-      responseTime: `${responseTime}ms`,
-      requestId,
-      userId
+  // Performance logging
+  async logPerformance(operation: string, duration: number, context?: Record<string, any>): Promise<void> {
+    const level = duration > 1000 ? LogLevel.WARN : LogLevel.INFO
+    await this.log(level, `Performance: ${operation} took ${duration}ms`, {
+      ...context,
+      operation,
+      duration
     })
-    
-    if (level === LogLevel.WARN) {
-      console.warn(this.formatLog(entry))
-    } else {
-      console.log(this.formatLog(entry))
-    }
   }
 
   // Database operation logging
-  logDatabaseOperation(
-    operation: string,
-    table: string,
-    success: boolean,
-    duration: number,
-    context?: Record<string, any>
-  ) {
+  async logDatabaseOperation(operation: string, table: string, duration: number, success: boolean, context?: Record<string, any>): Promise<void> {
     const level = success ? LogLevel.INFO : LogLevel.ERROR
-    const entry = this.createEntry(level, `Database ${operation}`, {
+    await this.log(level, `Database ${operation} on ${table}`, {
+      ...context,
+      operation,
       table,
-      success,
-      duration: `${duration}ms`,
-      ...context
+      duration,
+      success
     })
-    
-    if (level === LogLevel.ERROR) {
-      console.error(this.formatLog(entry))
-    } else {
-      console.log(this.formatLog(entry))
-    }
   }
 
   // Authentication logging
-  logAuthEvent(
-    event: 'login' | 'logout' | 'signup' | 'password_reset' | 'failed_login',
-    userId?: string,
-    email?: string,
-    success: boolean,
-    context?: Record<string, any>
-  ) {
+  async logAuthEvent(event: string, userId?: string, success: boolean, context?: Record<string, any>): Promise<void> {
     const level = success ? LogLevel.INFO : LogLevel.WARN
-    const entry = this.createEntry(level, `Auth event: ${event}`, {
+    await this.log(level, `Auth event: ${event}`, {
+      ...context,
+      event,
       userId,
-      email,
-      success,
-      ...context
+      success
     })
-    
-    if (level === LogLevel.WARN) {
-      console.warn(this.formatLog(entry))
-    } else {
-      console.log(this.formatLog(entry))
-    }
   }
 
   // Configuration logging
-  logConfigChange(
-    setting: string,
-    oldValue: any,
-    newValue: any,
-    userId?: string
-  ) {
-    this.info('Configuration changed', {
-      setting,
-      oldValue: typeof oldValue === 'object' ? '[Object]' : oldValue,
-      newValue: typeof newValue === 'object' ? '[Object]' : newValue,
-      userId
-    })
+  async logConfigEvent(event: string, context?: Record<string, any>): Promise<void> {
+    await this.log(LogLevel.INFO, `Config event: ${event}`, context)
   }
 }
 
 // Global logger instance
-export const logger = new Logger()
+const logger = new Logger({
+  level: (process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG) as LogLevel,
+  enableConsole: true,
+  enableExternal: process.env.NODE_ENV === 'production',
+  externalService: process.env.LOG_EXTERNAL_SERVICE as 'sentry' | 'logrocket' | 'datadog' | undefined,
+  externalConfig: process.env.LOG_EXTERNAL_CONFIG ? JSON.parse(process.env.LOG_EXTERNAL_CONFIG) : undefined
+})
 
-// Helper function to generate request ID
-export function generateRequestId(): string {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-}
+export default logger
 
-// Middleware helper for request logging
-export function createRequestLogger(requestId: string) {
-  return {
-    logRequest: (method: string, endpoint: string, ip: string, userAgent: string, userId?: string) => {
-      logger.logRequest(method, endpoint, ip, userAgent, requestId, userId)
-    },
-    logResponse: (method: string, endpoint: string, statusCode: number, responseTime: number, userId?: string) => {
-      logger.logResponse(method, endpoint, statusCode, responseTime, requestId, userId)
-    },
-    debug: (message: string, context?: Record<string, any>) => {
-      logger.debug(message, { ...context, requestId })
-    },
-    info: (message: string, context?: Record<string, any>) => {
-      logger.info(message, { ...context, requestId })
-    },
-    warn: (message: string, context?: Record<string, any>, error?: Error) => {
-      logger.warn(message, { ...context, requestId }, error)
-    },
-    error: (message: string, context?: Record<string, any>, error?: Error) => {
-      logger.error(message, { ...context, requestId }, error)
-    }
-  }
-}
+// Convenience functions
+export const logDebug = (message: string, context?: Record<string, any>) => logger.debug(message, context)
+export const logInfo = (message: string, context?: Record<string, any>) => logger.info(message, context)
+export const logWarn = (message: string, context?: Record<string, any>, error?: Error) => logger.warn(message, context, error)
+export const logError = (message: string, context?: Record<string, any>, error?: Error) => logger.error(message, context, error)
+export const logCritical = (message: string, context?: Record<string, any>, error?: Error) => logger.critical(message, context, error)
+export const createRequestLogger = (request: Request, userId?: string, sessionId?: string) => logger.createRequestLogger(request, userId, sessionId)

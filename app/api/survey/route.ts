@@ -1,84 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateSurveyResponse, sanitizeInput } from '@/lib/validation'
-import { rateLimit, getClientIP } from '@/lib/rate-limit'
+import { 
+  handleApiError, 
+  withRateLimit, 
+  withValidation, 
+  withDatabaseConnection,
+  formatSuccessResponse,
+  validateSurveyRequest,
+  withErrorHandling,
+  createValidationError,
+  createDatabaseError
+} from '@/lib/error-handler'
+import { sanitizeInput } from '@/lib/validation'
 import { submitSurveyToDatabase } from '@/lib/database-config'
+import logger from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now()
-  const clientIP = getClientIP(request)
+  const requestLogger = logger.createRequestLogger(request)
   
   try {
-    // Rate limiting
-    const rateLimitResult = await rateLimit(clientIP, '/api/survey', 'SURVEY_SUBMISSION')
-    if (!rateLimitResult.allowed) {
-      console.warn(`Rate limit exceeded for IP ${clientIP}: ${rateLimitResult.error}`)
-      return NextResponse.json({
-        success: false,
-        error: rateLimitResult.error,
-        timestamp: new Date().toISOString()
-      }, { status: 429 })
-    }
-
-    // Parse and validate request body
-    const body = await request.json()
-    
-    // Sanitize text inputs
-    if (body.main_challenge) {
-      body.main_challenge = sanitizeInput(body.main_challenge)
-    }
-    if (body.email) {
-      body.email = sanitizeInput(body.email)
-    }
-
-    // Validate survey response
-    const validation = validateSurveyResponse(body)
-    if (!validation.success) {
-      console.warn(`Survey validation failed for IP ${clientIP}:`, validation.error)
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid survey data',
-        details: validation.details,
-        timestamp: new Date().toISOString()
-      }, { status: 400 })
-    }
-
-    // Submit to database
-    const result = await submitSurveyToDatabase(validation.data)
-    
-    if (!result.success) {
-      console.error(`Survey submission failed for IP ${clientIP}:`, result.error)
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to save survey response',
-        timestamp: new Date().toISOString()
-      }, { status: 500 })
-    }
-
-    const duration = Date.now() - startTime
-    console.log(`Survey submitted successfully in ${duration}ms for IP ${clientIP}`)
-
-    return NextResponse.json({
-      success: true,
-      message: 'Survey submitted successfully',
-      timestamp: new Date().toISOString()
+    await requestLogger.info('Survey submission request received', {
+      method: request.method,
+      url: request.url
     })
 
+    // Rate limiting
+    const rateLimitCheck = await withRateLimit(request, 'SURVEY_SUBMISSION')
+    if (!rateLimitCheck.allowed) {
+      await requestLogger.warn('Rate limit exceeded for survey submission', {
+        clientIP: request.headers.get('x-forwarded-for') || 'unknown'
+      })
+      return NextResponse.json(rateLimitCheck.error, { status: 429 })
+    }
+
+    // Validate request body
+    const validationResult = await withValidation(request, validateSurveyRequest)
+    if (!validationResult.valid) {
+      await requestLogger.warn('Survey validation failed', {
+        error: validationResult.error?.message,
+        details: validationResult.error?.details
+      })
+      return NextResponse.json(validationResult.error, { status: 400 })
+    }
+
+    // Sanitize text inputs
+    const sanitizedData = {
+      ...validationResult.data,
+      main_challenge: validationResult.data?.main_challenge ? 
+        sanitizeInput(validationResult.data.main_challenge) : '',
+      email: validationResult.data?.email ? 
+        sanitizeInput(validationResult.data.email) : ''
+    }
+
+    // Submit to database with error handling
+    const dbResult = await withDatabaseConnection(request, async () => {
+      return await submitSurveyToDatabase(sanitizedData)
+    })
+
+    if (!dbResult.success) {
+      await requestLogger.error('Survey submission to database failed', {
+        error: dbResult.error?.message,
+        details: dbResult.error?.details
+      }, dbResult.error)
+      return NextResponse.json(dbResult.error, { status: 500 })
+    }
+
+    await requestLogger.info('Survey submitted successfully', {
+      surveyId: dbResult.data?.id,
+      duration: Date.now() - requestLogger.startTime
+    })
+
+    return NextResponse.json(formatSuccessResponse({
+      message: 'Survey submitted successfully',
+      surveyId: dbResult.data?.id
+    }, requestLogger.requestId))
+
   } catch (error) {
-    const duration = Date.now() - startTime
-    console.error(`Survey API error for IP ${clientIP} after ${duration}ms:`, error)
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Internal server error',
-      timestamp: new Date().toISOString()
-    }, { status: 500 })
+    return await handleApiError(error, request)
   }
 }
 
 export async function GET() {
+  const requestLogger = logger.createRequestLogger(new Request('GET', '/api/survey'))
+  
+  await requestLogger.warn('GET method not allowed on survey endpoint')
+  
   return NextResponse.json({
     success: false,
-    error: 'Method not allowed',
-    timestamp: new Date().toISOString()
+    error: {
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'GET method not allowed on this endpoint',
+      timestamp: new Date().toISOString(),
+      requestId: requestLogger.requestId
+    },
+    timestamp: new Date().toISOString(),
+    requestId: requestLogger.requestId
   }, { status: 405 })
 }
