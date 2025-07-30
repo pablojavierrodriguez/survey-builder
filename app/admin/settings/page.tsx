@@ -192,8 +192,9 @@ export default function SettingsPage() {
     try {
       console.log('Fetching users from Supabase...')
       
-      // Get Supabase client
-      const client = supabase
+      // Get dynamic Supabase client
+      const { getSupabaseClient } = await import('@/lib/supabase')
+      const client = await getSupabaseClient()
       if (!client) {
         console.error('Supabase client not available')
         setUsers([])
@@ -244,8 +245,9 @@ export default function SettingsPage() {
     try {
       console.log('Creating user with Supabase Auth:', newUser.email)
       
-      // Get Supabase client
-      const client = supabase
+      // Get dynamic Supabase client
+      const { getSupabaseClient } = await import('@/lib/supabase')
+      const client = await getSupabaseClient()
       if (!client) {
         alert('❌ Supabase client not initialized')
         return
@@ -299,13 +301,16 @@ export default function SettingsPage() {
     try {
       console.log('Updating user role:', userId, role)
       
-      if (!supabase) {
+      // Get dynamic Supabase client
+      const { getSupabaseClient } = await import('@/lib/supabase')
+      const client = await getSupabaseClient()
+      if (!client) {
         alert('❌ Supabase client not initialized')
         return
       }
       
       // Try using the RPC function first
-      const { error: rpcError } = await supabase.rpc('update_user_role', {
+      const { error: rpcError } = await client.rpc('update_user_role', {
         user_id: userId,
         new_role: role
       })
@@ -317,7 +322,7 @@ export default function SettingsPage() {
       }
 
       // Fallback to direct profiles update
-      const { error: updateError } = await supabase
+      const { error: updateError } = await client
         .from('profiles')
         .update({ role, updated_at: new Date().toISOString() })
         .eq('id', userId)

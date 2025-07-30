@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+import { getSupabaseClient } from './supabase'
 import { Profile } from './supabase'
 
 interface AuthContextType {
@@ -26,34 +26,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Only initialize Supabase auth if configured
-    if (!supabase) {
-      console.log('Supabase not configured - auth features disabled')
-      setLoading(false)
-      return
-    }
-
-    // Check if Supabase URL is not a placeholder
-    if (!supabase) {
-      console.log('Supabase URL is placeholder - auth features disabled')
-      setLoading(false)
-      return
-    }
-
-    try {
-      // Get initial session
-      if (supabase) {
-        supabase.auth.getSession().then(({ data, error }) => {
-          if (error) {
-            console.error('Error getting session:', error)
-          }
-          const session = data?.session
-          setUser(session?.user || null)
+    const initializeAuth = async () => {
+      try {
+        // Get dynamic Supabase client
+        const client = await getSupabaseClient()
+        if (!client) {
+          console.log('Supabase not configured - auth features disabled')
           setLoading(false)
-        })
+          return
+        }
+
+        // Get initial session
+        const { data, error } = await client.auth.getSession()
+        if (error) {
+          console.error('Error getting session:', error)
+        }
+        const session = data?.session
+        setUser(session?.user || null)
+        setLoading(false)
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        const { data: { subscription } } = client.auth.onAuthStateChange(
           async (event, session) => {
             console.log('Auth state changed:', event, session?.user?.email)
             setUser(session?.user || null)
@@ -62,20 +55,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         )
 
         return () => subscription.unsubscribe()
-      } else {
+      } catch (error) {
+        console.error('Auth context error:', error)
         setLoading(false)
       }
-    } catch (error) {
-      console.error('Auth context error:', error)
-      setLoading(false)
     }
+
+    initializeAuth()
   }, [])
 
   const fetchProfile = async (userId: string) => {
-    if (!supabase) return
-
     try {
-      const { data, error } = await supabase!
+      const client = await getSupabaseClient()
+      if (!client) return
+
+      const { data, error } = await client
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -94,73 +88,131 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    if (!supabase) {
-      return { error: new Error('Supabase not configured') }
+    try {
+      const client = await getSupabaseClient()
+      if (!client) {
+        return { error: new Error('Supabase not configured') }
+      }
+      
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        return { error }
+      }
+
+      if (data.user) {
+        setUser(data.user)
+        await fetchProfile(data.user.id)
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error }
     }
-    
-    const { error } = await supabase!.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { error }
   }
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    if (!supabase) {
-      return { error: new Error('Supabase not configured') }
-    }
-    
-    const { error } = await supabase!.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+    try {
+      const client = await getSupabaseClient()
+      if (!client) {
+        return { error: new Error('Supabase not configured') }
+      }
+      
+      const { data, error } = await client.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
         },
-      },
-    })
-    return { error }
+      })
+
+      if (error) {
+        return { error }
+      }
+
+      if (data.user) {
+        setUser(data.user)
+        await fetchProfile(data.user.id)
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
   }
 
   const signInWithGoogle = async () => {
-    if (!supabase) {
-      return { error: new Error('Supabase not configured - Google OAuth not available') }
+    try {
+      const client = await getSupabaseClient()
+      if (!client) {
+        return { error: new Error('Supabase not configured - Google OAuth not available') }
+      }
+      
+      const { data, error } = await client.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        return { error }
+      }
+
+      // OAuth redirects to callback page, so we don't set user here
+      return { error: null }
+    } catch (error) {
+      return { error }
     }
-    
-    const { error } = await supabase!.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    return { error }
   }
 
   const signOut = async () => {
-    if (!supabase) {
-      return { error: new Error('Supabase not configured') }
+    try {
+      const client = await getSupabaseClient()
+      if (!client) {
+        return { error: new Error('Supabase not configured') }
+      }
+      
+      const { error } = await client.auth.signOut()
+      if (error) {
+        return { error }
+      }
+
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      return { error: null }
+    } catch (error) {
+      return { error }
     }
-    
-    const { error } = await supabase!.auth.signOut()
-    return { error }
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') }
-    if (!supabase) {
-      return { error: new Error('Supabase not configured') }
+    try {
+      const client = await getSupabaseClient()
+      if (!client) {
+        return { error: new Error('Supabase not configured') }
+      }
+
+      const { error } = await client
+        .from('profiles')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+
+      if (!error) {
+        await fetchProfile(user.id)
+      }
+
+      return { error }
+    } catch (error) {
+      return { error }
     }
-
-    const { error } = await supabase!
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id)
-
-    if (!error) {
-      await fetchProfile(user.id)
-    }
-
-    return { error }
   }
 
   const value = {
