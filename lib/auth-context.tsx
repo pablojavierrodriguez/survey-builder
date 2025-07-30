@@ -3,9 +3,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { getSupabaseClient } from './supabase'
-import { Database } from './supabase' // Import Database type
+import { Database } from './supabase'
 
-type Profile = Database['public']['Tables']['profiles']['Row'] // Use Database type for Profile
+type Profile = Database['public']['Tables']['profiles']['Row']
 
 interface AuthContextType {
   user: User | null
@@ -17,6 +17,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<{ error: Error | null }>
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>
+  getAccessToken: () => string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -157,6 +158,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const getAccessToken = (): string | null => {
+    return session?.access_token || null
+  }
+
   const value = {
     user,
     profile,
@@ -167,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signOut,
     updateProfile,
+    getAccessToken,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

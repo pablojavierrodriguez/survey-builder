@@ -1,166 +1,134 @@
-import { createClient } from '@supabase/supabase-js'
+// Centralized configuration management with secure API access
+interface AppConfig {
+  appName: string
+  appUrl: string
+  enableExport: boolean
+  enableEmailNotifications: boolean
+  enableAnalytics: boolean
+  environment: string
+  isProduction: boolean
+}
 
-export interface DatabaseConfig {
-  url: string
-  apiKey: string
+interface DatabaseConfig {
+  supabaseUrl: string
+  anonKey: string
   tableName: string
   environment: string
 }
 
-export interface AppConfig {
-  database: DatabaseConfig
-  general: {
-    appName: string
-    publicUrl: string
-    maintenanceMode: boolean
-    analyticsEnabled: boolean
+class ConfigManager {
+  private appConfig: AppConfig | null = null
+  private databaseConfig: DatabaseConfig | null = null
+  private lastFetch: number = 0
+  private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+  // Get app configuration from secure API
+  async getAppConfig(): Promise<AppConfig> {
+    const now = Date.now()
+    
+    // Return cached config if still valid
+    if (this.appConfig && (now - this.lastFetch) < this.CACHE_DURATION) {
+      return this.appConfig
+    }
+
+    try {
+      const response = await fetch('/api/config/app')
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        this.appConfig = result.data
+        this.lastFetch = now
+        return this.appConfig
+      } else {
+        throw new Error(result.error || 'Failed to fetch app config')
+      }
+    } catch (error) {
+      console.error('Error fetching app config:', error)
+      
+      // Return fallback config
+      return {
+        appName: 'Product Community Survey',
+        appUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+        enableExport: true,
+        enableEmailNotifications: false,
+        enableAnalytics: true,
+        environment: 'development',
+        isProduction: false
+      }
+    }
+  }
+
+  // Get database configuration (server-side only)
+  getDatabaseConfig(): DatabaseConfig {
+    if (typeof window !== 'undefined') {
+      throw new Error('Database config is server-side only')
+    }
+
+    if (this.databaseConfig) {
+      return this.databaseConfig
+    }
+
+    const supabaseUrl = 
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.POSTGRES_SUPABASE_URL ||
+      ''
+
+    const anonKey = 
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.POSTGRES_SUPABASE_ANON_KEY ||
+      ''
+
+    this.databaseConfig = {
+      supabaseUrl,
+      anonKey,
+      tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data',
+      environment: process.env.NODE_ENV || 'development'
+    }
+
+    return this.databaseConfig
+  }
+
+  // Check if database is configured
+  isDatabaseConfigured(): boolean {
+    try {
+      const config = this.getDatabaseConfig()
+      return !!(config.supabaseUrl && config.anonKey)
+    } catch {
+      return false
+    }
+  }
+
+  // Get specific config value
+  async getConfigValue(key: keyof AppConfig): Promise<any> {
+    const config = await this.getAppConfig()
+    return config[key]
+  }
+
+  // Refresh configuration cache
+  async refreshConfig(): Promise<void> {
+    this.lastFetch = 0
+    this.appConfig = null
+    await this.getAppConfig()
+  }
+
+  // Get environment variable safely (server-side only)
+  getEnvVar(key: string): string {
+    if (typeof window !== 'undefined') {
+      throw new Error('Environment variables are server-side only')
+    }
+    return process.env[key] || ''
   }
 }
 
-let cachedConfig: AppConfig | null = null
-let lastLoaded = 0
-const CACHE_TTL = 60 * 1000 // 1 minute
+// Global config manager instance
+export const configManager = new ConfigManager()
 
-// Helper to get env vars
-function getEnvVar(key: string): string {
-  return process.env[key] || ''
-}
-
-// Get Supabase config from env
-function getSupabaseEnvConfig() {
-  return {
-    url:
-      getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ||
-      getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ||
-      '',
-    apiKey:
-      getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-      getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-      '',
-    tableName: getEnvVar('NEXT_PUBLIC_DB_TABLE') || 'survey_data',
-    environment: getEnvVar('NEXT_PUBLIC_NODE_ENV') || 'production',
-  }
-}
-
-// Get default config from env
-function getDefaultConfig(): AppConfig {
-  const db = getSupabaseEnvConfig()
-  return {
-    database: db,
-    general: {
-      appName: getEnvVar('NEXT_PUBLIC_APP_NAME') || 'Product Community Survey',
-      publicUrl: getEnvVar('NEXT_PUBLIC_APP_URL') || '',
-      maintenanceMode: false,
-      analyticsEnabled: getEnvVar('NEXT_PUBLIC_ENABLE_ANALYTICS') === 'true',
-    },
-  }
-}
-
-// Load config from DB (app_settings)
-async function loadConfigFromDB(): Promise<AppConfig | null> {
-  const db = getSupabaseEnvConfig()
-  if (!db.url || !db.apiKey) return null
-  const supabase = createClient(db.url, db.apiKey)
-  const { data, error } = await supabase
-    .from('app_settings')
-    .select('*')
-    .limit(1)
-    .single()
-  if (error || !data) return null
-  // Map DB fields to config
-  return {
-    database: {
-      url: data.settings?.supabase_url || db.url,
-      apiKey: data.settings?.supabase_anon_key || db.apiKey,
-      tableName: data.survey_table_name || db.tableName,
-      environment: data.environment || db.environment,
-    },
-    general: {
-      appName: data.app_name || 'Product Community Survey',
-      publicUrl: data.app_url || '',
-      maintenanceMode: data.maintenance_mode || false,
-      analyticsEnabled: data.enable_analytics ?? true,
-    },
-  }
-}
-
-// Main config loader
-export async function getConfig(force = false): Promise<AppConfig> {
-  if (!force && cachedConfig && Date.now() - lastLoaded < CACHE_TTL) {
-    return cachedConfig
-  }
-  // Try DB first
-  const dbConfig = await loadConfigFromDB()
-  if (dbConfig) {
-    cachedConfig = dbConfig
-    lastLoaded = Date.now()
-    return dbConfig
-  }
-  // Fallback to env
-  const envConfig = getDefaultConfig()
-  cachedConfig = envConfig
-  lastLoaded = Date.now()
-  return envConfig
-}
-
-// Save config to DB
-export async function setConfig(newConfig: AppConfig): Promise<boolean> {
-  const db = getSupabaseEnvConfig()
-  if (!db.url || !db.apiKey) return false
-  const supabase = createClient(db.url, db.apiKey)
-  // Upsert settings
-  const settingsData = {
-    environment: newConfig.database.environment,
-    survey_table_name: newConfig.database.tableName,
-    app_name: newConfig.general.appName,
-    app_url: newConfig.general.publicUrl,
-    maintenance_mode: newConfig.general.maintenanceMode,
-    enable_analytics: newConfig.general.analyticsEnabled,
-    settings: {
-      supabase_url: newConfig.database.url,
-      supabase_anon_key: newConfig.database.apiKey,
-    },
-    updated_at: new Date().toISOString(),
-  }
-  // Check if exists
-  const { data: existing } = await supabase
-    .from('app_settings')
-    .select('id')
-    .limit(1)
-    .single()
-  let result
-  if (existing) {
-    result = await supabase
-      .from('app_settings')
-      .update(settingsData)
-      .eq('id', existing.id)
-  } else {
-    result = await supabase
-      .from('app_settings')
-      .insert(settingsData)
-  }
-  if (result.error) return false
-  await refreshConfig()
-  return true
-}
-
-// Expose only safe config to client
-export async function getSafeClientConfig(): Promise<any> {
-  const config = await getConfig()
-  return {
-    supabaseUrl: config.database.url,
-    supabaseAnonKey: config.database.apiKey,
-    tableName: config.database.tableName,
-    environment: config.database.environment,
-    appName: config.general.appName,
-    publicUrl: config.general.publicUrl,
-    maintenanceMode: config.general.maintenanceMode,
-    analyticsEnabled: config.general.analyticsEnabled,
-  }
-}
-
-export async function refreshConfig() {
-  cachedConfig = null
-  lastLoaded = 0
-  await getConfig(true)
-}
+// Convenience functions
+export const getAppConfig = () => configManager.getAppConfig()
+export const getDatabaseConfig = () => configManager.getDatabaseConfig()
+export const isDatabaseConfigured = () => configManager.isDatabaseConfigured()
+export const getConfigValue = (key: keyof AppConfig) => configManager.getConfigValue(key)
+export const refreshConfig = () => configManager.refreshConfig()
+export const getEnvVar = (key: string) => configManager.getEnvVar(key)

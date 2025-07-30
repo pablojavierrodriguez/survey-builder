@@ -1,17 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Simple environment variable getter
+// Simple environment variable getter (server-side only)
 function getEnvVar(key: string): string {
   if (typeof window !== 'undefined') {
-    // Client-side: try window.__ENV__ first, then process.env
-    const value = (window as any).__ENV__?.[key] || process.env[key] || ''
-    console.log(`🔧 [Client] getEnvVar(${key}):`, value ? 'SET' : 'EMPTY')
-    return value
+    // Client-side: only use process.env for public variables
+    return process.env[key] || ''
   } else {
     // Server-side: use process.env
-    const value = process.env[key] || ''
-    console.log(`🔧 [Server] getEnvVar(${key}):`, value ? 'SET' : 'EMPTY')
-    return value
+    return process.env[key] || ''
   }
 }
 
