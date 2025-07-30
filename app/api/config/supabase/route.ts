@@ -1,61 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { logger, generateRequestId, withLogging } from '@/lib/logger'
+import { NextResponse } from 'next/server'
 
-async function handleGetSupabaseConfig(request: NextRequest) {
-  const requestId = generateRequestId()
-  const requestLogger = logger.request(requestId, 'GET /api/config/supabase')
-
+export async function GET() {
   try {
-    // Get Supabase configuration from environment variables
-    const supabaseUrl = 
-      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      ''
+    // Check all possible environment variable names
+    const possibleUrls = [
+      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.POSTGRES_SUPABASE_URL,
+    ].filter(Boolean)
 
-    const supabaseAnonKey = 
-      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      ''
+    const possibleKeys = [
+      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      process.env.POSTGRES_SUPABASE_ANON_KEY,
+    ].filter(Boolean)
 
-    requestLogger.info('Supabase config requested', {
-      hasUrl: !!supabaseUrl,
-      hasKey: !!supabaseAnonKey,
-      urlSource: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ? 'POSTGRES_NEXT_PUBLIC' : 
-                 process.env.NEXT_PUBLIC_SUPABASE_URL ? 'NEXT_PUBLIC' : 'NONE',
-      keySource: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'POSTGRES_NEXT_PUBLIC' : 
-                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'NEXT_PUBLIC' : 'NONE'
+    const supabaseUrl = possibleUrls[0] || ''
+    const supabaseAnonKey = possibleKeys[0] || ''
+
+    // Comprehensive logging
+    console.log('🔧 [API] Supabase Config Check:', {
+      availableUrls: possibleUrls.length,
+      availableKeys: possibleKeys.length,
+      finalUrl: supabaseUrl ? 'SET' : 'EMPTY',
+      finalKey: supabaseAnonKey ? 'SET' : 'EMPTY',
+      envVars: {
+        POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
+        NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
+        POSTGRES_SUPABASE_URL: process.env.POSTGRES_SUPABASE_URL ? 'SET' : 'EMPTY',
+        POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
+        POSTGRES_SUPABASE_ANON_KEY: process.env.POSTGRES_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
+      }
     })
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      requestLogger.warn('Supabase configuration incomplete', {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseAnonKey
-      })
+      console.error('❌ [API] No valid Supabase configuration found')
       return NextResponse.json(
         { 
-          success: false, 
-          error: 'Supabase configuration not available' 
+          error: 'Supabase configuration not available',
+          availableUrls: possibleUrls.length,
+          availableKeys: possibleKeys.length,
         },
-        { status: 503 }
+        { status: 500 }
       )
     }
 
     return NextResponse.json({
-      success: true,
-      data: {
-        supabaseUrl,
-        supabaseAnonKey
-      }
+      supabaseUrl,
+      supabaseAnonKey,
+      timestamp: new Date().toISOString()
     })
-
   } catch (error) {
-    requestLogger.error('Error providing Supabase config', error as Error)
+    console.error('❌ [API] Error in Supabase config API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
-
-// Export the wrapped handler
-export const GET = withLogging(handleGetSupabaseConfig)
