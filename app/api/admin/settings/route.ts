@@ -207,7 +207,6 @@ export async function POST(request: NextRequest) {
       settings: {
         supabase_url: settings.database.url,
         supabase_anon_key: settings.database.apiKey,
-        connection_timeout: settings.database.connectionTimeout,
         require_https: true, // Default to true
         enable_rate_limit: true, // Default to true
         enforce_strong_passwords: false, // Default to false
