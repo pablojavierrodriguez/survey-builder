@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, getSupabaseClient } from './supabase'
 
 // Get environment variables safely
 function getEnvVar(key: string): string {
@@ -38,6 +38,27 @@ export function getDatabaseConfigSync(): DatabaseConfig {
   return getSupabaseConfig()
 }
 
+// Fetch Supabase config from API
+async function fetchSupabaseConfigFromAPI(): Promise<DatabaseConfig | null> {
+  try {
+    const response = await fetch('/api/config/supabase')
+    const config = await response.json()
+    
+    if (config.supabaseUrl && config.supabaseAnonKey) {
+      return {
+        supabaseUrl: config.supabaseUrl,
+        anonKey: config.supabaseAnonKey,
+        tableName: config.tableName || getSupabaseConfig().tableName,
+        environment: config.environment || getSupabaseConfig().environment
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching Supabase config from API:', error)
+  }
+  
+  return null
+}
+
 // Get database endpoint for API calls
 export function getDatabaseEndpointSync(): string {
   const config = getSupabaseConfig()
@@ -46,6 +67,10 @@ export function getDatabaseEndpointSync(): string {
 
 // Get database endpoint for API calls (async version)
 export async function getDatabaseEndpoint(): Promise<string> {
+  const apiConfig = await fetchSupabaseConfigFromAPI()
+  if (apiConfig) {
+    return `${apiConfig.supabaseUrl}/rest/v1/${apiConfig.tableName}`
+  }
   return getDatabaseEndpointSync()
 }
 
@@ -62,6 +87,15 @@ export function getDatabaseHeadersSync(): Record<string, string> {
 
 // Get database headers for API calls (async version)
 export async function getDatabaseHeaders(): Promise<Record<string, string>> {
+  const apiConfig = await fetchSupabaseConfigFromAPI()
+  if (apiConfig) {
+    return {
+      'apikey': apiConfig.anonKey,
+      'Authorization': `Bearer ${apiConfig.anonKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    }
+  }
   return getDatabaseHeadersSync()
 }
 

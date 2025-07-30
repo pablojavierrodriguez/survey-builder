@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 // Get Supabase configuration from environment variables
 function getSupabaseConfig() {
   return {
-    supabaseUrl: process.env.POSTGRES_SUPABASE_URL || "",
-    anonKey: process.env.POSTGRES_SUPABASE_ANON_KEY || ""
+    supabaseUrl: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || "",
+    anonKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
   }
 }
 

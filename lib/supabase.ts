@@ -23,6 +23,27 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
 
+// Function to get Supabase client with dynamic config
+export async function getSupabaseClient() {
+  if (supabase) {
+    return supabase
+  }
+  
+  // Try to fetch config from API if not available
+  try {
+    const response = await fetch('/api/config/supabase')
+    const config = await response.json()
+    
+    if (config.supabaseUrl && config.supabaseAnonKey) {
+      return createClient(config.supabaseUrl, config.supabaseAnonKey)
+    }
+  } catch (error) {
+    console.error('Error fetching Supabase config from API:', error)
+  }
+  
+  return null
+}
+
 // Helper function to check if we can use Supabase features
 export function requireSupabase() {
   if (!isSupabaseConfigured || !supabase) {
