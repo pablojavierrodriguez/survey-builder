@@ -70,8 +70,8 @@ export default function AdminDashboard() {
       setError(null)
       
       // Get dynamic database configuration
-      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
-      const config = getDatabaseConfig()
+      const { getSupabaseConfig } = await import('@/lib/database-config')
+      const config = await getSupabaseConfig()
       
       console.log('Dashboard - Using database config:', config)
       
@@ -79,8 +79,15 @@ export default function AdminDashboard() {
       
       // Try to fetch from configured database
       try {
-        const response = await fetch(`${await getDatabaseEndpoint()}?select=*&order=created_at.desc`, {
-          headers: await getDatabaseHeaders()
+        const endpoint = `${config.supabaseUrl}/rest/v1/${config.tableName}?select=*&order=created_at.desc`
+        const headers = {
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${config.anonKey}`,
+          'Content-Type': 'application/json'
+        }
+        
+        const response = await fetch(endpoint, {
+          headers: headers
         })
         
         console.log('Dashboard - API response status:', response.status)

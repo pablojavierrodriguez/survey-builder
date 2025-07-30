@@ -59,6 +59,7 @@ export default function SettingsPage() {
   // Permissions and role management
   const [userRole, setUserRole] = useState<UserRole>('viewer')
   const [permissions, setPermissions] = useState(getCurrentUserPermissions())
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false)
 
   useEffect(() => {
     // Load user role and permissions
@@ -82,6 +83,11 @@ export default function SettingsPage() {
       const { getConfig } = await import('@/lib/config-manager')
       const config = await getConfig()
       
+      // Check if Supabase is configured
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      const configured = await isSupabaseConfigured()
+      setSupabaseConfigured(configured)
+      
       // Transform to local settings format
       const apiSettings = {
         database: {
@@ -104,6 +110,7 @@ export default function SettingsPage() {
         databaseKey: config.database.apiKey ? 'SET' : 'EMPTY',
         tableName: config.database.tableName,
         appName: config.general.appName,
+        supabaseConfigured: configured,
       })
     } catch (error) {
       console.error('Error loading settings:', error)
@@ -623,8 +630,8 @@ export default function SettingsPage() {
               {userRole === 'admin' && (
                 <li>• <strong>Private Users:</strong> collaborator/collab456, admin/admin789</li>
               )}
-              <li>• <strong>Google OAuth:</strong> {isSupabaseConfigured ? 'Available on login page' : 'Requires Supabase config'}</li>
-              <li>• <strong>Email/Password:</strong> {isSupabaseConfigured ? 'Created via form below' : 'Requires Supabase config'}</li>
+              <li>• <strong>Google OAuth:</strong> {supabaseConfigured ? 'Available on login page' : 'Requires Supabase config'}</li>
+              <li>• <strong>Email/Password:</strong> {supabaseConfigured ? 'Created via form below' : 'Requires Supabase config'}</li>
             </ul>
           </div>
           

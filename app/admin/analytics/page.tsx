@@ -280,11 +280,15 @@ export default function AnalyticsPage() {
     setIsLoading(true)
     try {
       // Get dynamic database configuration
-      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
-      const config = getDatabaseConfig()
+      const { getSupabaseConfig } = await import('@/lib/database-config')
+      const config = await getSupabaseConfig()
       
-      const endpoint = await getDatabaseEndpoint()
-      const headers = await getDatabaseHeaders()
+      const endpoint = `${config.supabaseUrl}/rest/v1/${config.tableName}?select=*`
+      const headers = {
+        'apikey': config.anonKey,
+        'Authorization': `Bearer ${config.anonKey}`,
+        'Content-Type': 'application/json'
+      }
       
       const response = await fetch(endpoint, {
         headers: headers

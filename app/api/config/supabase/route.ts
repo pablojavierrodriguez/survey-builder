@@ -11,6 +11,15 @@ export async function GET(request: NextRequest) {
                            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
                            ""
     
+    console.log('🔧 API Config - Environment variables check:', {
+      POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
+      POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
+      finalUrl: supabaseUrl ? 'SET' : 'EMPTY',
+      finalKey: supabaseAnonKey ? 'SET' : 'EMPTY'
+    })
+    
     // Return configuration (anon key is safe to expose to client)
     return NextResponse.json({
       supabaseUrl,

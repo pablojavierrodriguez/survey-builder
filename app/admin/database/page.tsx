@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle, Loader2 } from "lucide-react"
-import { getDatabaseConfigSync, getDatabaseEndpointSync, getDatabaseHeadersSync, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
+import { getSupabaseConfig, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
 
 interface SurveyResponse {
   id: string
@@ -39,6 +39,7 @@ export default function DatabasePage() {
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "testing">("testing")
   const [setupLoading, setSetupLoading] = useState(false)
   const [devTableExists, setDevTableExists] = useState(false)
+  const [config, setConfig] = useState<any>(null)
 
   useEffect(() => {
     testConnection()
@@ -78,57 +79,38 @@ export default function DatabasePage() {
     try {
       setConnectionStatus("testing")
       
-      // First, try to get current settings from API
-      let currentSettings = null
-      try {
-        const settingsResponse = await fetch('/api/admin/settings')
-        if (settingsResponse.ok) {
-          currentSettings = await settingsResponse.json()
-        }
-      } catch (error) {
-        console.warn('Could not fetch current settings:', error)
-      }
-      
-      // Get environment-specific config
-      const config = getDatabaseConfigSync()
-      
-      // Use settings from API if available, otherwise fall back to config
-      const tableName = currentSettings?.survey_table_name || config.tableName
-      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
-      const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
+      // Get database configuration
+      const dbConfig = await getSupabaseConfig()
+      setConfig(dbConfig)
       
       // Check if we have valid database configuration
-      if (!supabaseUrl || !supabaseKey) {
-        console.error('No valid database configuration found')
+      if (!dbConfig.supabaseUrl || !dbConfig.anonKey) {
         setConnectionStatus("disconnected")
         return
       }
-      
-      // Check if configured table exists
-      const tableExists = await ensureTableExists(tableName)
-      setDevTableExists(tableExists)
-      if (!tableExists) {
-        setConnectionStatus("disconnected")
-        return
-      }
-      
-      // Test connection to the appropriate table
-      const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}?limit=1`, {
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
+
+              // Test connection by making a simple API call
+        const response = await fetch('/api/admin/database/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            tableName: dbConfig.tableName
+          })
+        })
+
+        if (response.ok) {
+          setConnectionStatus("connected")
+          
+          // Check if configured table exists
+          const tableExists = await ensureTableExists(dbConfig.tableName)
+          setDevTableExists(tableExists)
+        } else {
+          setConnectionStatus("disconnected")
         }
-      })
-      
-      if (response.ok) {
-        setConnectionStatus("connected")
-      } else {
-        console.error('Database connection test failed:', response.status, response.statusText)
-        setConnectionStatus("disconnected")
-      }
     } catch (error) {
-      console.error("Database connection test failed:", error)
+      console.error('Connection test failed:', error)
       setConnectionStatus("disconnected")
     }
   }
@@ -136,28 +118,11 @@ export default function DatabasePage() {
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
-      // First, try to get current settings from API
-      let currentSettings = null
-      try {
-        const settingsResponse = await fetch('/api/admin/settings')
-        if (settingsResponse.ok) {
-          currentSettings = await settingsResponse.json()
-        }
-      } catch (error) {
-        console.warn('Could not fetch current settings:', error)
-      }
-      
-      // Get environment-specific config
-      const config = getDatabaseConfigSync()
-      
-      // Use settings from API if available, otherwise fall back to config
-      const tableName = currentSettings?.survey_table_name || config.tableName
-      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
-      const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
+      // Get database configuration
+      const config = await getSupabaseConfig()
       
       // Check if we have valid database configuration
-      if (!supabaseUrl || !supabaseKey) {
-        console.error('No valid database configuration found')
+      if (!config.supabaseUrl || !config.anonKey) {
         setResponses([])
         setConnectionStatus("disconnected")
         return
@@ -165,11 +130,11 @@ export default function DatabasePage() {
       
       // Try to fetch from current database configuration
       const response = await fetch(
-        `${supabaseUrl}/rest/v1/${tableName}?select=*&order=created_at.desc`,
+        `${config.supabaseUrl}/rest/v1/${config.tableName}?select=*&order=created_at.desc`,
         {
           headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
+            'apikey': config.anonKey,
+            'Authorization': `Bearer ${config.anonKey}`,
             'Content-Type': 'application/json'
           }
         }
@@ -261,35 +226,19 @@ export default function DatabasePage() {
     }
 
     try {
-      // Get current settings from API
-      let currentSettings = null
-      try {
-        const settingsResponse = await fetch('/api/admin/settings')
-        if (settingsResponse.ok) {
-          currentSettings = await settingsResponse.json()
-        }
-      } catch (error) {
-        console.warn('Could not fetch current settings:', error)
-      }
+      // Get database configuration
+      const config = await getSupabaseConfig()
       
-      // Get environment-specific config
-      const config = getDatabaseConfigSync()
-      
-      // Use settings from API if available, otherwise fall back to config
-      const tableName = currentSettings?.survey_table_name || config.tableName
-      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
-      const supabaseKey = currentSettings?.settings?.supabase_anon_key || config.anonKey
-      
-      if (!supabaseUrl || !supabaseKey) {
+      if (!config.supabaseUrl || !config.anonKey) {
         alert("❌ Cannot delete response: No valid database configuration")
         return
       }
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/${tableName}?id=eq.${id}`, {
+      const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}?id=eq.${id}`, {
         method: "DELETE",
         headers: {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${config.anonKey}`,
           'Content-Type': 'application/json'
         },
       })
@@ -309,31 +258,17 @@ export default function DatabasePage() {
   const handleAutoSetup = async () => {
     setSetupLoading(true)
     try {
-      // First, try to get current settings from API
-      let currentSettings = null
-      try {
-        const settingsResponse = await fetch('/api/admin/settings')
-        if (settingsResponse.ok) {
-          currentSettings = await settingsResponse.json()
-        }
-      } catch (error) {
-        console.warn('Could not fetch current settings:', error)
-      }
-      
-      const config = getDatabaseConfigSync()
+      // Get database configuration
+      const config = await getSupabaseConfig()
       const environment = config.environment
-      
-      // Use settings from API if available, otherwise fall back to config
-      const tableName = currentSettings?.survey_table_name || config.tableName
-      const supabaseUrl = currentSettings?.settings?.supabase_url || config.supabaseUrl
       
       // Show manual setup instructions with current configuration
       const manualInstructions = `📋 MANUAL SETUP REQUIRED:
 
 Current Configuration:
 - Environment: ${environment}
-- Table Name: ${tableName}
-- Supabase URL: ${supabaseUrl}
+- Table Name: ${config.tableName}
+- Supabase URL: ${config.supabaseUrl}
 
 Steps:
 1. Go to your Supabase Dashboard
@@ -341,7 +276,7 @@ Steps:
 3. Copy and run the database schema script
 4. The script will create all necessary tables and sample data
 
-🔗 Direct link: ${supabaseUrl}/project/default/sql
+🔗 Direct link: ${config.supabaseUrl}/project/default/sql
 
 Note: Auto-setup is not available. Please configure the database manually using the settings panel.`
 
@@ -389,10 +324,10 @@ Note: Auto-setup is not available. Please configure the database manually using 
             <div>
               <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Current Configuration</p>
               <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                {getDatabaseConfigSync().environment.toUpperCase()} - Table: {getDatabaseConfigSync().tableName}
+                {config?.environment?.toUpperCase() || 'UNKNOWN'} - Table: {config?.tableName || 'unknown'}
               </p>
               <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                URL: {getDatabaseConfigSync().supabaseUrl?.substring(0, 30)}...
+                URL: {config?.supabaseUrl?.substring(0, 30) || 'Not configured'}...
               </p>
             </div>
             <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -420,7 +355,7 @@ Note: Auto-setup is not available. Please configure the database manually using 
               🚀 Auto-Setup Available
             </h3>
                           <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                The table `{getDatabaseConfigSync().tableName}` doesn't exist yet. 
+                The table `{config?.tableName || 'unknown'}` doesn't exist yet. 
                 You can create it automatically or manually using SQL.
               </p>
             <div className="flex gap-2">
@@ -436,10 +371,10 @@ Note: Auto-setup is not available. Please configure the database manually using 
                      Setting up...
                    </>
                  ) : (
-                   <>
-                     <Database className="w-4 h-4 mr-2" />
-                     Auto-Setup {getDatabaseConfigSync().environment.toUpperCase()} Environment
-                   </>
+                                        <>
+                       <Database className="w-4 h-4 mr-2" />
+                       Auto-Setup {config?.environment?.toUpperCase() || 'UNKNOWN'} Environment
+                     </>
                  )}
                </Button>
               <Button

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
-import { isSupabaseConfigured } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,8 +29,23 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [loginAttempts, setLoginAttempts] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false)
   const { signInWithGoogle } = useAuth()
   const router = useRouter()
+
+  // Check if Supabase is configured on component mount
+  useEffect(() => {
+    const checkSupabase = async () => {
+      try {
+        const client = await getSupabaseClient()
+        setSupabaseConfigured(!!client)
+      } catch (error) {
+        console.error('Error checking Supabase configuration:', error)
+        setSupabaseConfigured(false)
+      }
+    }
+    checkSupabase()
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -173,7 +188,7 @@ export default function LoginPage() {
             </form>
 
             {/* Google Sign In - Only show if Supabase is configured */}
-            {isSupabaseConfigured && (
+            {supabaseConfigured && (
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -230,7 +245,7 @@ export default function LoginPage() {
                   <p><strong>Viewer Demo:</strong> viewer / viewer123 (Read-only analytics)</p>
                   <p><strong>Admin Demo:</strong> admin-demo / demo123 (Read-only admin panel)</p>
                   <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {isSupabaseConfigured ? 'Or sign up with Google OAuth above' : 'Google OAuth requires Supabase configuration'}
+                    {supabaseConfigured ? 'Or sign up with Google OAuth above' : 'Google OAuth requires Supabase configuration'}
                   </p>
                 </div>
               </div>

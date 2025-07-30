@@ -1,15 +1,4 @@
-import { supabase } from './supabase'
-
-// Get environment variables safely
-function getEnvVar(key: string): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: try window.__ENV__ first, then process.env
-    return (window as any).__ENV__?.[key] || process.env[key] || ''
-  } else {
-    // Server-side: use process.env
-    return process.env[key] || ''
-  }
-}
+import { getSupabaseClient } from './supabase'
 
 export interface DatabaseConfig {
   supabaseUrl: string
@@ -18,69 +7,35 @@ export interface DatabaseConfig {
   environment: string
 }
 
-// Get Supabase configuration from environment variables
-export function getSupabaseConfig(): DatabaseConfig {
-  // Try multiple possible variable names
-  const supabaseUrl = 
-    getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ||
-    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ||
-    getEnvVar('POSTGRES_SUPABASE_URL') ||
-    ''
-
-  const anonKey = 
-    getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-    getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ||
-    ''
-
-  console.log('🔧 Database Config - Supabase Config:', {
-    supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-    anonKey: anonKey ? 'SET' : 'EMPTY',
-  })
-
-  return {
-    supabaseUrl,
-    anonKey,
-    tableName: getEnvVar('NEXT_PUBLIC_DB_TABLE') || "survey_data",
-    environment: getEnvVar('NEXT_PUBLIC_NODE_ENV') || "production"
+// Get Supabase configuration from API
+export async function getSupabaseConfig(): Promise<DatabaseConfig> {
+  try {
+    const response = await fetch('/api/config/supabase')
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`)
+    }
+    
+    const config = await response.json()
+    
+    if (config.error) {
+      throw new Error(config.error)
+    }
+    
+    return {
+      supabaseUrl: config.supabaseUrl || '',
+      anonKey: config.supabaseAnonKey || '',
+      tableName: config.tableName || "survey_data",
+      environment: config.environment || "production"
+    }
+  } catch (error) {
+    console.error('Error fetching Supabase config:', error)
+    return {
+      supabaseUrl: '',
+      anonKey: '',
+      tableName: "survey_data",
+      environment: "production"
+    }
   }
-}
-
-// Get database configuration
-export function getDatabaseConfig(): DatabaseConfig {
-  return getSupabaseConfig()
-}
-
-// Get database configuration synchronously (for backward compatibility)
-export function getDatabaseConfigSync(): DatabaseConfig {
-  return getSupabaseConfig()
-}
-
-// Get database endpoint for API calls
-export function getDatabaseEndpointSync(): string {
-  const config = getSupabaseConfig()
-  return `${config.supabaseUrl}/rest/v1/${config.tableName}`
-}
-
-// Get database endpoint for API calls (async version)
-export async function getDatabaseEndpoint(): Promise<string> {
-  return getDatabaseEndpointSync()
-}
-
-// Get database headers for API calls
-export function getDatabaseHeadersSync(): Record<string, string> {
-  const config = getSupabaseConfig()
-  return {
-    'apikey': config.anonKey,
-    'Authorization': `Bearer ${config.anonKey}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=minimal'
-  }
-}
-
-// Get database headers for API calls (async version)
-export async function getDatabaseHeaders(): Promise<Record<string, string>> {
-  return getDatabaseHeadersSync()
 }
 
 // Check database connection
@@ -89,26 +44,18 @@ export async function checkDatabaseConnection(): Promise<{
   tableName: string
   error?: string
 }> {
-  const config = getSupabaseConfig()
-  
-  if (!config.supabaseUrl || !config.anonKey) {
-    return {
-      connected: false,
-      tableName: config.tableName,
-      error: 'Database not configured'
-    }
-  }
-
   try {
-    const client = supabase
+    const client = await getSupabaseClient()
     if (!client) {
       return {
         connected: false,
-        tableName: config.tableName,
-        error: 'Supabase client not available'
+        tableName: "survey_data",
+        error: 'Database not configured'
       }
     }
 
+    const config = await getSupabaseConfig()
+    
     // Test connection by trying to fetch a single row
     const { data, error } = await client
       .from(config.tableName)
@@ -130,7 +77,7 @@ export async function checkDatabaseConnection(): Promise<{
   } catch (error) {
     return {
       connected: false,
-      tableName: config.tableName,
+      tableName: "survey_data",
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
@@ -142,23 +89,16 @@ export async function submitSurveyToDatabase(surveyData: any): Promise<{
   error?: string
   id?: string
 }> {
-  const config = getSupabaseConfig()
-  
-  if (!config.supabaseUrl || !config.anonKey) {
-    return {
-      success: false,
-      error: 'Database not configured'
-    }
-  }
-
   try {
-    const client = supabase
+    const client = await getSupabaseClient()
     if (!client) {
       return {
         success: false,
-        error: 'Supabase client not available'
+        error: 'Database not configured'
       }
     }
+
+    const config = await getSupabaseConfig()
 
     const { data, error } = await client
       .from(config.tableName)
@@ -189,18 +129,14 @@ export async function submitSurveyToDatabase(surveyData: any): Promise<{
 
 // Ensure table exists (for development)
 export async function ensureTableExists(tableName?: string): Promise<boolean> {
-  const config = getSupabaseConfig()
-  const targetTable = tableName || config.tableName
-  
-  if (!config.supabaseUrl || !config.anonKey) {
-    return false
-  }
-
   try {
-    const client = supabase
+    const client = await getSupabaseClient()
     if (!client) {
       return false
     }
+
+    const config = await getSupabaseConfig()
+    const targetTable = tableName || config.tableName
 
     // Try to create table if it doesn't exist
     const { error } = await client.rpc('create_survey_table_if_not_exists', {

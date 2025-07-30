@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Database, Settings } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useAuth } from "@/lib/auth-context"
-import { validateDatabase, canSubmitSurvey, getDatabaseStatus } from "@/lib/database-validator"
+import { validateDatabaseStatus, isDatabaseConfigured } from "@/lib/database-validator"
 
 interface SurveyData {
   role: string
@@ -194,8 +194,12 @@ export default function ProductSurvey() {
         setIsAdmin(userIsAdmin || false)
 
         // Validate database status
-        const status = await getDatabaseStatus()
-        setDatabaseStatus(status)
+        const status = await validateDatabaseStatus()
+        setDatabaseStatus({
+          status: status.connected ? 'healthy' : (status.configured ? 'configured' : 'unconfigured'),
+          message: status.connected ? 'Database is properly configured and connected' : (status.error || 'Database not configured'),
+          details: status
+        })
 
         // Check for survey configuration first
         const surveyConfig = localStorage.getItem("survey_config")
@@ -459,11 +463,11 @@ export default function ProductSurvey() {
     
     try {
       // Check if survey submission is allowed
-      const submissionCheck = await canSubmitSurvey(isAdmin)
+      const isConfigured = await isDatabaseConfigured()
       
-      if (!submissionCheck.allowed) {
-        console.error("❌ Survey submission blocked:", submissionCheck.reason)
-        alert(`Survey submission blocked: ${submissionCheck.reason}`)
+      if (!isConfigured && !isAdmin) {
+        console.error("❌ Survey submission blocked: Database not configured")
+        alert("Survey submission blocked: Database not configured")
         setIsSubmitting(false)
         return
       }

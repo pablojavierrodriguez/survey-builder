@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -10,6 +10,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        const supabase = await getSupabaseClient()
         if (!supabase) {
           console.error('Supabase client not initialized')
           router.push('/login?error=supabase_not_initialized')
