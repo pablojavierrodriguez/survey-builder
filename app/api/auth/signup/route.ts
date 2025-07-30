@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateSignUp } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { getSupabaseClient } from '@/lib/supabase'
+import { logger, generateRequestId, withLogging } from '@/lib/logger'
+import { supabase } from '@/lib/supabase'
 
-export async function POST(request: NextRequest) {
+async function handleSignUp(request: NextRequest) {
+  const requestId = generateRequestId()
+  const clientIP = getClientIP(request)
+  const requestLogger = logger.request(requestId, 'POST /api/auth/signup')
+
   try {
     // Rate limiting
-    const clientIP = getClientIP(request)
-    const rateLimitResult = await rateLimit(
-      clientIP,
-      '/api/auth/signup',
-      'LOGIN'
-    )
-
+    const rateLimitResult = await rateLimit(clientIP, '/api/auth/signup', 'LOGIN')
     if (!rateLimitResult.allowed) {
+      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Too many signup attempts',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
         { status: 429 }
       )
     }
@@ -30,65 +26,79 @@ export async function POST(request: NextRequest) {
     // Validate signup data
     const validation = validateSignUp(body)
     if (!validation.success) {
+      requestLogger.warn('Signup validation failed', { 
+        errors: validation.details,
+        ip: clientIP 
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: validation.error,
-          details: validation.details,
-          timestamp: new Date().toISOString()
+          error: 'Invalid signup data',
+          details: validation.details 
         },
         { status: 400 }
       )
     }
 
-    // Attempt signup
-    const client = await getSupabaseClient()
-    if (!client) {
+    // Check if Supabase is configured
+    if (!supabase) {
+      requestLogger.error('Supabase not configured', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Authentication service unavailable',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Authentication service unavailable' },
         { status: 503 }
       )
     }
 
-    const { data, error } = await client.auth.signUp({
-      email: validation.data.email,
-      password: validation.data.password,
+    const { email, password } = validation.data
+
+    requestLogger.info('Signup attempt', { 
+      ip: clientIP,
+      email 
+    })
+
+    // Attempt signup
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
     })
 
     if (error) {
+      requestLogger.warn('Signup failed', error, { 
+        ip: clientIP,
+        email 
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: error.message || 'Signup failed',
-          timestamp: new Date().toISOString()
+          error: error.message || 'Failed to create account' 
         },
         { status: 400 }
       )
     }
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Account created successfully',
+    requestLogger.info('Signup successful', { 
+      ip: clientIP,
+      userId: data.user?.id,
+      email 
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Account created successfully',
+      data: {
         user: data.user,
-        timestamp: new Date().toISOString()
-      },
-      { status: 201 }
-    )
+        session: data.session
+      }
+    })
 
   } catch (error) {
-    console.error('Signup error:', error)
+    requestLogger.error('Unexpected error during signup', error as Error, { ip: clientIP })
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
+
+// Export the wrapped handler
+export const POST = withLogging(handleSignUp)

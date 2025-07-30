@@ -1,48 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { createClient } from '@supabase/supabase-js'
+import { logger, generateRequestId, withLogging } from '@/lib/logger'
+import { supabase } from '@/lib/supabase'
 
-// Get Supabase client for server-side operations
-function getSupabaseClient() {
-  const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    return null
-  }
-  
-  return createClient(supabaseUrl, supabaseKey)
-}
+async function handleGetAnalytics(request: NextRequest) {
+  const requestId = generateRequestId()
+  const clientIP = getClientIP(request)
+  const requestLogger = logger.request(requestId, 'GET /api/admin/analytics')
 
-export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const clientIP = getClientIP(request)
-    const rateLimitResult = await rateLimit(
-      clientIP,
-      '/api/admin/analytics',
-      'ADMIN'
-    )
-
+    const rateLimitResult = await rateLimit(clientIP, '/api/admin/analytics', 'ADMIN')
     if (!rateLimitResult.allowed) {
+      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Rate limit exceeded',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
         { status: 429 }
       )
     }
 
-    const client = getSupabaseClient()
-    if (!client) {
+    // Check if Supabase is configured
+    if (!supabase) {
+      requestLogger.error('Supabase not configured', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database not configured',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Analytics service unavailable' },
         { status: 503 }
       )
     }
@@ -51,102 +32,107 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const tableName = searchParams.get('table') || 'survey_data'
 
-    // Fetch analytics data
-    const { data: responses, error: responsesError } = await client
+    requestLogger.info('Fetching analytics data', { 
+      ip: clientIP,
+      tableName 
+    })
+
+    // Fetch survey data
+    const { data: surveyData, error: surveyError } = await supabase
       .from(tableName)
       .select('*')
 
-    if (responsesError) {
-      console.error('Error fetching survey responses:', responsesError)
+    if (surveyError) {
+      requestLogger.error('Failed to fetch survey data', surveyError, { 
+        ip: clientIP,
+        tableName 
+      })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to fetch analytics data',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Failed to fetch analytics data' },
         { status: 500 }
       )
     }
 
     // Process analytics data
     const analytics = {
-      totalResponses: responses?.length || 0,
-      roles: {},
-      seniorityLevels: {},
-      companyTypes: {},
-      industries: {},
-      productTypes: {},
-      customerSegments: {},
-      tools: {},
-      learningMethods: {},
-      salaryRanges: {},
-      challenges: []
+      totalResponses: surveyData.length,
+      roles: {} as Record<string, number>,
+      seniorityLevels: {} as Record<string, number>,
+      companyTypes: {} as Record<string, number>,
+      industries: {} as Record<string, number>,
+      productTypes: {} as Record<string, number>,
+      customerSegments: {} as Record<string, number>,
+      tools: {} as Record<string, number>,
+      learningMethods: {} as Record<string, number>,
+      salaryRanges: {} as Record<string, number>,
+      challenges: [] as string[],
+      recentResponses: surveyData.slice(-10).reverse()
     }
 
-    if (responses) {
-      responses.forEach(response => {
-        // Count roles
-        analytics.roles[response.role] = (analytics.roles[response.role] || 0) + 1
-        
-        // Count seniority levels
-        analytics.seniorityLevels[response.seniority_level] = (analytics.seniorityLevels[response.seniority_level] || 0) + 1
-        
-        // Count company types
-        analytics.companyTypes[response.company_type] = (analytics.companyTypes[response.company_type] || 0) + 1
-        
-        // Count industries
-        analytics.industries[response.industry] = (analytics.industries[response.industry] || 0) + 1
-        
-        // Count product types
-        analytics.productTypes[response.product_type] = (analytics.productTypes[response.product_type] || 0) + 1
-        
-        // Count customer segments
-        analytics.customerSegments[response.customer_segment] = (analytics.customerSegments[response.customer_segment] || 0) + 1
-        
-        // Count tools
-        if (response.tools && Array.isArray(response.tools)) {
-          response.tools.forEach(tool => {
-            analytics.tools[tool] = (analytics.tools[tool] || 0) + 1
-          })
-        }
-        
-        // Count learning methods
-        if (response.learning_methods && Array.isArray(response.learning_methods)) {
-          response.learning_methods.forEach(method => {
-            analytics.learningMethods[method] = (analytics.learningMethods[method] || 0) + 1
-          })
-        }
-        
-        // Count salary ranges
-        if (response.salary_range) {
-          analytics.salaryRanges[response.salary_range] = (analytics.salaryRanges[response.salary_range] || 0) + 1
-        }
-        
-        // Collect challenges
-        if (response.main_challenge) {
-          analytics.challenges.push(response.main_challenge)
-        }
-      })
-    }
+    // Aggregate data
+    surveyData.forEach(response => {
+      // Count roles
+      analytics.roles[response.role] = (analytics.roles[response.role] || 0) + 1
+      
+      // Count seniority levels
+      analytics.seniorityLevels[response.seniority_level] = (analytics.seniorityLevels[response.seniority_level] || 0) + 1
+      
+      // Count company types
+      analytics.companyTypes[response.company_type] = (analytics.companyTypes[response.company_type] || 0) + 1
+      
+      // Count industries
+      analytics.industries[response.industry] = (analytics.industries[response.industry] || 0) + 1
+      
+      // Count product types
+      analytics.productTypes[response.product_type] = (analytics.productTypes[response.product_type] || 0) + 1
+      
+      // Count customer segments
+      analytics.customerSegments[response.customer_segment] = (analytics.customerSegments[response.customer_segment] || 0) + 1
+      
+      // Count tools
+      if (response.tools && Array.isArray(response.tools)) {
+        response.tools.forEach(tool => {
+          analytics.tools[tool] = (analytics.tools[tool] || 0) + 1
+        })
+      }
+      
+      // Count learning methods
+      if (response.learning_methods && Array.isArray(response.learning_methods)) {
+        response.learning_methods.forEach(method => {
+          analytics.learningMethods[method] = (analytics.learningMethods[method] || 0) + 1
+        })
+      }
+      
+      // Count salary ranges
+      if (response.salary_range) {
+        analytics.salaryRanges[response.salary_range] = (analytics.salaryRanges[response.salary_range] || 0) + 1
+      }
+      
+      // Collect challenges
+      if (response.main_challenge) {
+        analytics.challenges.push(response.main_challenge)
+      }
+    })
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        data: analytics,
-        timestamp: new Date().toISOString()
-      },
-      { status: 200 }
-    )
+    requestLogger.info('Analytics data processed successfully', { 
+      ip: clientIP,
+      totalResponses: analytics.totalResponses,
+      tableName 
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: analytics
+    })
 
   } catch (error) {
-    console.error('Analytics error:', error)
+    requestLogger.error('Unexpected error fetching analytics', error as Error, { ip: clientIP })
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
+
+// Export the wrapped handler
+export const GET = withLogging(handleGetAnalytics)

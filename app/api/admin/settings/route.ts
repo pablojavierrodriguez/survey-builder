@@ -1,92 +1,119 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminSettings } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { createClient } from '@supabase/supabase-js'
+import { logger, generateRequestId, withLogging } from '@/lib/logger'
+import { supabase } from '@/lib/supabase'
 
-// Get Supabase client for server-side operations
-function getSupabaseClient() {
-  const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    return null
-  }
-  
-  return createClient(supabaseUrl, supabaseKey)
-}
+async function handleGetSettings(request: NextRequest) {
+  const requestId = generateRequestId()
+  const clientIP = getClientIP(request)
+  const requestLogger = logger.request(requestId, 'GET /api/admin/settings')
 
-export async function GET() {
   try {
-    const client = getSupabaseClient()
-    if (!client) {
+    // Rate limiting
+    const rateLimitResult = await rateLimit(clientIP, '/api/admin/settings', 'ADMIN')
+    if (!rateLimitResult.allowed) {
+      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database not configured',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
+        { status: 429 }
+      )
+    }
+
+    // Check if Supabase is configured
+    if (!supabase) {
+      requestLogger.error('Supabase not configured', { ip: clientIP })
+      return NextResponse.json(
+        { success: false, error: 'Settings service unavailable' },
         { status: 503 }
       )
     }
 
-    const { data, error } = await client
+    // Fetch settings from database
+    const { data, error } = await supabase
       .from('app_settings')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
 
-    if (error) {
-      console.error('Error fetching settings:', error)
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      requestLogger.error('Failed to fetch settings', error, { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to fetch settings',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Failed to load settings' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        data,
-        timestamp: new Date().toISOString()
-      },
-      { status: 200 }
-    )
+    // Return default settings if none exist
+    if (!data) {
+      requestLogger.info('No settings found, returning defaults', { ip: clientIP })
+      return NextResponse.json({
+        success: true,
+        data: {
+          database: {
+            url: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || '',
+            apiKey: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'survey_data',
+            connectionTimeout: 30
+          },
+          general: {
+            appName: process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey',
+            publicUrl: process.env.NEXT_PUBLIC_APP_URL || '',
+            maintenanceMode: false,
+            analyticsEnabled: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
+          }
+        }
+      })
+    }
+
+    // Parse settings from database
+    const settings = data.settings || {}
+    
+    requestLogger.info('Settings loaded successfully', { 
+      ip: clientIP,
+      settingsId: data.id 
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        database: {
+          url: settings.supabase_url || '',
+          apiKey: settings.supabase_anon_key || '',
+          tableName: data.survey_table_name || 'survey_data',
+          connectionTimeout: settings.connection_timeout || 30
+        },
+        general: {
+          appName: data.app_name || 'Product Community Survey',
+          publicUrl: data.app_url || '',
+          maintenanceMode: data.maintenance_mode || false,
+          analyticsEnabled: data.enable_analytics || false
+        }
+      }
+    })
 
   } catch (error) {
-    console.error('Settings GET error:', error)
+    requestLogger.error('Unexpected error fetching settings', error as Error, { ip: clientIP })
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
 
-export async function POST(request: NextRequest) {
+async function handleUpdateSettings(request: NextRequest) {
+  const requestId = generateRequestId()
+  const clientIP = getClientIP(request)
+  const requestLogger = logger.request(requestId, 'POST /api/admin/settings')
+
   try {
     // Rate limiting
-    const clientIP = getClientIP(request)
-    const rateLimitResult = await rateLimit(
-      clientIP,
-      '/api/admin/settings',
-      'ADMIN'
-    )
-
+    const rateLimitResult = await rateLimit(clientIP, '/api/admin/settings', 'ADMIN')
     if (!rateLimitResult.allowed) {
+      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Rate limit exceeded',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
         { status: 429 }
       )
     }
@@ -94,34 +121,34 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json()
     
-    // Validate admin settings
+    // Validate settings data
     const validation = validateAdminSettings(body)
     if (!validation.success) {
+      requestLogger.warn('Settings validation failed', { 
+        errors: validation.details,
+        ip: clientIP 
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: validation.error,
-          details: validation.details,
-          timestamp: new Date().toISOString()
+          error: 'Invalid settings data',
+          details: validation.details 
         },
         { status: 400 }
       )
     }
 
-    const client = getSupabaseClient()
-    if (!client) {
+    // Check if Supabase is configured
+    if (!supabase) {
+      requestLogger.error('Supabase not configured', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database not configured',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Settings service unavailable' },
         { status: 503 }
       )
     }
 
-    // Prepare settings data
-    const settingsData = {
+    // Prepare settings for database
+    const apiSettings = {
       survey_table_name: validation.data.database.tableName,
       app_name: validation.data.general.appName,
       app_url: validation.data.general.publicUrl,
@@ -136,7 +163,7 @@ export async function POST(request: NextRequest) {
       settings: {
         supabase_url: validation.data.database.url,
         supabase_anon_key: validation.data.database.apiKey,
-        connection_timeout: 30,
+        connection_timeout: validation.data.database.connectionTimeout,
         require_https: true, // Default to true
         enable_rate_limit: true, // Default to true
         enforce_strong_passwords: false, // Default to false
@@ -146,44 +173,44 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert or update settings
-    const { data, error } = await client
+    // Update or insert settings
+    const { data, error } = await supabase
       .from('app_settings')
-      .upsert(settingsData, { onConflict: 'id' })
+      .upsert([apiSettings], { 
+        onConflict: 'id',
+        ignoreDuplicates: false 
+      })
       .select()
       .single()
 
     if (error) {
-      console.error('Error saving settings:', error)
+      requestLogger.error('Failed to save settings', error, { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to save settings',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Failed to save settings' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Settings saved successfully',
-        data,
-        timestamp: new Date().toISOString()
-      },
-      { status: 200 }
-    )
+    requestLogger.info('Settings updated successfully', { 
+      ip: clientIP,
+      settingsId: data.id 
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Settings updated successfully',
+      data: { id: data.id }
+    })
 
   } catch (error) {
-    console.error('Settings POST error:', error)
+    requestLogger.error('Unexpected error updating settings', error as Error, { ip: clientIP })
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
+
+// Export the wrapped handlers
+export const GET = withLogging(handleGetSettings)
+export const POST = withLogging(handleUpdateSettings)

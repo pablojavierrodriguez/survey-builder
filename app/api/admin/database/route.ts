@@ -1,48 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { createClient } from '@supabase/supabase-js'
+import { logger, generateRequestId, withLogging } from '@/lib/logger'
+import { supabase } from '@/lib/supabase'
 
-// Get Supabase client for server-side operations
-function getSupabaseClient() {
-  const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    return null
-  }
-  
-  return createClient(supabaseUrl, supabaseKey)
-}
+async function handleGetResponses(request: NextRequest) {
+  const requestId = generateRequestId()
+  const clientIP = getClientIP(request)
+  const requestLogger = logger.request(requestId, 'GET /api/admin/database')
 
-export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const clientIP = getClientIP(request)
-    const rateLimitResult = await rateLimit(
-      clientIP,
-      '/api/admin/database',
-      'ADMIN'
-    )
-
+    const rateLimitResult = await rateLimit(clientIP, '/api/admin/database', 'ADMIN')
     if (!rateLimitResult.allowed) {
+      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Rate limit exceeded',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
         { status: 429 }
       )
     }
 
-    const client = getSupabaseClient()
-    if (!client) {
+    // Check if Supabase is configured
+    if (!supabase) {
+      requestLogger.error('Supabase not configured', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database not configured',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Database service unavailable' },
         { status: 503 }
       )
     }
@@ -51,75 +32,69 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const tableName = searchParams.get('table') || 'survey_data'
 
+    requestLogger.info('Fetching database responses', { 
+      ip: clientIP,
+      tableName 
+    })
+
     // Fetch survey responses
-    const { data: responses, error: responsesError } = await client
+    const { data: responses, error } = await supabase
       .from(tableName)
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (responsesError) {
-      console.error('Error fetching survey responses:', responsesError)
+    if (error) {
+      requestLogger.error('Failed to fetch responses', error, { 
+        ip: clientIP,
+        tableName 
+      })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to fetch survey responses',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Failed to fetch responses' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        data: responses || [],
-        timestamp: new Date().toISOString()
-      },
-      { status: 200 }
-    )
+    requestLogger.info('Responses fetched successfully', { 
+      ip: clientIP,
+      count: responses?.length || 0,
+      tableName 
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: responses || []
+    })
 
   } catch (error) {
-    console.error('Database GET error:', error)
+    requestLogger.error('Unexpected error fetching responses', error as Error, { ip: clientIP })
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function handleDeleteResponse(request: NextRequest) {
+  const requestId = generateRequestId()
+  const clientIP = getClientIP(request)
+  const requestLogger = logger.request(requestId, 'DELETE /api/admin/database')
+
   try {
     // Rate limiting
-    const clientIP = getClientIP(request)
-    const rateLimitResult = await rateLimit(
-      clientIP,
-      '/api/admin/database',
-      'ADMIN'
-    )
-
+    const rateLimitResult = await rateLimit(clientIP, '/api/admin/database', 'ADMIN')
     if (!rateLimitResult.allowed) {
+      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Rate limit exceeded',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
         { status: 429 }
       )
     }
 
-    const client = getSupabaseClient()
-    if (!client) {
+    // Check if Supabase is configured
+    if (!supabase) {
+      requestLogger.error('Supabase not configured', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database not configured',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Database service unavailable' },
         { status: 503 }
       )
     }
@@ -129,52 +104,57 @@ export async function DELETE(request: NextRequest) {
     const { id, tableName = 'survey_data' } = body
 
     if (!id) {
+      requestLogger.warn('Delete request missing ID', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Response ID is required',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Response ID is required' },
         { status: 400 }
       )
     }
 
+    requestLogger.info('Deleting response', { 
+      ip: clientIP,
+      responseId: id,
+      tableName 
+    })
+
     // Delete the response
-    const { error: deleteError } = await client
+    const { error } = await supabase
       .from(tableName)
       .delete()
       .eq('id', id)
 
-    if (deleteError) {
-      console.error('Error deleting response:', deleteError)
+    if (error) {
+      requestLogger.error('Failed to delete response', error, { 
+        ip: clientIP,
+        responseId: id,
+        tableName 
+      })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to delete response',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Failed to delete response' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Response deleted successfully',
-        timestamp: new Date().toISOString()
-      },
-      { status: 200 }
-    )
+    requestLogger.info('Response deleted successfully', { 
+      ip: clientIP,
+      responseId: id,
+      tableName 
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Response deleted successfully'
+    })
 
   } catch (error) {
-    console.error('Database DELETE error:', error)
+    requestLogger.error('Unexpected error deleting response', error as Error, { ip: clientIP })
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
+
+// Export the wrapped handlers
+export const GET = withLogging(handleGetResponses)
+export const DELETE = withLogging(handleDeleteResponse)

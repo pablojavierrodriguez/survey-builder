@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateLogin } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { getSupabaseClient } from '@/lib/supabase'
+import { logger, generateRequestId, withLogging } from '@/lib/logger'
+import { supabase } from '@/lib/supabase'
 
-export async function POST(request: NextRequest) {
+async function handleLogin(request: NextRequest) {
+  const requestId = generateRequestId()
+  const clientIP = getClientIP(request)
+  const requestLogger = logger.request(requestId, 'POST /api/auth/login')
+
   try {
     // Rate limiting
-    const clientIP = getClientIP(request)
-    const rateLimitResult = await rateLimit(
-      clientIP,
-      '/api/auth/login',
-      'LOGIN'
-    )
-
+    const rateLimitResult = await rateLimit(clientIP, '/api/auth/login', 'LOGIN')
     if (!rateLimitResult.allowed) {
+      requestLogger.warn('Rate limit exceeded', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Too many login attempts',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
         { status: 429 }
       )
     }
@@ -30,65 +26,79 @@ export async function POST(request: NextRequest) {
     // Validate login data
     const validation = validateLogin(body)
     if (!validation.success) {
+      requestLogger.warn('Login validation failed', { 
+        errors: validation.details,
+        ip: clientIP 
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: validation.error,
-          details: validation.details,
-          timestamp: new Date().toISOString()
+          error: 'Invalid login data',
+          details: validation.details 
         },
         { status: 400 }
       )
     }
 
-    // Attempt login
-    const client = await getSupabaseClient()
-    if (!client) {
+    // Check if Supabase is configured
+    if (!supabase) {
+      requestLogger.error('Supabase not configured', { ip: clientIP })
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Authentication service unavailable',
-          timestamp: new Date().toISOString()
-        },
+        { success: false, error: 'Authentication service unavailable' },
         { status: 503 }
       )
     }
 
-    const { data, error } = await client.auth.signInWithPassword({
-      email: validation.data.email,
-      password: validation.data.password,
+    const { email, password } = validation.data
+
+    requestLogger.info('Login attempt', { 
+      ip: clientIP,
+      email: email // Log email for security tracking
+    })
+
+    // Attempt login
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     })
 
     if (error) {
+      requestLogger.warn('Login failed', error, { 
+        ip: clientIP,
+        email 
+      })
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Invalid credentials',
-          timestamp: new Date().toISOString()
+          error: error.message || 'Invalid credentials' 
         },
         { status: 401 }
       )
     }
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Login successful',
+    requestLogger.info('Login successful', { 
+      ip: clientIP,
+      userId: data.user?.id,
+      email 
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Login successful',
+      data: {
         user: data.user,
-        timestamp: new Date().toISOString()
-      },
-      { status: 200 }
-    )
+        session: data.session
+      }
+    })
 
   } catch (error) {
-    console.error('Login error:', error)
+    requestLogger.error('Unexpected error during login', error as Error, { ip: clientIP })
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
+
+// Export the wrapped handler
+export const POST = withLogging(handleLogin)
