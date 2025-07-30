@@ -1,160 +1,274 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { 
-  handleApiError, 
-  withRateLimit, 
-  withDatabaseConnection,
-  formatSuccessResponse,
-  createConfigurationError,
-  createDatabaseError
-} from '@/lib/error-handler'
+import { rateLimit, getClientIP } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
-import logger from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
-  const requestLogger = logger.createRequestLogger(request)
+  const startTime = Date.now()
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const ip = getClientIP(request)
+  
+  logger.logRequest(requestId, 'GET', '/api/admin/analytics', ip)
   
   try {
-    await requestLogger.info('Analytics GET request received')
-
     // Rate limiting
-    const rateLimitCheck = await withRateLimit(request, 'ADMIN')
-    if (!rateLimitCheck.allowed) {
-      await requestLogger.warn('Rate limit exceeded for analytics GET')
-      return NextResponse.json(rateLimitCheck.error, { status: 429 })
+    const rateLimitResult = await rateLimit(ip, '/api/admin/analytics', 'ADMIN')
+    if (!rateLimitResult.allowed) {
+      logger.warn('Rate limit exceeded for analytics request', {
+        requestId,
+        ip,
+        error: rateLimitResult.error
+      })
+      
+      return NextResponse.json(
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
+        { status: 429 }
+      )
     }
 
     // Check if Supabase is configured
     if (!supabase) {
-      await requestLogger.error('Supabase not configured for analytics')
-      throw createConfigurationError('Database not configured')
+      logger.error('Supabase not configured for analytics', {
+        requestId,
+        ip
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Analytics not available' },
+        { status: 503 }
+      )
     }
 
-    // Get table name from query params or use default
-    const { searchParams } = new URL(request.url)
-    const tableName = searchParams.get('table') || 'survey_data'
+    // Fetch analytics data
+    const dbStartTime = Date.now()
+    
+    // Get total responses
+    const { count: totalResponses, error: countError } = await supabase
+      .from('survey_data')
+      .select('*', { count: 'exact', head: true })
 
-    // Fetch analytics data with error handling
-    const dbResult = await withDatabaseConnection(request, async () => {
-      const { data: responses, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .order('created_at', { ascending: false })
+    if (countError) {
+      logger.error('Database error fetching total responses', {
+        requestId,
+        ip,
+        error: countError.message,
+        duration: Date.now() - dbStartTime
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch analytics data' },
+        { status: 500 }
+      )
+    }
 
-      if (error) throw error
-      return responses || []
+    // Get role distribution
+    const { data: roleData, error: roleError } = await supabase
+      .from('survey_data')
+      .select('role')
+
+    if (roleError) {
+      logger.error('Database error fetching role data', {
+        requestId,
+        ip,
+        error: roleError.message
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch analytics data' },
+        { status: 500 }
+      )
+    }
+
+    // Get seniority distribution
+    const { data: seniorityData, error: seniorityError } = await supabase
+      .from('survey_data')
+      .select('seniority_level')
+
+    if (seniorityError) {
+      logger.error('Database error fetching seniority data', {
+        requestId,
+        ip,
+        error: seniorityError.message
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch analytics data' },
+        { status: 500 }
+      )
+    }
+
+    // Get company type distribution
+    const { data: companyData, error: companyError } = await supabase
+      .from('survey_data')
+      .select('company_type')
+
+    if (companyError) {
+      logger.error('Database error fetching company data', {
+        requestId,
+        ip,
+        error: companyError.message
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch analytics data' },
+        { status: 500 }
+      )
+    }
+
+    // Get industry distribution
+    const { data: industryData, error: industryError } = await supabase
+      .from('survey_data')
+      .select('industry')
+
+    if (industryError) {
+      logger.error('Database error fetching industry data', {
+        requestId,
+        ip,
+        error: industryError.message
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch analytics data' },
+        { status: 500 }
+      )
+    }
+
+    // Get tools usage
+    const { data: toolsData, error: toolsError } = await supabase
+      .from('survey_data')
+      .select('tools')
+
+    if (toolsError) {
+      logger.error('Database error fetching tools data', {
+        requestId,
+        ip,
+        error: toolsError.message
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch analytics data' },
+        { status: 500 }
+      )
+    }
+
+    // Get learning methods
+    const { data: learningData, error: learningError } = await supabase
+      .from('survey_data')
+      .select('learning_methods')
+
+    if (learningError) {
+      logger.error('Database error fetching learning data', {
+        requestId,
+        ip,
+        error: learningError.message
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch analytics data' },
+        { status: 500 }
+      )
+    }
+
+    const dbDuration = Date.now() - dbStartTime
+
+    // Process data for charts
+    const roleDistribution = roleData?.reduce((acc: any, item) => {
+      acc[item.role] = (acc[item.role] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    const seniorityDistribution = seniorityData?.reduce((acc: any, item) => {
+      acc[item.seniority_level] = (acc[item.seniority_level] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    const companyDistribution = companyData?.reduce((acc: any, item) => {
+      acc[item.company_type] = (acc[item.company_type] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    const industryDistribution = industryData?.reduce((acc: any, item) => {
+      acc[item.industry] = (acc[item.industry] || 0) + 1
+      return acc
+    }, {}) || {}
+
+    // Process tools data (flatten arrays)
+    const toolsUsage: any = {}
+    toolsData?.forEach(item => {
+      if (item.tools && Array.isArray(item.tools)) {
+        item.tools.forEach((tool: string) => {
+          toolsUsage[tool] = (toolsUsage[tool] || 0) + 1
+        })
+      }
     })
 
-    if (!dbResult.success) {
-      await requestLogger.error('Failed to fetch analytics data from database', {
-        error: dbResult.error?.message,
-        tableName
+    // Process learning methods data (flatten arrays)
+    const learningMethods: any = {}
+    learningData?.forEach(item => {
+      if (item.learning_methods && Array.isArray(item.learning_methods)) {
+        item.learning_methods.forEach((method: string) => {
+          learningMethods[method] = (learningMethods[method] || 0) + 1
+        })
+      }
+    })
+
+    // Get recent responses (last 10)
+    const { data: recentResponses, error: recentError } = await supabase
+      .from('survey_data')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (recentError) {
+      logger.error('Database error fetching recent responses', {
+        requestId,
+        ip,
+        error: recentError.message
       })
-      return NextResponse.json(dbResult.error, { status: 500 })
     }
-
-    const responses = dbResult.data
-
-    // Calculate analytics
-    const totalResponses = responses.length
-    
-    // Role distribution
-    const roleDistribution = responses.reduce((acc: any, response: any) => {
-      acc[response.role] = (acc[response.role] || 0) + 1
-      return acc
-    }, {})
-
-    // Seniority distribution
-    const seniorityDistribution = responses.reduce((acc: any, response: any) => {
-      acc[response.seniority_level] = (acc[response.seniority_level] || 0) + 1
-      return acc
-    }, {})
-
-    // Company type distribution
-    const companyTypeDistribution = responses.reduce((acc: any, response: any) => {
-      acc[response.company_type] = (acc[response.company_type] || 0) + 1
-      return acc
-    }, {})
-
-    // Industry distribution
-    const industryDistribution = responses.reduce((acc: any, response: any) => {
-      acc[response.industry] = (acc[response.industry] || 0) + 1
-      return acc
-    }, {})
-
-    // Product type distribution
-    const productTypeDistribution = responses.reduce((acc: any, response: any) => {
-      acc[response.product_type] = (acc[response.product_type] || 0) + 1
-      return acc
-    }, {})
-
-    // Customer segment distribution
-    const customerSegmentDistribution = responses.reduce((acc: any, response: any) => {
-      acc[response.customer_segment] = (acc[response.customer_segment] || 0) + 1
-      return acc
-    }, {})
-
-    // Tools usage
-    const toolsUsage = responses.reduce((acc: any, response: any) => {
-      if (response.tools && Array.isArray(response.tools)) {
-        response.tools.forEach((tool: string) => {
-          acc[tool] = (acc[tool] || 0) + 1
-        })
-      }
-      return acc
-    }, {})
-
-    // Learning methods
-    const learningMethods = responses.reduce((acc: any, response: any) => {
-      if (response.learning_methods && Array.isArray(response.learning_methods)) {
-        response.learning_methods.forEach((method: string) => {
-          acc[method] = (acc[method] || 0) + 1
-        })
-      }
-      return acc
-    }, {})
-
-    // Salary range distribution
-    const salaryDistribution = responses.reduce((acc: any, response: any) => {
-      if (response.salary_range) {
-        acc[response.salary_range] = (acc[response.salary_range] || 0) + 1
-      }
-      return acc
-    }, {})
-
-    // Recent activity (last 7 days)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    
-    const recentResponses = responses.filter((response: any) => 
-      new Date(response.created_at) > sevenDaysAgo
-    )
 
     const analyticsData = {
-      totalResponses,
+      totalResponses: totalResponses || 0,
       roleDistribution,
       seniorityDistribution,
-      companyTypeDistribution,
+      companyDistribution,
       industryDistribution,
-      productTypeDistribution,
-      customerSegmentDistribution,
       toolsUsage,
       learningMethods,
-      salaryDistribution,
-      recentActivity: {
-        last7Days: recentResponses.length,
-        responses: recentResponses.slice(0, 10) // Last 10 responses
-      }
+      recentResponses: recentResponses || []
     }
 
-    await requestLogger.info('Analytics data fetched successfully', {
-      totalResponses,
-      tableName,
-      duration: Date.now() - requestLogger.startTime
+    logger.logDatabaseOperation('SELECT', 'survey_data', true, dbDuration)
+    logger.info('Analytics data fetched successfully', {
+      requestId,
+      ip,
+      totalResponses: analyticsData.totalResponses
     })
 
-    return NextResponse.json(formatSuccessResponse(analyticsData, requestLogger.requestId))
+    const totalDuration = Date.now() - startTime
+    logger.logResponse(requestId, 200, totalDuration)
+
+    return NextResponse.json({
+      success: true,
+      data: analyticsData
+    })
 
   } catch (error) {
-    return await handleApiError(error, request)
+    const totalDuration = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    logger.error('Unexpected error in analytics request', {
+      requestId,
+      ip,
+      error: errorMessage,
+      duration: totalDuration
+    }, error instanceof Error ? error : undefined)
+
+    logger.logResponse(requestId, 500, totalDuration)
+
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

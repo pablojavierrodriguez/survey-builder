@@ -1,60 +1,74 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit, getClientIP } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const ip = getClientIP(request)
+  
+  logger.logRequest(requestId, 'GET', '/api/config/supabase', ip)
+  
   try {
-    // Check all possible environment variable names
-    const possibleUrls = [
-      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.POSTGRES_SUPABASE_URL,
-    ].filter(Boolean)
-
-    const possibleKeys = [
-      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      process.env.POSTGRES_SUPABASE_ANON_KEY,
-    ].filter(Boolean)
-
-    const supabaseUrl = possibleUrls[0] || ''
-    const supabaseAnonKey = possibleKeys[0] || ''
-
-    // Comprehensive logging
-    console.log('🔧 [API] Supabase Config Check:', {
-      availableUrls: possibleUrls.length,
-      availableKeys: possibleKeys.length,
-      finalUrl: supabaseUrl ? 'SET' : 'EMPTY',
-      finalKey: supabaseAnonKey ? 'SET' : 'EMPTY',
-      envVars: {
-        POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
-        NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
-        POSTGRES_SUPABASE_URL: process.env.POSTGRES_SUPABASE_URL ? 'SET' : 'EMPTY',
-        POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
-        POSTGRES_SUPABASE_ANON_KEY: process.env.POSTGRES_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
-      }
-    })
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('❌ [API] No valid Supabase configuration found')
+    // Rate limiting
+    const rateLimitResult = await rateLimit(ip, '/api/config/supabase', 'API')
+    if (!rateLimitResult.allowed) {
+      logger.warn('Rate limit exceeded for Supabase config request', {
+        requestId,
+        ip,
+        error: rateLimitResult.error
+      })
+      
       return NextResponse.json(
-        { 
-          error: 'Supabase configuration not available',
-          availableUrls: possibleUrls.length,
-          availableKeys: possibleKeys.length,
-        },
-        { status: 500 }
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
+        { status: 429 }
       )
     }
 
-    return NextResponse.json({
-      supabaseUrl,
-      supabaseAnonKey,
-      timestamp: new Date().toISOString()
+    // Get Supabase configuration from environment variables
+    const supabaseUrl = 
+      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      ''
+
+    const supabaseAnonKey = 
+      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      ''
+
+    logger.info('Supabase config requested', {
+      requestId,
+      ip,
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey
     })
+
+    const totalDuration = Date.now() - startTime
+    logger.logResponse(requestId, 200, totalDuration)
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        supabaseUrl,
+        supabaseAnonKey
+      }
+    })
+
   } catch (error) {
-    console.error('❌ [API] Error in Supabase config API:', error)
+    const totalDuration = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    logger.error('Unexpected error in Supabase config request', {
+      requestId,
+      ip,
+      error: errorMessage,
+      duration: totalDuration
+    }, error instanceof Error ? error : undefined)
+
+    logger.logResponse(requestId, 500, totalDuration)
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }

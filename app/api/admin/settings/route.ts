@@ -1,150 +1,181 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { 
-  handleApiError, 
-  withRateLimit, 
-  withValidation, 
-  withDatabaseConnection,
-  formatSuccessResponse,
-  validateAdminSettingsRequest,
-  withAuthentication,
-  withAuthorization,
-  createConfigurationError,
-  createDatabaseError,
-  createValidationError
-} from '@/lib/error-handler'
-import logger from '@/lib/logger'
-
-// Initialize Supabase client for server-side operations
-const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null
+import { validateAdminSettings } from '@/lib/validation'
+import { rateLimit, getClientIP } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
+import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
-  const requestLogger = logger.createRequestLogger(request)
+  const startTime = Date.now()
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const ip = getClientIP(request)
+  
+  logger.logRequest(requestId, 'GET', '/api/admin/settings', ip)
   
   try {
-    await requestLogger.info('Admin settings GET request received')
-
     // Rate limiting
-    const rateLimitCheck = await withRateLimit(request, 'ADMIN')
-    if (!rateLimitCheck.allowed) {
-      await requestLogger.warn('Rate limit exceeded for admin settings GET')
-      return NextResponse.json(rateLimitCheck.error, { status: 429 })
+    const rateLimitResult = await rateLimit(ip, '/api/admin/settings', 'ADMIN')
+    if (!rateLimitResult.allowed) {
+      logger.warn('Rate limit exceeded for admin settings request', {
+        requestId,
+        ip,
+        error: rateLimitResult.error
+      })
+      
+      return NextResponse.json(
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
+        { status: 429 }
+      )
     }
 
     // Check if Supabase is configured
     if (!supabase) {
-      await requestLogger.error('Supabase not configured for admin settings', {
-        supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-        supabaseKey: supabaseKey ? 'SET' : 'EMPTY'
+      logger.error('Supabase not configured for admin settings', {
+        requestId,
+        ip
       })
-      throw createConfigurationError('Database not configured')
+      
+      return NextResponse.json(
+        { success: false, error: 'Admin system not available' },
+        { status: 503 }
+      )
     }
 
-    // Fetch settings from database with error handling
-    const dbResult = await withDatabaseConnection(request, async () => {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+    // Fetch settings from database
+    const dbStartTime = Date.now()
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
 
-      if (error) throw error
-      return data
-    })
+    const dbDuration = Date.now() - dbStartTime
 
-    if (!dbResult.success) {
-      await requestLogger.error('Failed to fetch admin settings from database', {
-        error: dbResult.error?.message
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      logger.error('Database error fetching admin settings', {
+        requestId,
+        ip,
+        error: error.message,
+        duration: dbDuration
       })
-      return NextResponse.json(dbResult.error, { status: 500 })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch settings' },
+        { status: 500 }
+      )
     }
 
-    // Transform database response to frontend format
-    const settings = {
-      database: {
-        url: dbResult.data.settings?.supabase_url || '',
-        apiKey: dbResult.data.settings?.supabase_anon_key || '',
-        tableName: dbResult.data.survey_table_name || 'survey_data',
-        connectionTimeout: dbResult.data.settings?.connection_timeout || 30,
-      },
-      general: {
-        appName: dbResult.data.app_name || 'Product Community Survey',
-        publicUrl: dbResult.data.app_url || '',
-        maintenanceMode: dbResult.data.maintenance_mode || false,
-        analyticsEnabled: dbResult.data.enable_analytics || false,
-      },
+    logger.logDatabaseOperation('SELECT', 'app_settings', true, dbDuration)
+
+    // Return settings or default configuration
+    const settings = data || {
+      id: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      environment: 'dev',
+      survey_table_name: 'pc_survey_data_dev',
+      analytics_table_name: null,
+      app_name: 'Product Community Survey (DEV)',
+      app_url: 'https://productcommunitysurvey-dev.vercel.app',
+      maintenance_mode: false,
+      enable_analytics: true,
+      enable_email_notifications: false,
+      enable_export: true,
+      session_timeout: 28800000,
+      max_login_attempts: 20,
+      theme_default: 'system',
+      language_default: 'en',
+      settings: {},
+      description: 'Development environment configuration',
+      version: '1.0.0'
     }
 
-    await requestLogger.info('Admin settings fetched successfully', { 
-      hasDatabaseConfig: !!(settings.database.url && settings.database.apiKey),
-      tableName: settings.database.tableName,
-      appName: settings.general.appName,
-      duration: Date.now() - requestLogger.startTime
+    const totalDuration = Date.now() - startTime
+    logger.logResponse(requestId, 200, totalDuration)
+
+    return NextResponse.json({
+      success: true,
+      data: settings
     })
-
-    return NextResponse.json(formatSuccessResponse(settings, requestLogger.requestId))
 
   } catch (error) {
-    return await handleApiError(error, request)
+    const totalDuration = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    logger.error('Unexpected error in admin settings GET', {
+      requestId,
+      ip,
+      error: errorMessage,
+      duration: totalDuration
+    }, error instanceof Error ? error : undefined)
+
+    logger.logResponse(requestId, 500, totalDuration)
+
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
-  const requestLogger = logger.createRequestLogger(request)
+  const startTime = Date.now()
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const ip = getClientIP(request)
+  
+  logger.logRequest(requestId, 'POST', '/api/admin/settings', ip)
   
   try {
-    await requestLogger.info('Admin settings POST request received')
-
     // Rate limiting
-    const rateLimitCheck = await withRateLimit(request, 'ADMIN')
-    if (!rateLimitCheck.allowed) {
-      await requestLogger.warn('Rate limit exceeded for admin settings POST')
-      return NextResponse.json(rateLimitCheck.error, { status: 429 })
-    }
-
-    // Validate request body
-    const validationResult = await withValidation(request, validateAdminSettingsRequest)
-    if (!validationResult.valid) {
-      await requestLogger.warn('Admin settings validation failed', {
-        error: validationResult.error?.message,
-        details: validationResult.error?.details
+    const rateLimitResult = await rateLimit(ip, '/api/admin/settings', 'ADMIN')
+    if (!rateLimitResult.allowed) {
+      logger.warn('Rate limit exceeded for admin settings update', {
+        requestId,
+        ip,
+        error: rateLimitResult.error
       })
-      return NextResponse.json(validationResult.error, { status: 400 })
+      
+      return NextResponse.json(
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
+        { status: 429 }
+      )
     }
 
-    const settings = validationResult.data
+    // Parse and validate request body
+    const body = await request.json()
+    
+    // Validate admin settings
+    const validation = validateAdminSettings(body)
+    if (!validation.success) {
+      logger.warn('Admin settings validation failed', {
+        requestId,
+        ip,
+        errors: validation.details
+      })
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Invalid settings data',
+          details: validation.details 
+        },
+        { status: 400 }
+      )
+    }
+
+    const settings = validation.data
 
     // Check if Supabase is configured
     if (!supabase) {
-      await requestLogger.error('Supabase not configured for admin settings POST', {
-        supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-        supabaseKey: supabaseKey ? 'SET' : 'EMPTY'
+      logger.error('Supabase not configured for admin settings update', {
+        requestId,
+        ip
       })
-      throw createConfigurationError('Database not configured')
-    }
-
-    // Test database connection with new settings
-    const testClient = createClient(settings.database.url, settings.database.apiKey)
-    const { error: testError } = await testClient
-      .from('app_settings')
-      .select('id')
-      .limit(1)
-
-    if (testError) {
-      await requestLogger.error('Database connection test failed', { 
-        error: testError.message,
-        code: testError.code 
-      })
-      throw createDatabaseError('Invalid database configuration', {
-        testError: testError.message,
-        code: testError.code
-      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Admin system not available' },
+        { status: 503 }
+      )
     }
 
     // Prepare settings for database
@@ -173,39 +204,67 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save settings to database with error handling
-    const saveResult = await withDatabaseConnection(request, async () => {
-      const { error } = await supabase
-        .from('app_settings')
-        .upsert([apiSettings], { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
-
-      if (error) throw error
-      return { success: true }
-    })
-
-    if (!saveResult.success) {
-      await requestLogger.error('Failed to save admin settings to database', {
-        error: saveResult.error?.message,
-        details: saveResult.error?.details
+    // Update settings in database
+    const dbStartTime = Date.now()
+    const { data, error } = await supabase
+      .from('app_settings')
+      .upsert([apiSettings], { 
+        onConflict: 'id',
+        ignoreDuplicates: false 
       })
-      return NextResponse.json(saveResult.error, { status: 500 })
+      .select()
+      .single()
+
+    const dbDuration = Date.now() - dbStartTime
+
+    if (error) {
+      logger.error('Database error updating admin settings', {
+        requestId,
+        ip,
+        error: error.message,
+        duration: dbDuration
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to save settings' },
+        { status: 500 }
+      )
     }
 
-    await requestLogger.info('Admin settings saved successfully', { 
-      appName: settings.general.appName,
-      tableName: settings.database.tableName,
-      hasDatabaseConfig: !!(settings.database.url && settings.database.apiKey),
-      duration: Date.now() - requestLogger.startTime
+    // Log configuration change
+    logger.logConfigChange('admin_settings', 'updated', data, ip)
+    logger.logDatabaseOperation('UPSERT', 'app_settings', true, dbDuration)
+    logger.info('Admin settings updated successfully', {
+      requestId,
+      ip,
+      settingsId: data?.id
     })
 
-    return NextResponse.json(formatSuccessResponse({
-      message: 'Settings saved successfully'
-    }, requestLogger.requestId))
+    const totalDuration = Date.now() - startTime
+    logger.logResponse(requestId, 200, totalDuration)
+
+    return NextResponse.json({
+      success: true,
+      data: data,
+      message: 'Settings updated successfully'
+    })
 
   } catch (error) {
-    return await handleApiError(error, request)
+    const totalDuration = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    logger.error('Unexpected error in admin settings POST', {
+      requestId,
+      ip,
+      error: errorMessage,
+      duration: totalDuration
+    }, error instanceof Error ? error : undefined)
+
+    logger.logResponse(requestId, 500, totalDuration)
+
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
