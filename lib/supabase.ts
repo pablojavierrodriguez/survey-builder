@@ -1,19 +1,45 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Get environment variables safely
+// Simple environment variable getter
 function getEnvVar(key: string): string {
   if (typeof window !== 'undefined') {
-    // Client-side: use window.__ENV__
-    return (window as any).__ENV__?.[key] || ''
+    // Client-side: try window.__ENV__ first, then process.env
+    return (window as any).__ENV__?.[key] || process.env[key] || ''
   } else {
     // Server-side: use process.env
     return process.env[key] || ''
   }
 }
 
-// Use standard Next.js environment variables for Supabase
-const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
-const supabaseAnonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+// Get Supabase configuration with multiple fallbacks
+function getSupabaseConfig() {
+  // Try multiple possible variable names
+  const supabaseUrl = 
+    getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ||
+    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ||
+    getEnvVar('POSTGRES_SUPABASE_URL') ||
+    ''
+
+  const supabaseAnonKey = 
+    getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+    getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ||
+    ''
+
+  console.log('🔧 Supabase Config Check:', {
+    supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
+    supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
+    envKeys: {
+      NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
+      POSTGRES_NEXT_PUBLIC_SUPABASE_URL: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
+      POSTGRES_SUPABASE_URL: getEnvVar('POSTGRES_SUPABASE_URL') ? 'SET' : 'EMPTY',
+    }
+  })
+
+  return { supabaseUrl, supabaseAnonKey }
+}
+
+const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig()
 
 // Check if Supabase is configured
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
@@ -54,35 +80,79 @@ export function requireSupabase() {
 }
 
 // Database types for better TypeScript support
-export type Profile = {
-  id: string
-  email: string
-  full_name?: string
-  role: 'admin' | 'collaborator' | 'viewer'
-  created_at: string
-  updated_at: string
-}
-
-export type SurveyResponse = {
-  id: string
-  created_at: string
-  updated_at: string
-  role: string
-  seniority: string
-  company_type: string
-  industry: string
-  product_type: string
-  customer_segment: string
-  main_challenge: string
-  tools_used: string[]
-  learning_methods: string[]
-  salary_range?: string
-  email?: string
-  currency?: string
-  location?: string
-  experience_years?: number
-  team_size?: number
-  product_stage?: string
-  user_feedback?: string
-  additional_notes?: string
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string
+          email: string
+          role: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      survey_data: {
+        Row: {
+          id: string
+          role: string
+          seniority_level: string
+          company_type: string
+          industry: string
+          product_type: string
+          customer_segment: string
+          main_challenge: string
+          tools: string[]
+          learning_methods: string[]
+          salary_range?: string
+          email?: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          role: string
+          seniority_level: string
+          company_type: string
+          industry: string
+          product_type: string
+          customer_segment: string
+          main_challenge: string
+          tools: string[]
+          learning_methods: string[]
+          salary_range?: string
+          email?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          role?: string
+          seniority_level?: string
+          company_type?: string
+          industry?: string
+          product_type?: string
+          customer_segment?: string
+          main_challenge?: string
+          tools?: string[]
+          learning_methods?: string[]
+          salary_range?: string
+          email?: string
+          created_at?: string
+        }
+      }
+    }
+  }
 }

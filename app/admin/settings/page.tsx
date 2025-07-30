@@ -18,19 +18,6 @@ interface AppSettings {
     tableName: string
     connectionTimeout: number
   }
-  security: {
-    sessionTimeout: number
-    maxLoginAttempts: number
-    requireHttps: boolean
-    enableRateLimit: boolean
-    enforceStrongPasswords: boolean
-    enableTwoFactor: boolean
-  }
-  notifications: {
-    emailAlerts: boolean
-    adminEmail: string
-    responseThreshold: number
-  }
   general: {
     appName: string
     publicUrl: string
@@ -46,19 +33,6 @@ export default function SettingsPage() {
       apiKey: "",
       tableName: "",
       connectionTimeout: 30,
-    },
-    security: {
-      sessionTimeout: 3600,
-      maxLoginAttempts: 10,
-      requireHttps: true,
-      enableRateLimit: true,
-      enforceStrongPasswords: false,
-      enableTwoFactor: false,
-    },
-    notifications: {
-      emailAlerts: false,
-      adminEmail: "",
-      responseThreshold: 10,
     },
     general: {
       appName: "",
@@ -116,19 +90,6 @@ export default function SettingsPage() {
           tableName: config.database.tableName,
           connectionTimeout: 30,
         },
-        security: {
-          sessionTimeout: config.security.sessionTimeout,
-          maxLoginAttempts: config.security.maxLoginAttempts,
-          requireHttps: config.security.requireHttps,
-          enableRateLimit: config.security.enableRateLimit,
-          enforceStrongPasswords: config.security.enforceStrongPasswords,
-          enableTwoFactor: config.security.enableTwoFactor,
-        },
-        notifications: {
-          emailAlerts: config.notifications.emailAlerts,
-          adminEmail: config.notifications.adminEmail,
-          responseThreshold: config.notifications.responseThreshold,
-        },
         general: {
           appName: config.general.appName,
           publicUrl: config.general.publicUrl,
@@ -154,19 +115,6 @@ export default function SettingsPage() {
           apiKey: "",
           tableName: "",
           connectionTimeout: 30,
-        },
-        security: {
-          sessionTimeout: 3600,
-          maxLoginAttempts: 10,
-          requireHttps: true,
-          enableRateLimit: true,
-          enforceStrongPasswords: false,
-          enableTwoFactor: false,
-        },
-        notifications: {
-          emailAlerts: false,
-          adminEmail: "",
-          responseThreshold: 10,
         },
         general: {
           appName: "Product Community Survey",
@@ -361,22 +309,22 @@ export default function SettingsPage() {
         app_url: settings.general.publicUrl,
         maintenance_mode: settings.general.maintenanceMode,
         enable_analytics: settings.general.analyticsEnabled,
-        enable_email_notifications: settings.notifications.emailAlerts,
+        enable_email_notifications: false, // Default to false
         enable_export: true, // Default to true
-        session_timeout: settings.security.sessionTimeout * 1000, // Convert to milliseconds
-        max_login_attempts: settings.security.maxLoginAttempts,
+        session_timeout: 3600 * 1000, // Default to 1 hour
+        max_login_attempts: 10, // Default to 10
         theme_default: 'system',
         language_default: 'en',
         settings: {
           supabase_url: settings.database.url,
           supabase_anon_key: settings.database.apiKey,
           connection_timeout: settings.database.connectionTimeout,
-          require_https: settings.security.requireHttps,
-          enable_rate_limit: settings.security.enableRateLimit,
-          enforce_strong_passwords: settings.security.enforceStrongPasswords,
-          enable_two_factor: settings.security.enableTwoFactor,
-          admin_email: settings.notifications.adminEmail,
-          response_threshold: settings.notifications.responseThreshold
+          require_https: true, // Default to true
+          enable_rate_limit: true, // Default to true
+          enforce_strong_passwords: false, // Default to false
+          enable_two_factor: false, // Default to false
+          admin_email: "", // Default to empty
+          response_threshold: 10 // Default to 10
         }
       }
 
@@ -594,116 +542,6 @@ export default function SettingsPage() {
               className="w-32 bg-background text-foreground border-border"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Security Settings */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Shield className="w-5 h-5" />
-            Security Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Session Timeout (minutes)
-            </label>
-            <Input
-              type="number"
-              value={settings.security.sessionTimeout}
-              onChange={(e) => updateSettings("security", "sessionTimeout", Number.parseInt(e.target.value))}
-              className="w-32 bg-background text-foreground border-border"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              How long before users are automatically logged out
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Max Login Attempts</label>
-            <Input
-              type="number"
-              value={settings.security.maxLoginAttempts}
-              onChange={(e) => updateSettings("security", "maxLoginAttempts", Number.parseInt(e.target.value))}
-              className="w-32 bg-background text-foreground border-border"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-foreground">Require HTTPS</label>
-                <p className="text-xs text-muted-foreground">Force secure connections only</p>
-              </div>
-              <Switch
-                checked={settings.security.requireHttps}
-                onCheckedChange={(checked) => updateSettings("security", "requireHttps", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-foreground">Enable Rate Limiting</label>
-                <p className="text-xs text-muted-foreground">Prevent brute force attacks</p>
-              </div>
-              <Switch
-                checked={settings.security.enableRateLimit}
-                onCheckedChange={(checked) => updateSettings("security", "enableRateLimit", checked)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Bell className="w-5 h-5" />
-            Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-foreground">Email Alerts</label>
-              <p className="text-xs text-muted-foreground">Receive notifications for new responses</p>
-            </div>
-            <Switch
-              checked={settings.notifications.emailAlerts}
-              onCheckedChange={(checked) => updateSettings("notifications", "emailAlerts", checked)}
-            />
-          </div>
-
-          {settings.notifications.emailAlerts && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Admin Email</label>
-                <Input
-                  type="email"
-                  value={settings.notifications.adminEmail}
-                  onChange={(e) => updateSettings("notifications", "adminEmail", e.target.value)}
-                  placeholder="admin@example.com"
-                  className="bg-background text-foreground border-border"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Alert Threshold</label>
-                <Input
-                  type="number"
-                  value={settings.notifications.responseThreshold}
-                  onChange={(e) =>
-                    updateSettings("notifications", "responseThreshold", Number.parseInt(e.target.value))
-                  }
-                  className="w-32 bg-background text-foreground border-border"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Send alert every N responses</p>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 

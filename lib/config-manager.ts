@@ -1,5 +1,5 @@
-// Centralized Configuration Manager
-// Handles environment variables, database settings, and manual configurations
+// Simplified Configuration Manager
+// Focuses on getting Supabase working immediately
 
 export interface DatabaseConfig {
   url: string
@@ -10,19 +10,6 @@ export interface DatabaseConfig {
 
 export interface AppConfig {
   database: DatabaseConfig
-  security: {
-    sessionTimeout: number
-    maxLoginAttempts: number
-    requireHttps: boolean
-    enableRateLimit: boolean
-    enforceStrongPasswords: boolean
-    enableTwoFactor: boolean
-  }
-  notifications: {
-    emailAlerts: boolean
-    adminEmail: string
-    responseThreshold: number
-  }
   general: {
     appName: string
     publicUrl: string
@@ -34,7 +21,6 @@ export interface AppConfig {
 class ConfigManager {
   private static instance: ConfigManager
   private config: AppConfig | null = null
-  private databaseSettings: any = null
 
   private constructor() {}
 
@@ -45,35 +31,42 @@ class ConfigManager {
     return ConfigManager.instance
   }
 
-  // Get environment variables safely
+  // Simple environment variable getter
   private getEnvVar(key: string): string {
     if (typeof window !== 'undefined') {
-      // Client-side: use window.__ENV__
-      return (window as any).__ENV__?.[key] || ''
+      // Client-side: try window.__ENV__ first, then process.env
+      return (window as any).__ENV__?.[key] || process.env[key] || ''
     } else {
       // Server-side: use process.env
       return process.env[key] || ''
     }
   }
 
-  // Load database settings from API
-  private async loadDatabaseSettings(): Promise<any> {
-    try {
-      const response = await fetch('/api/admin/settings')
-      if (response.ok) {
-        const data = await response.json()
-        console.log('🔍 ConfigManager - Database settings loaded:', {
-          hasSettings: !!data.settings,
-          settingsKeys: data.settings ? Object.keys(data.settings) : [],
-          supabaseUrl: data.settings?.supabase_url ? 'SET' : 'EMPTY',
-          supabaseKey: data.settings?.supabase_anon_key ? 'SET' : 'EMPTY'
-        })
-        return data
+  // Get Supabase configuration with multiple fallbacks
+  private getSupabaseConfig(): { url: string; apiKey: string } {
+    const url = 
+      this.getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ||
+      this.getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ||
+      this.getEnvVar('POSTGRES_SUPABASE_URL') ||
+      ''
+
+    const apiKey = 
+      this.getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+      this.getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+      this.getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ||
+      ''
+
+    console.log('🔧 ConfigManager - Supabase Config:', {
+      url: url ? 'SET' : 'EMPTY',
+      apiKey: apiKey ? 'SET' : 'EMPTY',
+      envKeys: {
+        NEXT_PUBLIC_SUPABASE_URL: this.getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
+        POSTGRES_NEXT_PUBLIC_SUPABASE_URL: this.getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
+        POSTGRES_SUPABASE_URL: this.getEnvVar('POSTGRES_SUPABASE_URL') ? 'SET' : 'EMPTY',
       }
-    } catch (error) {
-      console.error('ConfigManager - Error loading database settings:', error)
-    }
-    return null
+    })
+
+    return { url, apiKey }
   }
 
   // Get configuration with proper fallback hierarchy
@@ -81,9 +74,6 @@ class ConfigManager {
     if (this.config) {
       return this.config
     }
-
-    // Load database settings first
-    this.databaseSettings = await this.loadDatabaseSettings()
 
     // Get environment variables
     const env = {
@@ -93,52 +83,31 @@ class ConfigManager {
       NEXT_PUBLIC_APP_NAME: this.getEnvVar('NEXT_PUBLIC_APP_NAME'),
       NEXT_PUBLIC_APP_URL: this.getEnvVar('NEXT_PUBLIC_APP_URL'),
       NEXT_PUBLIC_NODE_ENV: this.getEnvVar('NEXT_PUBLIC_NODE_ENV'),
-      NEXT_PUBLIC_SESSION_TIMEOUT: this.getEnvVar('NEXT_PUBLIC_SESSION_TIMEOUT'),
-      NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS: this.getEnvVar('NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS'),
-      NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS: this.getEnvVar('NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS'),
       NEXT_PUBLIC_ENABLE_ANALYTICS: this.getEnvVar('NEXT_PUBLIC_ENABLE_ANALYTICS'),
     }
 
-    console.log('🔍 ConfigManager - Environment variables:', {
-      NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
-      NEXT_PUBLIC_DB_TABLE: env.NEXT_PUBLIC_DB_TABLE,
-      NEXT_PUBLIC_APP_NAME: env.NEXT_PUBLIC_APP_NAME,
-    })
+    // Get Supabase config with fallbacks
+    const supabaseConfig = this.getSupabaseConfig()
 
     // Build configuration with proper priority:
-    // 1. Manual settings from database (highest priority)
-    // 2. Environment variables (fallback)
-    // 3. Default values (lowest priority)
+    // 1. Environment variables (primary)
+    // 2. Default values (fallback)
     this.config = {
       database: {
-        url: this.databaseSettings?.settings?.supabase_url || env.NEXT_PUBLIC_SUPABASE_URL || "",
-        apiKey: this.databaseSettings?.settings?.supabase_anon_key || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-        tableName: this.databaseSettings?.survey_table_name || env.NEXT_PUBLIC_DB_TABLE || "survey_data",
-        environment: this.databaseSettings?.environment || env.NEXT_PUBLIC_NODE_ENV || "production",
-      },
-      security: {
-        sessionTimeout: this.databaseSettings?.session_timeout || Number.parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
-        maxLoginAttempts: this.databaseSettings?.max_login_attempts || Number.parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
-        requireHttps: true,
-        enableRateLimit: true,
-        enforceStrongPasswords: false,
-        enableTwoFactor: false,
-      },
-      notifications: {
-        emailAlerts: this.databaseSettings?.enable_email_notifications || env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
-        adminEmail: "",
-        responseThreshold: 10,
+        url: supabaseConfig.url,
+        apiKey: supabaseConfig.apiKey,
+        tableName: env.NEXT_PUBLIC_DB_TABLE || "survey_data",
+        environment: env.NEXT_PUBLIC_NODE_ENV || "production",
       },
       general: {
-        appName: this.databaseSettings?.app_name || env.NEXT_PUBLIC_APP_NAME || "Product Community Survey",
-        publicUrl: this.databaseSettings?.app_url || env.NEXT_PUBLIC_APP_URL || "",
-        maintenanceMode: this.databaseSettings?.maintenance_mode || false,
-        analyticsEnabled: this.databaseSettings?.enable_analytics || env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
+        appName: env.NEXT_PUBLIC_APP_NAME || "Product Community Survey",
+        publicUrl: env.NEXT_PUBLIC_APP_URL || "",
+        maintenanceMode: false,
+        analyticsEnabled: env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
       },
     }
 
-    console.log('🔍 ConfigManager - Final configuration:', {
+    console.log('🔧 ConfigManager - Final configuration:', {
       databaseUrl: this.config.database.url ? 'SET' : 'EMPTY',
       databaseKey: this.config.database.apiKey ? 'SET' : 'EMPTY',
       tableName: this.config.database.tableName,
@@ -163,7 +132,6 @@ class ConfigManager {
   // Refresh configuration (useful after settings changes)
   async refreshConfig(): Promise<AppConfig> {
     this.config = null
-    this.databaseSettings = null
     return this.getConfig()
   }
 }
