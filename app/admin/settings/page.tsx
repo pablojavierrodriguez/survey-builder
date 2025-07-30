@@ -104,84 +104,79 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     setLoading(true)
     try {
+      // Use the new centralized configuration manager
+      const { getConfig } = await import('@/lib/config-manager')
+      const config = await getConfig()
       
-      // First try to get settings from API
-      const response = await fetch('/api/admin/settings')
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Get environment variables from window.__ENV__
-        const env = (window as any).__ENV__ || {}
-        
-        // Transform API data to local settings format
-        const apiSettings = {
-          database: {
-            url: data.settings?.supabase_url || env.NEXT_PUBLIC_SUPABASE_URL || "",
-            apiKey: data.settings?.supabase_anon_key || env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-            tableName: data.survey_table_name || env.NEXT_PUBLIC_DB_TABLE || "",
-            connectionTimeout: 30,
-          },
-          security: {
-            sessionTimeout: data.session_timeout || Number.parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
-            maxLoginAttempts: data.max_login_attempts || Number.parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
-            requireHttps: true,
-            enableRateLimit: true,
-            enforceStrongPasswords: false,
-            enableTwoFactor: false,
-          },
-          notifications: {
-            emailAlerts: data.enable_email_notifications || env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
-            adminEmail: "",
-            responseThreshold: 10,
-          },
-          general: {
-            appName: data.app_name || env.NEXT_PUBLIC_APP_NAME || "",
-            publicUrl: data.app_url || env.NEXT_PUBLIC_APP_URL || "",
-            maintenanceMode: data.maintenance_mode || false,
-            analyticsEnabled: data.enable_analytics || env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
-          },
-        }
-        
-        setSettings(apiSettings)
-        console.log('🔍 Debug - API response:', data)
-        console.log('🔍 Debug - Final settings:', apiSettings)
-      } else {
-        throw new Error('Failed to fetch settings')
-      }
-    } catch (error) {
-      console.error('Error loading settings:', error)
-      
-      // Fallback to environment variables only
-      const env = (window as any).__ENV__ || {}
-      const envSettings = {
+      // Transform to local settings format
+      const apiSettings = {
         database: {
-          url: env.NEXT_PUBLIC_SUPABASE_URL || "",
-          apiKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-          tableName: env.NEXT_PUBLIC_DB_TABLE || "",
+          url: config.database.url,
+          apiKey: config.database.apiKey,
+          tableName: config.database.tableName,
           connectionTimeout: 30,
         },
         security: {
-          sessionTimeout: Number.parseInt(env.NEXT_PUBLIC_SESSION_TIMEOUT || "3600"),
-          maxLoginAttempts: Number.parseInt(env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || "10"),
+          sessionTimeout: config.security.sessionTimeout,
+          maxLoginAttempts: config.security.maxLoginAttempts,
+          requireHttps: config.security.requireHttps,
+          enableRateLimit: config.security.enableRateLimit,
+          enforceStrongPasswords: config.security.enforceStrongPasswords,
+          enableTwoFactor: config.security.enableTwoFactor,
+        },
+        notifications: {
+          emailAlerts: config.notifications.emailAlerts,
+          adminEmail: config.notifications.adminEmail,
+          responseThreshold: config.notifications.responseThreshold,
+        },
+        general: {
+          appName: config.general.appName,
+          publicUrl: config.general.publicUrl,
+          maintenanceMode: config.general.maintenanceMode,
+          analyticsEnabled: config.general.analyticsEnabled,
+        },
+      }
+      
+      setSettings(apiSettings)
+      console.log('🔍 Settings - Loaded configuration:', {
+        databaseUrl: config.database.url ? 'SET' : 'EMPTY',
+        databaseKey: config.database.apiKey ? 'SET' : 'EMPTY',
+        tableName: config.database.tableName,
+        appName: config.general.appName,
+      })
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      
+      // Fallback to empty settings
+      const emptySettings = {
+        database: {
+          url: "",
+          apiKey: "",
+          tableName: "",
+          connectionTimeout: 30,
+        },
+        security: {
+          sessionTimeout: 3600,
+          maxLoginAttempts: 10,
           requireHttps: true,
           enableRateLimit: true,
           enforceStrongPasswords: false,
           enableTwoFactor: false,
         },
         notifications: {
-          emailAlerts: env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === "true",
+          emailAlerts: false,
           adminEmail: "",
           responseThreshold: 10,
         },
         general: {
-          appName: env.NEXT_PUBLIC_APP_NAME || "",
-          publicUrl: env.NEXT_PUBLIC_APP_URL || "",
+          appName: "Product Community Survey",
+          publicUrl: "",
           maintenanceMode: false,
-          analyticsEnabled: env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true",
+          analyticsEnabled: false,
         },
       }
       
-      setSettings(envSettings)
+      setSettings(emptySettings)
     } finally {
       setLoading(false)
     }
@@ -396,6 +391,10 @@ export default function SettingsPage() {
       if (response.ok) {
         const result = await response.json()
         console.log('Settings saved successfully:', result)
+        
+        // Refresh the configuration manager
+        const { refreshConfig } = await import('@/lib/config-manager')
+        await refreshConfig()
         
         // Dispatch custom events to notify other components
         window.dispatchEvent(new CustomEvent('app_settings_changed', { 

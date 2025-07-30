@@ -29,6 +29,16 @@ const envVars = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY,
 }
 
+// Debug: Log environment variables (server-side only)
+if (typeof window === 'undefined') {
+  console.log('🔍 Server-side envVars:', {
+    NEXT_PUBLIC_SUPABASE_URL: envVars.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
+    POSTGRES_NEXT_PUBLIC_SUPABASE_URL: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY',
+    POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY',
+  })
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -40,6 +50,15 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `window.__ENV__ = ${JSON.stringify(envVars)};`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              console.log('🔍 Client-side window.__ENV__:', window.__ENV__);
+              console.log('🔍 Client-side NEXT_PUBLIC_SUPABASE_URL:', window.__ENV__?.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'EMPTY');
+              console.log('🔍 Client-side NEXT_PUBLIC_SUPABASE_ANON_KEY:', window.__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'EMPTY');
+            `,
           }}
         />
       </head>
