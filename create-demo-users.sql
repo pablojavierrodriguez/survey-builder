@@ -40,7 +40,7 @@ INSERT INTO auth.users (
   '',
   '',
   ''
-) ON CONFLICT (email) DO NOTHING;
+) WHERE NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'viewer@demo.com');
 
 -- 2. Create admin-demo user
 INSERT INTO auth.users (
@@ -71,7 +71,7 @@ INSERT INTO auth.users (
   '',
   '',
   ''
-) ON CONFLICT (email) DO NOTHING;
+) WHERE NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin-demo@demo.com');
 
 -- 3. Create collaborator demo user
 INSERT INTO auth.users (
@@ -102,7 +102,7 @@ INSERT INTO auth.users (
   '',
   '',
   ''
-) ON CONFLICT (email) DO NOTHING;
+) WHERE NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'collaborator@demo.com');
 
 -- 4. Create admin user
 INSERT INTO auth.users (
@@ -133,7 +133,7 @@ INSERT INTO auth.users (
   '',
   '',
   ''
-) ON CONFLICT (email) DO NOTHING;
+) WHERE NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@demo.com');
 
 -- Create profiles for the demo users
 -- Note: This will be handled by the trigger function handle_new_user()
@@ -153,16 +153,38 @@ BEGIN
   SELECT id INTO collaborator_id FROM auth.users WHERE email = 'collaborator@demo.com';
   SELECT id INTO admin_id FROM auth.users WHERE email = 'admin@demo.com';
 
-  -- Create profiles
-  INSERT INTO profiles (id, email, role, created_at, updated_at)
-  VALUES 
-    (viewer_id, 'viewer@demo.com', 'viewer', NOW(), NOW()),
-    (admin_demo_id, 'admin-demo@demo.com', 'admin-demo', NOW(), NOW()),
-    (collaborator_id, 'collaborator@demo.com', 'collaborator', NOW(), NOW()),
-    (admin_id, 'admin@demo.com', 'admin', NOW(), NOW())
-  ON CONFLICT (id) DO UPDATE SET
-    role = EXCLUDED.role,
-    updated_at = NOW();
+  -- Create profiles if they don't exist
+  IF viewer_id IS NOT NULL THEN
+    INSERT INTO profiles (id, email, role, created_at, updated_at)
+    VALUES (viewer_id, 'viewer@demo.com', 'viewer', NOW(), NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      role = EXCLUDED.role,
+      updated_at = NOW();
+  END IF;
+
+  IF admin_demo_id IS NOT NULL THEN
+    INSERT INTO profiles (id, email, role, created_at, updated_at)
+    VALUES (admin_demo_id, 'admin-demo@demo.com', 'admin-demo', NOW(), NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      role = EXCLUDED.role,
+      updated_at = NOW();
+  END IF;
+
+  IF collaborator_id IS NOT NULL THEN
+    INSERT INTO profiles (id, email, role, created_at, updated_at)
+    VALUES (collaborator_id, 'collaborator@demo.com', 'collaborator', NOW(), NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      role = EXCLUDED.role,
+      updated_at = NOW();
+  END IF;
+
+  IF admin_id IS NOT NULL THEN
+    INSERT INTO profiles (id, email, role, created_at, updated_at)
+    VALUES (admin_id, 'admin@demo.com', 'admin', NOW(), NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      role = EXCLUDED.role,
+      updated_at = NOW();
+  END IF;
 END $$;
 
 -- Verify the users were created

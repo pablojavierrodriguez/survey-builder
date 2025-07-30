@@ -178,6 +178,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if settings data is valid
+    if (!settings) {
+      logger.error('Settings data is undefined', {
+        requestId,
+        ip
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Invalid settings data' },
+        { status: 400 }
+      )
+    }
+
     // Prepare settings for database
     const apiSettings = {
       survey_table_name: settings.database.tableName,

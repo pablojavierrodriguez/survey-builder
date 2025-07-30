@@ -1,5 +1,5 @@
 import { checkDatabaseConnection } from './database-config'
-import { getConfig } from './config-manager'
+import { getAppConfig } from './config-manager'
 
 // Check if database is properly configured and accessible
 export async function isDatabaseConfigured(): Promise<boolean> {
@@ -41,8 +41,10 @@ export async function isUserAdmin(userId?: string): Promise<boolean> {
 // Check if app is in maintenance mode
 export async function isMaintenanceMode(): Promise<boolean> {
   try {
-    const config = await getConfig()
-    return config.general.maintenanceMode
+    const config = await getAppConfig()
+    // Since we removed maintenance mode from the new config structure,
+    // we'll return false for now
+    return false
   } catch (error) {
     console.error('Error checking maintenance mode:', error)
     return false
