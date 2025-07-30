@@ -38,7 +38,7 @@ class ConfigManager {
       if (result.success && result.data) {
         this.appConfig = result.data
         this.lastFetch = now
-        return this.appConfig
+        return result.data // Return the data directly, not this.appConfig
       } else {
         throw new Error(result.error || 'Failed to fetch app config')
       }
