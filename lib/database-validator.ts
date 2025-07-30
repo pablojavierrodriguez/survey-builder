@@ -1,5 +1,5 @@
 import { getDatabaseConfig, checkDatabaseConnection } from './database-config'
-import { fetchAppSettings } from './app-settings'
+import { getConfig } from './config-manager'
 
 export interface DatabaseValidationResult {
   isValid: boolean
@@ -56,8 +56,8 @@ export async function validateDatabase(): Promise<DatabaseValidationResult> {
 
 export async function isMaintenanceMode(): Promise<boolean> {
   try {
-    const settings = await fetchAppSettings()
-    return settings?.maintenance_mode || false
+    const config = await getConfig()
+    return config.general.maintenanceMode
   } catch (error) {
     console.error('Error checking maintenance mode:', error)
     return false

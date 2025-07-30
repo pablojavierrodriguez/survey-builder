@@ -108,7 +108,10 @@ components/
 lib/
 ├── auth-context.tsx     # Authentication logic
 ├── supabase.ts          # Database client
-├── database-config.ts   # Database configuration
+├── config-manager.ts    # Centralized configuration management
+├── database-config.ts   # Database configuration utilities
+├── database-validator.ts # Database validation and status
+├── permissions.ts       # User permissions and roles
 └── utils.ts             # Utility functions
 ```
 
@@ -150,30 +153,38 @@ This application is configured for easy deployment on Vercel with environment se
 
 ### ✅ **Fixed Issues**
 
-1. **Database Integration**
+1. **Configuration System Overhaul**
+   - ✅ Implemented centralized `ConfigManager` for all settings
+   - ✅ Fixed environment variable loading and fallback hierarchy
+   - ✅ Removed obsolete configuration files and hardcoded values
+   - ✅ Created robust configuration priority: Manual > Environment > Defaults
+
+2. **Database Integration**
    - ✅ Removed hardcoded database credentials
    - ✅ Implemented proper environment variable usage
    - ✅ Fixed survey submission to save to database
    - ✅ Added fallback to localStorage for offline support
 
-2. **Mobile UX Improvements**
+3. **Mobile UX Improvements**
    - ✅ Fixed header layout for mobile devices
    - ✅ Improved button responsiveness
    - ✅ Enhanced text sizing for small screens
    - ✅ Better navigation button layout
 
-3. **Environment Separation**
+4. **Environment Separation**
    - ✅ Proper dev/prod database table separation
    - ✅ Environment-specific configuration
    - ✅ Branch-based deployment strategy
 
-4. **Configuration Management**
-   - ✅ Created proper environment files
-   - ✅ Updated Vercel configuration
-   - ✅ Added deployment documentation
+5. **Code Cleanup**
+   - ✅ Removed obsolete files (`lib/env.ts`, `lib/app-settings.ts`)
+   - ✅ Cleaned up debug logging for production
+   - ✅ Updated all components to use new configuration system
+   - ✅ Improved error handling and user feedback
 
 ### 🚀 **New Features**
 
+- **ConfigManager**: Centralized configuration management with proper fallbacks
 - **Database Schema**: Updated schema matching current survey structure
 - **Deployment Guide**: Comprehensive deployment instructions
 - **Error Handling**: Improved error handling and user feedback
