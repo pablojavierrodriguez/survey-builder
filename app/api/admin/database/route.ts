@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAdminSettings } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { createClient } from '@supabase/supabase-js'
 
@@ -15,68 +14,13 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseKey)
 }
 
-export async function GET() {
-  try {
-    const client = getSupabaseClient()
-    if (!client) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database not configured',
-          timestamp: new Date().toISOString()
-        },
-        { status: 503 }
-      )
-    }
-
-    const { data, error } = await client
-      .from('app_settings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (error) {
-      console.error('Error fetching settings:', error)
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to fetch settings',
-          timestamp: new Date().toISOString()
-        },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(
-      { 
-        success: true, 
-        data,
-        timestamp: new Date().toISOString()
-      },
-      { status: 200 }
-    )
-
-  } catch (error) {
-    console.error('Settings GET error:', error)
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Internal server error',
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     // Rate limiting
     const clientIP = getClientIP(request)
     const rateLimitResult = await rateLimit(
       clientIP,
-      '/api/admin/settings',
+      '/api/admin/database',
       'ADMIN'
     )
 
@@ -91,20 +35,80 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parse and validate request body
-    const body = await request.json()
-    
-    // Validate admin settings
-    const validation = validateAdminSettings(body)
-    if (!validation.success) {
+    const client = getSupabaseClient()
+    if (!client) {
       return NextResponse.json(
         { 
           success: false, 
-          error: validation.error,
-          details: validation.details,
+          error: 'Database not configured',
           timestamp: new Date().toISOString()
         },
-        { status: 400 }
+        { status: 503 }
+      )
+    }
+
+    // Get table name from query params or use default
+    const { searchParams } = new URL(request.url)
+    const tableName = searchParams.get('table') || 'survey_data'
+
+    // Fetch survey responses
+    const { data: responses, error: responsesError } = await client
+      .from(tableName)
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (responsesError) {
+      console.error('Error fetching survey responses:', responsesError)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to fetch survey responses',
+          timestamp: new Date().toISOString()
+        },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(
+      { 
+        success: true, 
+        data: responses || [],
+        timestamp: new Date().toISOString()
+      },
+      { status: 200 }
+    )
+
+  } catch (error) {
+    console.error('Database GET error:', error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Internal server error',
+        timestamp: new Date().toISOString()
+      },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Rate limiting
+    const clientIP = getClientIP(request)
+    const rateLimitResult = await rateLimit(
+      clientIP,
+      '/api/admin/database',
+      'ADMIN'
+    )
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: rateLimitResult.error || 'Rate limit exceeded',
+          timestamp: new Date().toISOString()
+        },
+        { status: 429 }
       )
     }
 
@@ -120,45 +124,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prepare settings data
-    const settingsData = {
-      survey_table_name: validation.data.database.tableName,
-      app_name: validation.data.general.appName,
-      app_url: validation.data.general.publicUrl,
-      maintenance_mode: validation.data.general.maintenanceMode,
-      enable_analytics: validation.data.general.analyticsEnabled,
-      enable_email_notifications: false, // Default to false
-      enable_export: true, // Default to true
-      session_timeout: 3600 * 1000, // Default to 1 hour
-      max_login_attempts: 10, // Default to 10
-      theme_default: 'system',
-      language_default: 'en',
-      settings: {
-        supabase_url: validation.data.database.url,
-        supabase_anon_key: validation.data.database.apiKey,
-        connection_timeout: 30,
-        require_https: true, // Default to true
-        enable_rate_limit: true, // Default to true
-        enforce_strong_passwords: false, // Default to false
-        enable_two_factor: false, // Default to false
-        admin_email: "", // Default to empty
-        response_threshold: 10 // Default to 10
-      }
-    }
+    // Parse request body
+    const body = await request.json()
+    const { id, tableName = 'survey_data' } = body
 
-    // Insert or update settings
-    const { data, error } = await client
-      .from('app_settings')
-      .upsert(settingsData, { onConflict: 'id' })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error saving settings:', error)
+    if (!id) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Failed to save settings',
+          error: 'Response ID is required',
+          timestamp: new Date().toISOString()
+        },
+        { status: 400 }
+      )
+    }
+
+    // Delete the response
+    const { error: deleteError } = await client
+      .from(tableName)
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      console.error('Error deleting response:', deleteError)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to delete response',
           timestamp: new Date().toISOString()
         },
         { status: 500 }
@@ -168,15 +160,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: true, 
-        message: 'Settings saved successfully',
-        data,
+        message: 'Response deleted successfully',
         timestamp: new Date().toISOString()
       },
       { status: 200 }
     )
 
   } catch (error) {
-    console.error('Settings POST error:', error)
+    console.error('Database DELETE error:', error)
     return NextResponse.json(
       { 
         success: false, 
