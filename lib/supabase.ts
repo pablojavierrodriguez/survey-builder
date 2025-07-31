@@ -27,18 +27,31 @@ function getSupabaseConfig() {
     getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ||
     ''
 
-  console.log('🔧 [Supabase] Config Check:', {
-    supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-    supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
-    envKeys: {
-      NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-      POSTGRES_NEXT_PUBLIC_SUPABASE_URL: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-      POSTGRES_SUPABASE_URL: getEnvVar('POSTGRES_SUPABASE_URL') ? 'SET' : 'EMPTY',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-      POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-      POSTGRES_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-    }
-  })
+  // Only log on server side to avoid POSTGRES_ warnings
+  if (typeof window === 'undefined') {
+    console.log('🔧 [Supabase] Config Check:', {
+      supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
+      supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
+      envKeys: {
+        NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
+        POSTGRES_NEXT_PUBLIC_SUPABASE_URL: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
+        POSTGRES_SUPABASE_URL: getEnvVar('POSTGRES_SUPABASE_URL') ? 'SET' : 'EMPTY',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
+        POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
+        POSTGRES_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
+      }
+    })
+  } else {
+    // Client-side logging without POSTGRES_ variables
+    console.log('🔧 [Supabase] Config Check:', {
+      supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
+      supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
+      envKeys: {
+        NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
+      }
+    })
+  }
 
   return { supabaseUrl, supabaseAnonKey }
 }
