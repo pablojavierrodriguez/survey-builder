@@ -48,36 +48,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null)
 
           if (session?.user) {
-            // Fetch user profile
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single()
-            if (mounted) setProfile(profileData)
-          }
-        }
-
-        // Listen for auth changes
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-          async (event: any, session: any) => {
-            if (!mounted) return
-            
-            console.log('Auth state changed:', event, session?.user?.id)
-            setSession(session)
-            setUser(session?.user ?? null)
-
-            if (session?.user) {
-              // Fetch user profile
+            // Fetch user profile only once
+            try {
               const { data: profileData } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single()
               if (mounted) setProfile(profileData)
-            } else {
+            } catch (profileError) {
+              console.warn('Could not fetch profile:', profileError)
               if (mounted) setProfile(null)
             }
+          }
+        }
+
+        // Listen for auth changes with debouncing
+        let authTimeout: NodeJS.Timeout
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+          async (event: any, session: any) => {
+            if (!mounted) return
+            
+            // Clear previous timeout
+            clearTimeout(authTimeout)
+            
+            // Debounce auth state changes
+            authTimeout = setTimeout(() => {
+              if (!mounted) return
+              
+              console.log('Auth state changed:', event, session?.user?.id)
+              setSession(session)
+              setUser(session?.user ?? null)
+
+              if (session?.user) {
+                // Fetch user profile
+                supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single()
+                  .then(({ data: profileData }) => {
+                    if (mounted) setProfile(profileData)
+                  })
+                  .catch((profileError) => {
+                    console.warn('Could not fetch profile:', profileError)
+                    if (mounted) setProfile(null)
+                  })
+              } else {
+                if (mounted) setProfile(null)
+              }
+            }, 100) // 100ms debounce
           }
         )
 
