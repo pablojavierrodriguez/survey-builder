@@ -18,7 +18,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
-  const { signInWithPassword, signInWithGoogle, user } = useAuth()
+  const { user, profile, loading: authLoading, signInWithPassword, signInWithGoogle } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
@@ -39,10 +39,27 @@ function LoginForm() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user) {
-      router.push(redirectTo)
+    if (user && !authLoading && !isLoading) {
+      // Add a small delay to ensure auth state is stable
+      const timer = setTimeout(() => {
+        router.push(redirectTo)
+      }, 100)
+      
+      return () => clearTimeout(timer)
     }
-  }, [user, router, redirectTo])
+  }, [user, router, redirectTo, isLoading, authLoading])
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
