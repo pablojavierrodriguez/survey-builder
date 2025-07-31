@@ -38,6 +38,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, loading, router])
 
+  // Role-based redirection logic
+  useEffect(() => {
+    if (!loading && user && profile) {
+      const currentUserRole = profile.role || 'viewer'
+      
+      // If user is viewer and trying to access dashboard, redirect to analytics
+      if (currentUserRole === 'viewer' && pathname === '/admin/dashboard') {
+        console.log('[AdminLayout] Viewer accessing dashboard, redirecting to analytics')
+        router.push('/admin/analytics')
+        return
+      }
+      
+      // If user is admin/admin-demo and accessing analytics as default, redirect to dashboard
+      if ((currentUserRole === 'admin' || currentUserRole === 'admin-demo') && pathname === '/admin/analytics') {
+        // Only redirect if they're on the root admin path
+        if (pathname === '/admin' || pathname === '/admin/') {
+          console.log('[AdminLayout] Admin accessing root admin, redirecting to dashboard')
+          router.push('/admin/dashboard')
+          return
+        }
+      }
+    }
+  }, [user, profile, loading, pathname, router])
+
   const handleLogout = async () => {
     await signOut()
     router.push("/auth/login")
