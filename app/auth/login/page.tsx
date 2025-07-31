@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ModeToggle } from "@/components/mode-toggle"
 import { AlertTriangle } from "lucide-react"
 
 function LoginForm() {
@@ -99,82 +100,114 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>
-            Enter your credentials to access the admin panel
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+      <div className="w-full max-w-md space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold">Product Community Survey</h1>
+          <p className="text-muted-foreground">
+            Sign in to access the admin dashboard
+          </p>
+        </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-                required
-              />
-            </div>
+        {/* Login Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome Back</CardTitle>
+            <CardDescription>
+              Enter your credentials to access the admin panel
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isLoading}
-                required
-              />
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
             </div>
 
             <Button
-              type="submit"
-              className="w-full"
+              variant="outline"
+              onClick={handleGoogleLogin}
               disabled={isLoading}
+              className="w-full"
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              Sign in with Google
             </Button>
-          </form>
+          </CardContent>
+        </Card>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+        {/* Demo Accounts Info */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-2">
+              <h3 className="font-medium">Demo Accounts</h3>
+              <p className="text-sm text-muted-foreground">
+                For testing purposes, you can use these demo accounts:
+              </p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Viewer:</strong> viewer@demo.com / viewer123</p>
+                <p><strong>Admin Demo:</strong> admin-demo@demo.com / demo123</p>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <Button
-            variant="outline"
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
-            className="w-full"
-          >
-            Sign in with Google
-          </Button>
-        </CardContent>
-      </Card>
+        {/* Theme Toggle */}
+        <div className="flex justify-center">
+          <ModeToggle />
+        </div>
+      </div>
     </div>
   )
 }
