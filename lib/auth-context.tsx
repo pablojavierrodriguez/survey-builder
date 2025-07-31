@@ -29,23 +29,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+    let subscription: any = null
+
     const initializeAuth = async () => {
       try {
         const supabase = await getSupabaseClient()
         if (!supabase) {
           console.warn('Supabase not configured - auth features disabled')
-          setLoading(false)
+          if (mounted) setLoading(false)
           return
         }
 
         // Get initial session
         const { data: { session } } = await supabase.auth.getSession()
-        setSession(session)
-        setUser(session?.user ?? null)
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+
+          if (session?.user) {
+            // Fetch user profile
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+            if (mounted) setProfile(profileData)
+          }
+        }
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
           async (event: any, session: any) => {
+            if (!mounted) return
+            
             console.log('Auth state changed:', event, session?.user?.id)
             setSession(session)
             setUser(session?.user ?? null)
@@ -57,22 +74,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .select('*')
                 .eq('id', session.user.id)
                 .single()
-              setProfile(profileData)
+              if (mounted) setProfile(profileData)
             } else {
-              setProfile(null)
+              if (mounted) setProfile(null)
             }
           }
         )
 
-        setLoading(false)
-        return () => subscription.unsubscribe()
+        subscription = authSubscription
+        if (mounted) setLoading(false)
       } catch (error) {
         console.error('Error initializing auth:', error)
-        setLoading(false)
+        if (mounted) setLoading(false)
       }
     }
 
     initializeAuth()
+
+    return () => {
+      mounted = false
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
   }, [])
 
   const signInWithPassword = async (email: string, password: string): Promise<{ error: Error | null }> => {

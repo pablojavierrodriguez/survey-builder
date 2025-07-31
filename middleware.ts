@@ -29,13 +29,8 @@ function createSupabaseClient() {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  // Only apply middleware to admin routes
+  // Only apply middleware to admin routes, skip auth routes completely
   if (!pathname.startsWith('/admin')) {
-    return NextResponse.next()
-  }
-  
-  // Skip middleware for login page
-  if (pathname === '/auth/login') {
     return NextResponse.next()
   }
   
@@ -111,7 +106,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/auth/:path*'
+    '/admin/:path*'
   ]
 }
