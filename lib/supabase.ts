@@ -3,11 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 // Simple environment variable getter (server-side only)
 function getEnvVar(key: string): string {
   if (typeof window !== 'undefined') {
-    // Client-side: only use process.env for public variables
+    // Client-side: only use NEXT_PUBLIC_ variables
     return process.env[key] || ''
   } else {
-    // Server-side: use process.env
-    return process.env[key] || ''
+    // Server-side: try POSTGRES_ variables first, then NEXT_PUBLIC_
+    const postgresKey = key.replace('NEXT_PUBLIC_', 'POSTGRES_')
+    return process.env[postgresKey] || process.env[key] || ''
   }
 }
 
