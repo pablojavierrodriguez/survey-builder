@@ -16,14 +16,19 @@ function getSupabaseConfig() {
 }
 
 // Create Supabase client for middleware
-function createSupabaseClient() {
+function createSupabaseClient(request: NextRequest) {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig()
   
   if (!supabaseUrl || !supabaseAnonKey) {
     return null
   }
   
-  return createClient(supabaseUrl, supabaseAnonKey)
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
 }
 
 export async function middleware(request: NextRequest) {
@@ -34,19 +39,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Get authorization header
-  const authHeader = request.headers.get('authorization')
-  const token = authHeader?.replace('Bearer ', '')
-  
-  // If no token, redirect to login
-  if (!token) {
-    const loginUrl = new URL('/auth/login', request.url)
-    loginUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-  
-  // Verify token with Supabase
-  const supabase = createSupabaseClient()
+  // Create Supabase client
+  const supabase = createSupabaseClient(request)
   if (!supabase) {
     console.error('Supabase not configured in middleware')
     const loginUrl = new URL('/auth/login', request.url)
@@ -54,10 +48,11 @@ export async function middleware(request: NextRequest) {
   }
   
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token)
+    // Get session from cookies
+    const { data: { session }, error } = await supabase.auth.getSession()
     
-    if (error || !user) {
-      console.error('Invalid token in middleware:', error)
+    if (error || !session) {
+      console.error('No valid session in middleware:', error)
       const loginUrl = new URL('/auth/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
@@ -67,7 +62,7 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', session.user.id)
       .single()
     
     // Check role-based access
@@ -92,7 +87,7 @@ export async function middleware(request: NextRequest) {
     
     // Add user info to headers for use in components
     const response = NextResponse.next()
-    response.headers.set('x-user-id', user.id)
+    response.headers.set('x-user-id', session.user.id)
     response.headers.set('x-user-role', userRole)
     
     return response
