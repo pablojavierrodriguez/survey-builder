@@ -60,7 +60,14 @@ export default function SettingsPage() {
       // Load config from /api/admin/settings
       const response = await fetch('/api/admin/settings')
       if (!response.ok) throw new Error('Failed to load settings')
-      const config = await response.json()
+      const result = await response.json()
+      
+      if (!result.success || !result.data) {
+        throw new Error('Invalid settings response')
+      }
+      
+      const config = result.data
+      
       // Map to local AppSettings shape
       const apiSettings: AppSettings = {
         database: {
