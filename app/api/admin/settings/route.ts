@@ -209,6 +209,9 @@ export async function POST(request: NextRequest) {
 
     // Prepare settings for database
     const apiSettings = {
+      id: 1, // Ensure we have an ID for upsert
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       survey_table_name: settings.database.tableName,
       app_name: settings.general.appName,
       app_url: settings.general.publicUrl,
@@ -252,6 +255,14 @@ export async function POST(request: NextRequest) {
         error: error.message,
         duration: dbDuration
       })
+      
+      // If table doesn't exist, return a more helpful error
+      if (error.message.includes('relation "app_settings" does not exist')) {
+        return NextResponse.json(
+          { success: false, error: 'Settings table not found. Please contact administrator.' },
+          { status: 500 }
+        )
+      }
       
       return NextResponse.json(
         { success: false, error: 'Failed to save settings' },
