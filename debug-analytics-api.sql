@@ -53,9 +53,7 @@ FROM pc_survey_data_dev;
 SELECT 
     'API Query 8 - Recent responses' as test_name,
     COUNT(*) as result
-FROM pc_survey_data_dev
-ORDER BY created_at DESC
-LIMIT 10;
+FROM pc_survey_data_dev;
 
 -- =================================================================
 -- STEP 2: TEST WITH SAMPLE DATA
