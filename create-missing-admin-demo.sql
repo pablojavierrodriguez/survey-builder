@@ -2,14 +2,15 @@
 -- CREATE MISSING ADMIN-DEMO USER
 -- =================================================================
 -- This script creates the missing admin-demo@demo.com user
+-- Role: admin-demo (read-only admin with limited access)
 
 -- First, create the user in auth.users (this needs to be done manually in Supabase Auth dashboard)
 -- Go to Supabase Dashboard → Authentication → Users → Add User
 -- Email: admin-demo@demo.com
 -- Password: demo123
 
--- Then, create the profile for the user
--- You'll need to get the UUID from auth.users after creating the user
+-- Then, create the profile for the user with admin-demo role
+-- admin-demo role has access to: dashboard, analytics, settings (read-only)
 
 -- Check if admin-demo user exists
 SELECT 
@@ -20,13 +21,12 @@ SELECT
 FROM auth.users 
 WHERE email = 'admin-demo@demo.com';
 
--- If the user exists, create the profile
--- Replace 'USER_UUID_HERE' with the actual UUID from the query above
+-- If the user exists, create the profile with admin-demo role
 INSERT INTO profiles (id, email, role, created_at, updated_at)
 SELECT 
   id,
   email,
-  'admin-demo',
+  'admin-demo', -- Read-only admin role
   NOW(),
   NOW()
 FROM auth.users 
@@ -43,7 +43,8 @@ SELECT
   CASE 
     WHEN u.id IS NOT NULL THEN '✅ User exists in auth.users'
     ELSE '❌ User NOT found in auth.users'
-  END as auth_status
+  END as auth_status,
+  'admin-demo: read-only admin (dashboard, analytics, settings)' as role_description
 FROM profiles p
 LEFT JOIN auth.users u ON p.id = u.id
 WHERE p.email = 'admin-demo@demo.com';
