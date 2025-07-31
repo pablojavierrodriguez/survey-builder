@@ -93,9 +93,25 @@ export async function GET(request: NextRequest) {
     const totalDuration = Date.now() - startTime
     logger.logResponse(requestId, 200, totalDuration)
 
+    // Transform settings to match frontend expectations
+    const transformedSettings = {
+      database: {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        tableName: settings.survey_table_name || 'pc_survey_data_dev',
+        environment: settings.environment || 'dev'
+      },
+      general: {
+        appName: settings.app_name || 'Product Community Survey',
+        publicUrl: settings.app_url || '',
+        maintenanceMode: settings.maintenance_mode || false,
+        analyticsEnabled: settings.enable_analytics || true
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: settings
+      data: transformedSettings
     })
 
   } catch (error) {
