@@ -87,12 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   .select('*')
                   .eq('id', session.user.id)
                   .single()
-                  .then(({ data: profileData }) => {
-                    if (mounted) setProfile(profileData)
-                  })
-                  .catch((profileError) => {
-                    console.warn('Could not fetch profile:', profileError)
-                    if (mounted) setProfile(null)
+                  .then(({ data: profileData, error }) => {
+                    if (error) {
+                      console.warn('Could not fetch profile:', error)
+                      if (mounted) setProfile(null)
+                    } else {
+                      if (mounted) setProfile(profileData)
+                    }
                   })
               } else {
                 if (mounted) setProfile(null)
