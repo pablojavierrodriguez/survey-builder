@@ -56,7 +56,6 @@ export async function validateDatabaseStatus(): Promise<{
   configured: boolean
   connected: boolean
   error?: string
-  tableName?: string
 }> {
   try {
     const connection = await checkDatabaseConnection()
@@ -64,8 +63,7 @@ export async function validateDatabaseStatus(): Promise<{
     return {
       configured: true,
       connected: connection.success,
-      error: connection.error,
-      tableName: 'pc_survey_data_dev' // Use correct dev table name
+      error: connection.error
     }
   } catch (error) {
     return {
