@@ -39,24 +39,37 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
+  // Check for session cookie
+  const sessionCookie = request.cookies.get('sb-access-token') || 
+                       request.cookies.get('supabase-auth-token')
+  
+  if (!sessionCookie) {
+    console.log('[SERVER] No session cookie found, redirecting to login')
+    const loginUrl = new URL('/auth/login', request.url)
+    loginUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+  
   // Create Supabase client
   const supabase = createSupabaseClient(request)
   if (!supabase) {
-    console.error('Supabase not configured in middleware')
+    console.error('[SERVER] Supabase not configured in middleware')
     const loginUrl = new URL('/auth/login', request.url)
     return NextResponse.redirect(loginUrl)
   }
   
   try {
-    // Get session from cookies
+    // Try to get session
     const { data: { session }, error } = await supabase.auth.getSession()
     
     if (error || !session) {
-      console.error('No valid session in middleware:', error)
+      console.log('[SERVER] No valid session in middleware:', error?.message || 'No session')
       const loginUrl = new URL('/auth/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
     }
+    
+    console.log('[SERVER] Valid session found for user:', session.user.email)
     
     // Get user profile to check role
     const { data: profile } = await supabase
@@ -67,6 +80,7 @@ export async function middleware(request: NextRequest) {
     
     // Check role-based access
     const userRole = profile?.role || 'viewer'
+    console.log('[SERVER] User role:', userRole)
     
     // Define role-based access rules
     const roleAccess = {
@@ -80,10 +94,13 @@ export async function middleware(request: NextRequest) {
     const isAllowed = allowedPaths.some(path => pathname.startsWith(path))
     
     if (!isAllowed) {
+      console.log('[SERVER] Access denied for role', userRole, 'to path', pathname)
       // Redirect to appropriate default page based on role
       const defaultPath = userRole === 'admin' || userRole === 'admin-demo' ? '/admin/dashboard' : '/admin/analytics'
       return NextResponse.redirect(new URL(defaultPath, request.url))
     }
+    
+    console.log('[SERVER] Access granted for role', userRole, 'to path', pathname)
     
     // Add user info to headers for use in components
     const response = NextResponse.next()
@@ -93,7 +110,7 @@ export async function middleware(request: NextRequest) {
     return response
     
   } catch (error) {
-    console.error('Middleware error:', error)
+    console.error('[SERVER] Middleware error:', error)
     const loginUrl = new URL('/auth/login', request.url)
     return NextResponse.redirect(loginUrl)
   }
