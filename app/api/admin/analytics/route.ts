@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     // Get tools usage
     const { data: toolsData, error: toolsError } = await supabase
       .from('pc_survey_data_dev')
-      .select('tools')
+      .select('daily_tools')
 
     if (toolsError) {
       logger.error('Database error fetching tools data', {
@@ -195,8 +195,8 @@ export async function GET(request: NextRequest) {
     // Process tools data (flatten arrays)
     const toolsUsage: any = {}
     toolsData?.forEach(item => {
-      if (item.tools && Array.isArray(item.tools)) {
-        item.tools.forEach((tool: string) => {
+      if (item.daily_tools && Array.isArray(item.daily_tools)) {
+        item.daily_tools.forEach((tool: string) => {
           toolsUsage[tool] = (toolsUsage[tool] || 0) + 1
         })
       }
