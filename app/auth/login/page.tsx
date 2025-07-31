@@ -37,15 +37,15 @@ function LoginForm() {
     checkSupabase()
   }, [])
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated - only redirect after successful login
   useEffect(() => {
     if (user && !authLoading && !isLoading) {
-      // Add a small delay to ensure auth state is stable
-      const timer = setTimeout(() => {
+      // Only redirect if we just logged in, not on page load
+      const hasJustLoggedIn = sessionStorage.getItem('justLoggedIn')
+      if (hasJustLoggedIn) {
+        sessionStorage.removeItem('justLoggedIn')
         router.push(redirectTo)
-      }, 100)
-      
-      return () => clearTimeout(timer)
+      }
     }
   }, [user, router, redirectTo, isLoading, authLoading])
 
@@ -81,6 +81,7 @@ function LoginForm() {
       } else {
         // Success - user will be redirected by useEffect
         console.log("Login successful")
+        sessionStorage.setItem('justLoggedIn', 'true')
       }
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")
@@ -99,6 +100,10 @@ function LoginForm() {
       
       if (error) {
         setError(error.message || "Google login failed")
+      } else {
+        // Success - user will be redirected by useEffect
+        console.log("Google login successful")
+        sessionStorage.setItem('justLoggedIn', 'true')
       }
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")
