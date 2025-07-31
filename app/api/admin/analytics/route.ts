@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     
     // Get total responses
     const { count: totalResponses, error: countError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('*', { count: 'exact', head: true })
 
     if (countError) {
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     // Get role distribution
     const { data: roleData, error: roleError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('role')
 
     if (roleError) {
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     // Get seniority distribution
     const { data: seniorityData, error: seniorityError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('seniority_level')
 
     if (seniorityError) {
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
     // Get company type distribution
     const { data: companyData, error: companyError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('company_type')
 
     if (companyError) {
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     // Get industry distribution
     const { data: industryData, error: industryError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('industry')
 
     if (industryError) {
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
 
     // Get tools usage
     const { data: toolsData, error: toolsError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('tools')
 
     if (toolsError) {
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
 
     // Get learning methods
     const { data: learningData, error: learningError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('learning_methods')
 
     if (learningError) {
@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
 
     // Get recent responses (last 10)
     const { data: recentResponses, error: recentError } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(10)
@@ -238,7 +238,7 @@ export async function GET(request: NextRequest) {
       recentResponses: recentResponses || []
     }
 
-    logger.logDatabaseOperation('SELECT', 'survey_data', true, dbDuration)
+    logger.logDatabaseOperation('SELECT', 'pc_survey_data_dev', true, dbDuration)
     logger.info('Analytics data fetched successfully', {
       requestId,
       ip,

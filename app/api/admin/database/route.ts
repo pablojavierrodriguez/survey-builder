@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // Get table name from query params or use default
     const { searchParams } = new URL(request.url)
-    const tableName = searchParams.get('table') || 'survey_data'
+    const tableName = searchParams.get('table') || 'pc_survey_data_dev'
 
     // Fetch survey responses
     const { data: responses, error } = await supabase
@@ -96,7 +96,7 @@ export async function DELETE(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { id, tableName = 'survey_data' } = body
+          const { id, tableName = 'pc_survey_data_dev' } = body
 
     if (!id) {
       console.warn(`Missing response ID for deletion by IP ${clientIP}`)

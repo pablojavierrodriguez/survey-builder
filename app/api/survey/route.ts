@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     // Submit to database
     const dbStartTime = Date.now()
     const { data, error } = await supabase
-      .from('survey_data')
+      .from('pc_survey_data_dev')
       .insert([surveyData])
       .select()
 
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log successful submission
-    logger.logDatabaseOperation('INSERT', 'survey_data', true, dbDuration)
+    logger.logDatabaseOperation('INSERT', 'pc_survey_data_dev', true, dbDuration)
     logger.info('Survey submitted successfully', {
       requestId,
       ip,
