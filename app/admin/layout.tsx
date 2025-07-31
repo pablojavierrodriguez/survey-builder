@@ -50,14 +50,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return
       }
       
-      // If user is admin/admin-demo and accessing analytics as default, redirect to dashboard
-      if ((currentUserRole === 'admin' || currentUserRole === 'admin-demo') && pathname === '/admin/analytics') {
-        // Only redirect if they're on the root admin path
-        if (pathname === '/admin' || pathname === '/admin/') {
-          console.log('[AdminLayout] Admin accessing root admin, redirecting to dashboard')
-          router.push('/admin/dashboard')
-          return
-        }
+      // If user is admin/admin-demo and accessing root admin path, redirect to dashboard
+      if ((currentUserRole === 'admin' || currentUserRole === 'admin-demo') && (pathname === '/admin' || pathname === '/admin/')) {
+        console.log('[AdminLayout] Admin accessing root admin, redirecting to dashboard')
+        router.push('/admin/dashboard')
+        return
       }
     }
   }, [user, profile, loading, pathname, router])
