@@ -66,6 +66,8 @@ function LoginForm() {
     setIsLoading(true)
     setError("")
 
+    console.log('🔧 [Login] Attempting login with:', { email, password: '***' })
+
     // Validation
     if (!email || !password) {
       setError("Please enter both email and password")
@@ -76,16 +78,19 @@ function LoginForm() {
     try {
       const { error } = await signInWithPassword(email, password)
       
+      console.log('🔧 [Login] SignIn result:', { error: error?.message || 'No error' })
+      
       if (error) {
         setError(error.message || "Invalid email or password")
+        console.error('🔧 [Login] Login failed:', error)
       } else {
         // Success - user will be redirected by useEffect
-        console.log("Login successful")
+        console.log("🔧 [Login] Login successful")
         sessionStorage.setItem('justLoggedIn', 'true')
       }
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")
-      console.error("Login error:", error)
+      console.error("🔧 [Login] Login error:", error)
     }
 
     setIsLoading(false)
