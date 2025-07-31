@@ -41,7 +41,7 @@ export function getSupabaseConfig(): DatabaseConfig {
   return {
     supabaseUrl,
     anonKey,
-    tableName: getEnvVar('NEXT_PUBLIC_DB_TABLE') || "survey_data",
+    tableName: getEnvVar('NEXT_PUBLIC_DB_TABLE') || "pc_survey_data_dev",
     environment: getEnvVar('NEXT_PUBLIC_NODE_ENV') || "production"
   }
 }

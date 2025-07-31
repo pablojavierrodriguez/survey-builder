@@ -65,7 +65,7 @@ export async function validateDatabaseStatus(): Promise<{
       configured: true,
       connected: connection.success,
       error: connection.error,
-      tableName: 'survey_data' // Default table name
+      tableName: 'pc_survey_data_dev' // Use correct dev table name
     }
   } catch (error) {
     return {

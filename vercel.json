@@ -12,6 +12,7 @@
   "env": {
     "NEXT_PUBLIC_APP_NAME": "Product Community Survey",
     "NEXT_PUBLIC_APP_URL": "https://productcommunitysurvey-dev.vercel.app",
+    "NEXT_PUBLIC_DB_TABLE": "pc_survey_data_dev",
     "NEXT_PUBLIC_DB_TABLE_DEV": "pc_survey_data_dev",
     "NEXT_PUBLIC_DB_TABLE_PROD": "pc_survey_data",
     "NEXT_PUBLIC_ENABLE_ANALYTICS": "true",
