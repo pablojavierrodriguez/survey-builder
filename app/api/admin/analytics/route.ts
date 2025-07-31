@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     // Get seniority distribution
     const { data: seniorityData, error: seniorityError } = await supabase
       .from('pc_survey_data_dev')
-      .select('seniority_level')
+      .select('seniority')
 
     if (seniorityError) {
       logger.error('Database error fetching seniority data', {
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
     }, {}) || {}
 
     const seniorityDistribution = seniorityData?.reduce((acc: any, item) => {
-      acc[item.seniority_level] = (acc[item.seniority_level] || 0) + 1
+      acc[item.seniority] = (acc[item.seniority] || 0) + 1
       return acc
     }, {}) || {}
 

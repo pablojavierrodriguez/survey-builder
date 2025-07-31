@@ -25,7 +25,7 @@ SELECT
     'Sample data' as check_type,
     id,
     role,
-    seniority_level,
+    seniority,
     created_at
 FROM pc_survey_data_dev 
 LIMIT 3;
@@ -74,7 +74,7 @@ SELECT
     'Test seniority column' as check_type,
     COUNT(*) as result
 FROM pc_survey_data_dev 
-WHERE seniority_level IS NOT NULL;
+WHERE seniority IS NOT NULL;
 
 -- =================================================================
 -- STEP 4: CHECK FOR ANY ERRORS
