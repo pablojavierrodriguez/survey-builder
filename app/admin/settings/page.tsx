@@ -66,6 +66,13 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Reload settings when debug mode changes
+  useEffect(() => {
+    if (settings) {
+      loadSettings()
+    }
+  }, [debugMode])
+
   const loadSettings = async () => {
     setLoading(true)
     try {
@@ -83,8 +90,8 @@ export default function SettingsPage() {
       // Map to local AppSettings shape
       const apiSettings: AppSettings = {
         database: {
-          url: config.database?.url || '',
-          apiKey: config.database?.apiKey || '',
+          url: config.database?.url || (debugMode ? process.env.NEXT_PUBLIC_SUPABASE_URL || '' : ''),
+          apiKey: config.database?.apiKey || (debugMode ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' : ''),
           tableName: config.database?.tableName || 'pc_survey_data_dev',
           connectionTimeout: 30,
           environment: config.database?.environment || 'development',
