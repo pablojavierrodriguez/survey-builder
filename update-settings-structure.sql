@@ -1,24 +1,16 @@
 -- =================================================================
--- MIGRATE TO SIMPLIFIED SETTINGS STRUCTURE
+-- UPDATE SETTINGS STRUCTURE - SIMPLE VERSION
 -- =================================================================
--- This script migrates the existing app_settings table to use only JSON
--- instead of having redundant separate columns
+-- This script simply updates the app_settings table to the new structure
 
 -- =================================================================
--- STEP 1: BACKUP CURRENT DATA
+-- STEP 1: DROP AND RECREATE TABLE
 -- =================================================================
 
--- Create a backup of current settings
-CREATE TABLE IF NOT EXISTS app_settings_backup AS 
-SELECT * FROM app_settings;
-
--- =================================================================
--- STEP 2: MIGRATE TO SIMPLIFIED STRUCTURE
--- =================================================================
-
--- Drop and recreate the table with simplified structure
+-- Drop the existing table
 DROP TABLE IF EXISTS app_settings;
 
+-- Create the new simplified structure
 CREATE TABLE app_settings (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -28,10 +20,9 @@ CREATE TABLE app_settings (
 );
 
 -- =================================================================
--- STEP 3: INSERT DEFAULT CONFIGURATION
+-- STEP 2: INSERT DEFAULT CONFIGURATION
 -- =================================================================
 
--- Insert the default configuration
 INSERT INTO app_settings (id, settings, version) VALUES (
     1,
     '{
@@ -64,31 +55,21 @@ INSERT INTO app_settings (id, settings, version) VALUES (
 );
 
 -- =================================================================
--- STEP 4: CREATE INDEXES FOR PERFORMANCE
+-- STEP 3: CREATE INDEXES
 -- =================================================================
 
 CREATE INDEX IF NOT EXISTS idx_app_settings_created_at ON app_settings(created_at);
 CREATE INDEX IF NOT EXISTS idx_app_settings_settings ON app_settings USING GIN (settings);
 
 -- =================================================================
--- STEP 5: VERIFICATION
+-- STEP 4: VERIFICATION
 -- =================================================================
 
--- Check the migrated structure
 SELECT 
-    'Migration Complete' as status,
+    'Settings Updated' as status,
     id,
     settings->'general'->>'appName' as app_name,
     settings->'database'->>'tableName' as table_name,
-    settings->'security'->>'sessionTimeout' as session_timeout,
-    settings->'features'->>'enableAnalytics' as analytics_enabled,
     version
 FROM app_settings
-ORDER BY id;
-
--- =================================================================
--- STEP 6: CLEANUP (OPTIONAL)
--- =================================================================
-
--- Uncomment the following line to remove the backup table after verification
--- DROP TABLE IF EXISTS app_settings_backup;
+WHERE id = 1;
