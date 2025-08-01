@@ -40,19 +40,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get environment from query params or determine automatically
-    const { searchParams } = new URL(request.url)
-    let environment = searchParams.get('environment')
-    
-    if (!environment) {
-      // Auto-detect environment
-      const hostname = request.headers.get('host') || ''
-      if (hostname.includes('dev') || hostname.includes('localhost')) {
-        environment = 'dev'
-      } else {
-        environment = 'prod'
-      }
-    }
+    // Get environment from NODE_ENV
+    const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
+    const isProd = environment === 'prod'
 
     // Fetch settings from database for specific environment
     const dbStartTime = Date.now()
@@ -81,9 +71,25 @@ export async function GET(request: NextRequest) {
 
     logger.logDatabaseOperation('SELECT', 'app_settings', true, dbDuration)
 
-    // Return settings or default configuration based on environment
-    const isProd = environment === 'prod'
-    const settings = data?.settings || {
+    // PRIORITY 1: Return user-saved settings from DB if they exist
+    if (data?.settings) {
+      logger.info('Returning user-saved settings from database', {
+        requestId,
+        ip,
+        environment,
+        hasDatabaseConfig: !!(data.settings.database?.url && data.settings.database?.apiKey)
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: data.settings,
+        environment: environment,
+        source: 'database'
+      })
+    }
+
+    // PRIORITY 2: Return environment variables as fallback
+    const envSettings = {
       database: {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
         apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
@@ -97,26 +103,79 @@ export async function GET(request: NextRequest) {
         analyticsEnabled: true
       },
       security: {
+        sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
+        maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
+        enableRateLimit: true,
+        enforceStrongPasswords: isProd,
+        enableTwoFactor: false
+      },
+      features: {
+        enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
+        enableEmailNotifications: isProd,
+        enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
+      }
+    }
+
+    // Check if we have at least basic database configuration from env vars
+    if (envSettings.database.url && envSettings.database.apiKey) {
+      logger.info('Returning environment variables as fallback', {
+        requestId,
+        ip,
+        environment,
+        hasDatabaseConfig: true
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: envSettings,
+        environment: environment,
+        source: 'environment'
+      })
+    }
+
+    // PRIORITY 3: Return empty placeholders for admin to configure
+    const emptySettings = {
+      database: {
+        url: '', // Admin must configure
+        apiKey: '', // Admin must configure
+        tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
+        environment: environment
+      },
+      general: {
+        appName: isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)',
+        publicUrl: isProd ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
+        maintenanceMode: false,
+        analyticsEnabled: true
+      },
+      security: {
         sessionTimeout: 28800000,
         maxLoginAttempts: 3,
         enableRateLimit: true,
-        enforceStrongPasswords: isProd, // Stricter in prod
+        enforceStrongPasswords: isProd,
         enableTwoFactor: false
       },
       features: {
         enableExport: true,
-        enableEmailNotifications: isProd, // Only in prod
+        enableEmailNotifications: isProd,
         enableAnalytics: true
       }
     }
+
+    logger.info('Returning empty placeholders for admin configuration', {
+      requestId,
+      ip,
+      environment,
+      hasDatabaseConfig: false
+    })
 
     const totalDuration = Date.now() - startTime
     logger.logResponse(requestId, 200, totalDuration)
 
     return NextResponse.json({
       success: true,
-      data: settings,
-      environment: environment
+      data: emptySettings,
+      environment: environment,
+      source: 'placeholder'
     })
 
   } catch (error) {
@@ -212,21 +271,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get environment from query params or determine automatically
-    const { searchParams } = new URL(request.url)
-    let environment = searchParams.get('environment')
-    
-    if (!environment) {
-      // Auto-detect environment
-      const hostname = request.headers.get('host') || ''
-      if (hostname.includes('dev') || hostname.includes('localhost')) {
-        environment = 'dev'
-      } else {
-        environment = 'prod'
-      }
-    }
+    // Get environment from NODE_ENV
+    const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
 
-    // Prepare settings for database (simplified JSON structure)
+    // Prepare settings for database
     const apiSettings = {
       environment: environment,
       created_at: new Date().toISOString(),
@@ -278,7 +326,8 @@ export async function POST(request: NextRequest) {
       requestId,
       ip,
       settingsId: data?.id,
-      environment
+      environment,
+      hasDatabaseConfig: !!(settings.database?.url && settings.database?.apiKey)
     })
 
     const totalDuration = Date.now() - startTime

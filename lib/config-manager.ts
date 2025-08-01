@@ -58,18 +58,74 @@ class ConfigManager {
   private lastSettingsFetch: number = 0
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-  // Get current environment
+  // Get current environment from NODE_ENV
   private getCurrentEnvironment(): string {
-    if (typeof window !== 'undefined') {
-      // Client-side: use URL to determine environment
-      const hostname = window.location.hostname
-      if (hostname.includes('dev') || hostname.includes('localhost')) {
-        return 'dev'
-      }
-      return 'prod'
-    }
-    // Server-side: use NODE_ENV
     return process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
+  }
+
+  // Get environment variables as fallback
+  private getEnvironmentFallback(): SettingsConfig {
+    const environment = this.getCurrentEnvironment()
+    const isProd = environment === 'prod'
+    
+    return {
+      database: {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
+        environment: environment
+      },
+      general: {
+        appName: isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)',
+        publicUrl: isProd ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
+        maintenanceMode: false,
+        analyticsEnabled: true
+      },
+      security: {
+        sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
+        maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
+        enableRateLimit: true,
+        enforceStrongPasswords: isProd,
+        enableTwoFactor: false
+      },
+      features: {
+        enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
+        enableEmailNotifications: isProd,
+        enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
+      }
+    }
+  }
+
+  // Get empty placeholder configuration
+  private getEmptyPlaceholder(): SettingsConfig {
+    const environment = this.getCurrentEnvironment()
+    
+    return {
+      database: {
+        url: '', // Admin must configure
+        apiKey: '', // Admin must configure
+        tableName: environment === 'prod' ? 'pc_survey_data' : 'pc_survey_data_dev',
+        environment: environment
+      },
+      general: {
+        appName: environment === 'prod' ? 'Product Community Survey' : 'Product Community Survey (DEV)',
+        publicUrl: environment === 'prod' ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
+        maintenanceMode: false,
+        analyticsEnabled: true
+      },
+      security: {
+        sessionTimeout: 28800000,
+        maxLoginAttempts: 3,
+        enableRateLimit: true,
+        enforceStrongPasswords: environment === 'prod',
+        enableTwoFactor: false
+      },
+      features: {
+        enableExport: true,
+        enableEmailNotifications: environment === 'prod',
+        enableAnalytics: true
+      }
+    }
   }
 
   // Get complete configuration (all settings)
@@ -125,32 +181,7 @@ class ConfigManager {
           tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
           environment: process.env.NODE_ENV || 'development'
         },
-        settings: {
-          database: {
-            url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-            apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-            tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
-            environment: process.env.NODE_ENV || 'development'
-          },
-          general: {
-            appName: 'Product Community Survey',
-            publicUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
-            maintenanceMode: false,
-            analyticsEnabled: true
-          },
-          security: {
-            sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
-            maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
-            enableRateLimit: true,
-            enforceStrongPasswords: false,
-            enableTwoFactor: false
-          },
-          features: {
-            enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
-            enableEmailNotifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
-            enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
-          }
-        }
+        settings: this.getEnvironmentFallback()
       }
       
       this.completeConfig = fallbackConfig
@@ -201,7 +232,7 @@ class ConfigManager {
     }
   }
 
-  // Get settings configuration from admin settings API
+  // Get settings configuration with priority: DB > Env Vars > Placeholders
   async getSettingsConfig(): Promise<SettingsConfig> {
     const now = Date.now()
     
@@ -216,50 +247,46 @@ class ConfigManager {
       const result = await response.json()
       
       if (result.success && result.data) {
+        // User has saved settings in DB - use them
         this.settingsConfig = result.data
         this.lastSettingsFetch = now
         return result.data
       } else {
-        throw new Error(result.error || 'Failed to fetch settings config')
+        // No saved settings - fall back to environment variables
+        console.warn('No saved settings found, using environment variables as fallback')
+        const envFallback = this.getEnvironmentFallback()
+        
+        // Check if we have at least some basic configuration
+        if (envFallback.database.url && envFallback.database.apiKey) {
+          this.settingsConfig = envFallback
+          this.lastSettingsFetch = now
+          return envFallback
+        } else {
+          // No environment variables either - return empty placeholders
+          console.warn('No environment variables found, using empty placeholders')
+          const emptyPlaceholder = this.getEmptyPlaceholder()
+          this.settingsConfig = emptyPlaceholder
+          this.lastSettingsFetch = now
+          return emptyPlaceholder
+        }
       }
     } catch (error) {
       console.error('Error fetching settings config:', error)
       
-      // Return fallback config based on environment
-      const environment = this.getCurrentEnvironment()
-      const isProd = environment === 'prod'
+      // Try environment variables as fallback
+      const envFallback = this.getEnvironmentFallback()
       
-      const fallbackConfig: SettingsConfig = {
-        database: {
-          url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-          apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-          tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
-          environment: environment
-        },
-        general: {
-          appName: isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)',
-          publicUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
-          maintenanceMode: false,
-          analyticsEnabled: true
-        },
-        security: {
-          sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
-          maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
-          enableRateLimit: true,
-          enforceStrongPasswords: isProd, // Stricter in prod
-          enableTwoFactor: false
-        },
-        features: {
-          enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
-          enableEmailNotifications: isProd, // Only in prod
-          enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
-        }
+      if (envFallback.database.url && envFallback.database.apiKey) {
+        this.settingsConfig = envFallback
+        this.lastSettingsFetch = now
+        return envFallback
+      } else {
+        // Return empty placeholders for admin to configure
+        const emptyPlaceholder = this.getEmptyPlaceholder()
+        this.settingsConfig = emptyPlaceholder
+        this.lastSettingsFetch = now
+        return emptyPlaceholder
       }
-      
-      this.settingsConfig = fallbackConfig
-      this.lastSettingsFetch = now
-      
-      return fallbackConfig
     }
   }
 
@@ -416,6 +443,22 @@ class ConfigManager {
   getEnvironment(): string {
     return this.getCurrentEnvironment()
   }
+
+  // Check if settings are configured by user
+  async hasUserConfiguredSettings(): Promise<boolean> {
+    try {
+      const environment = this.getCurrentEnvironment()
+      const response = await fetch(`/api/admin/settings?environment=${environment}`)
+      const result = await response.json()
+      
+      return result.success && result.data && 
+             result.data.database && 
+             result.data.database.url && 
+             result.data.database.apiKey
+    } catch (error) {
+      return false
+    }
+  }
 }
 
 // Global config manager instance
@@ -439,3 +482,4 @@ export const getConfigValue = (key: keyof AppConfig) => configManager.getConfigV
 export const refreshConfig = () => configManager.refreshConfig()
 export const getEnvVar = (key: string) => configManager.getEnvVar(key)
 export const getEnvironment = () => configManager.getEnvironment()
+export const hasUserConfiguredSettings = () => configManager.hasUserConfiguredSettings()
