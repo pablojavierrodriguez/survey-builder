@@ -1074,6 +1074,17 @@ export default function ProductSurvey() {
             <span className="hidden sm:inline">Create DB Function</span>
             <span className="sm:hidden">DB</span>
           </Button>
+          
+          <Button
+            onClick={fixUserProfile}
+            variant="outline"
+            size="sm"
+            className="bg-green-50 dark:bg-green-900/20 backdrop-blur-sm border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-300 shadow-lg text-xs sm:text-sm"
+          >
+            <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Fix Profile</span>
+            <span className="sm:hidden">Profile</span>
+          </Button>
         </div>
         
         {/* Theme toggle */}

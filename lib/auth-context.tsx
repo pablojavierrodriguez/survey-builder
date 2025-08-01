@@ -68,15 +68,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
-                .single()
+                .limit(1)
               
               console.log('🔐 [Auth] Profile fetch result:', {
-                hasProfile: !!profileData,
-                role: profileData?.role || null,
+                hasProfile: !!profileData && profileData.length > 0,
+                role: profileData?.[0]?.role || null,
                 profileError: profileError?.message || null
               })
               
-              if (mounted) setProfile(profileData)
+              if (mounted) setProfile(profileData?.[0] || null)
             } catch (profileError) {
               console.warn('Could not fetch profile:', profileError)
               if (mounted) setProfile(null)
@@ -116,13 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
-                .single()
+                .limit(1)
                 .then(({ data: profileData, error }) => {
                   if (error) {
                     console.warn('Could not fetch profile:', error)
                     if (mounted) setProfile(null)
                   } else {
-                    if (mounted) setProfile(profileData)
+                    if (mounted) setProfile(profileData?.[0] || null)
                   }
                 })
             }, 100) // 100ms debounce
