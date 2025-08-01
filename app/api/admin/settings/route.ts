@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     const totalDuration = Date.now() - startTime
     logger.logResponse(requestId, 200, totalDuration)
 
-    // Transform settings to match frontend expectations
+    // Transform settings to match frontend expectations with complete configuration
     const transformedSettings = {
       database: {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -106,6 +106,18 @@ export async function GET(request: NextRequest) {
         publicUrl: settings.app_url || '',
         maintenanceMode: settings.maintenance_mode || false,
         analyticsEnabled: settings.enable_analytics || true
+      },
+      security: {
+        sessionTimeout: settings.session_timeout || 28800000,
+        maxLoginAttempts: settings.max_login_attempts || 3,
+        enableRateLimit: true,
+        enforceStrongPasswords: false,
+        enableTwoFactor: false
+      },
+      features: {
+        enableExport: settings.enable_export || true,
+        enableEmailNotifications: settings.enable_email_notifications || false,
+        enableAnalytics: settings.enable_analytics || true
       }
     }
 
@@ -207,7 +219,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prepare settings for database
+    // Prepare settings for database with complete configuration
     const apiSettings = {
       id: 1, // Ensure we have an ID for upsert
       created_at: new Date().toISOString(),
@@ -216,22 +228,22 @@ export async function POST(request: NextRequest) {
       app_name: settings.general.appName,
       app_url: settings.general.publicUrl,
       maintenance_mode: settings.general.maintenanceMode,
-      enable_analytics: settings.general.analyticsEnabled,
-      enable_email_notifications: false, // Default to false
-      enable_export: true, // Default to true
-      session_timeout: 3600 * 1000, // Default to 1 hour
-      max_login_attempts: 10, // Default to 10
+      enable_analytics: settings.features.enableAnalytics,
+      enable_email_notifications: settings.features.enableEmailNotifications,
+      enable_export: settings.features.enableExport,
+      session_timeout: settings.security.sessionTimeout,
+      max_login_attempts: settings.security.maxLoginAttempts,
       theme_default: 'system',
       language_default: 'en',
       settings: {
         supabase_url: settings.database.url,
         supabase_anon_key: settings.database.apiKey,
-        require_https: true, // Default to true
-        enable_rate_limit: true, // Default to true
-        enforce_strong_passwords: false, // Default to false
-        enable_two_factor: false, // Default to false
-        admin_email: "", // Default to empty
-        response_threshold: 10 // Default to 10
+        require_https: true,
+        enable_rate_limit: settings.security.enableRateLimit,
+        enforce_strong_passwords: settings.security.enforceStrongPasswords,
+        enable_two_factor: settings.security.enableTwoFactor,
+        admin_email: "",
+        response_threshold: 10
       }
     }
 

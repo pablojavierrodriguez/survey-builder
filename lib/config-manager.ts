@@ -29,15 +29,122 @@ interface SettingsConfig {
     maintenanceMode: boolean
     analyticsEnabled: boolean
   }
+  security: {
+    sessionTimeout: number
+    maxLoginAttempts: number
+    enableRateLimit: boolean
+    enforceStrongPasswords: boolean
+    enableTwoFactor: boolean
+  }
+  features: {
+    enableExport: boolean
+    enableEmailNotifications: boolean
+    enableAnalytics: boolean
+  }
+}
+
+interface CompleteConfig {
+  app: AppConfig
+  database: DatabaseConfig
+  settings: SettingsConfig
 }
 
 class ConfigManager {
   private appConfig: AppConfig | null = null
   private databaseConfig: DatabaseConfig | null = null
   private settingsConfig: SettingsConfig | null = null
+  private completeConfig: CompleteConfig | null = null
   private lastFetch: number = 0
   private lastSettingsFetch: number = 0
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+  // Get complete configuration (all settings)
+  async getCompleteConfig(): Promise<CompleteConfig> {
+    const now = Date.now()
+    
+    // Return cached config if still valid
+    if (this.completeConfig && (now - this.lastFetch) < this.CACHE_DURATION) {
+      return this.completeConfig
+    }
+
+    try {
+      const [appConfig, settingsConfig] = await Promise.all([
+        this.getAppConfig(),
+        this.getSettingsConfig()
+      ])
+
+      const databaseConfig = this.getDatabaseConfig()
+
+      this.completeConfig = {
+        app: appConfig,
+        database: databaseConfig,
+        settings: settingsConfig
+      }
+      
+      this.lastFetch = now
+      return this.completeConfig
+    } catch (error) {
+      console.error('Error getting complete config:', error)
+      
+      // Return fallback config
+      const fallbackConfig: CompleteConfig = {
+        app: {
+          appName: 'Product Community Survey',
+          appUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+          enableExport: true,
+          enableEmailNotifications: false,
+          enableAnalytics: true,
+          environment: 'development',
+          isProduction: false
+        },
+        database: {
+          supabaseUrl: 
+            process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
+            process.env.POSTGRES_SUPABASE_URL ||
+            process.env.NEXT_PUBLIC_SUPABASE_URL ||
+            '',
+          anonKey: 
+            process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+            process.env.POSTGRES_SUPABASE_ANON_KEY ||
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+            '',
+          tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
+          environment: process.env.NODE_ENV || 'development'
+        },
+        settings: {
+          database: {
+            url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+            apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
+            environment: process.env.NODE_ENV || 'development'
+          },
+          general: {
+            appName: 'Product Community Survey',
+            publicUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+            maintenanceMode: false,
+            analyticsEnabled: true
+          },
+          security: {
+            sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
+            maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
+            enableRateLimit: true,
+            enforceStrongPasswords: false,
+            enableTwoFactor: false
+          },
+          features: {
+            enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
+            enableEmailNotifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
+            enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
+          }
+        }
+      }
+      
+      this.completeConfig = fallbackConfig
+      this.lastFetch = now
+      
+      return fallbackConfig
+    }
+  }
 
   // Get app configuration from secure API
   async getAppConfig(): Promise<AppConfig> {
@@ -55,7 +162,7 @@ class ConfigManager {
       if (result.success && result.data) {
         this.appConfig = result.data
         this.lastFetch = now
-        return result.data // Return the data directly, not this.appConfig
+        return result.data
       } else {
         throw new Error(result.error || 'Failed to fetch app config')
       }
@@ -73,7 +180,6 @@ class ConfigManager {
         isProduction: false
       }
       
-      // Cache the fallback config
       this.appConfig = fallbackConfig
       this.lastFetch = now
       
@@ -117,10 +223,21 @@ class ConfigManager {
           publicUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
           maintenanceMode: false,
           analyticsEnabled: true
+        },
+        security: {
+          sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
+          maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
+          enableRateLimit: true,
+          enforceStrongPasswords: false,
+          enableTwoFactor: false
+        },
+        features: {
+          enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
+          enableEmailNotifications: process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true',
+          enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
         }
       }
       
-      // Cache the fallback config
       this.settingsConfig = fallbackConfig
       this.lastSettingsFetch = now
       
@@ -137,6 +254,72 @@ class ConfigManager {
       console.error('Error getting table name from settings:', error)
       // Fallback to environment variable or default
       return process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev'
+    }
+  }
+
+  // Get app name from settings
+  async getAppName(): Promise<string> {
+    try {
+      const settings = await this.getSettingsConfig()
+      return settings.general.appName
+    } catch (error) {
+      console.error('Error getting app name from settings:', error)
+      return process.env.NEXT_PUBLIC_APP_NAME || 'Product Community Survey'
+    }
+  }
+
+  // Get session timeout from settings
+  async getSessionTimeout(): Promise<number> {
+    try {
+      const settings = await this.getSettingsConfig()
+      return settings.security.sessionTimeout
+    } catch (error) {
+      console.error('Error getting session timeout from settings:', error)
+      return parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000')
+    }
+  }
+
+  // Get max login attempts from settings
+  async getMaxLoginAttempts(): Promise<number> {
+    try {
+      const settings = await this.getSettingsConfig()
+      return settings.security.maxLoginAttempts
+    } catch (error) {
+      console.error('Error getting max login attempts from settings:', error)
+      return parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3')
+    }
+  }
+
+  // Get analytics enabled from settings
+  async getAnalyticsEnabled(): Promise<boolean> {
+    try {
+      const settings = await this.getSettingsConfig()
+      return settings.features.enableAnalytics
+    } catch (error) {
+      console.error('Error getting analytics enabled from settings:', error)
+      return process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
+    }
+  }
+
+  // Get export enabled from settings
+  async getExportEnabled(): Promise<boolean> {
+    try {
+      const settings = await this.getSettingsConfig()
+      return settings.features.enableExport
+    } catch (error) {
+      console.error('Error getting export enabled from settings:', error)
+      return process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true'
+    }
+  }
+
+  // Get email notifications enabled from settings
+  async getEmailNotificationsEnabled(): Promise<boolean> {
+    try {
+      const settings = await this.getSettingsConfig()
+      return settings.features.enableEmailNotifications
+    } catch (error) {
+      console.error('Error getting email notifications enabled from settings:', error)
+      return process.env.NEXT_PUBLIC_ENABLE_EMAIL_NOTIFICATIONS === 'true'
     }
   }
 
@@ -191,8 +374,8 @@ class ConfigManager {
     this.lastSettingsFetch = 0
     this.appConfig = null
     this.settingsConfig = null
-    await this.getAppConfig()
-    await this.getSettingsConfig()
+    this.completeConfig = null
+    await this.getCompleteConfig()
   }
 
   // Get environment variable safely (server-side only)
@@ -208,9 +391,16 @@ class ConfigManager {
 export const configManager = new ConfigManager()
 
 // Convenience functions
+export const getCompleteConfig = () => configManager.getCompleteConfig()
 export const getAppConfig = () => configManager.getAppConfig()
 export const getSettingsConfig = () => configManager.getSettingsConfig()
 export const getTableName = () => configManager.getTableName()
+export const getAppName = () => configManager.getAppName()
+export const getSessionTimeout = () => configManager.getSessionTimeout()
+export const getMaxLoginAttempts = () => configManager.getMaxLoginAttempts()
+export const getAnalyticsEnabled = () => configManager.getAnalyticsEnabled()
+export const getExportEnabled = () => configManager.getExportEnabled()
+export const getEmailNotificationsEnabled = () => configManager.getEmailNotificationsEnabled()
 export const getDatabaseConfig = () => configManager.getDatabaseConfig()
 export const getDatabaseConfigWithDynamicTable = () => configManager.getDatabaseConfigWithDynamicTable()
 export const isDatabaseConfigured = () => configManager.isDatabaseConfigured()
