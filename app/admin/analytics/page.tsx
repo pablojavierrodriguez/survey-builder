@@ -511,7 +511,7 @@ export default function AnalyticsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Company Types</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.companyTypeDistribution).length : 0}
+                  {data ? Object.keys(data.companyDistribution).length : 0}
                 </p>
               </div>
               <BarChart3 className="w-8 h-8 text-purple-500" />
@@ -539,7 +539,7 @@ export default function AnalyticsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Learning Methods</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.learningMethodsUsage).length : 0}
+                  {data ? Object.keys(data.learningMethods).length : 0}
                 </p>
               </div>
               <MessageSquare className="w-8 h-8 text-indigo-500" />
@@ -551,14 +551,14 @@ export default function AnalyticsPage() {
       {/* Analytics Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {data && renderRankingChart(data.roleDistribution, "Role Distribution", <Users className="w-5 h-5" />)}
-        {data && renderRankingChart(data.companyTypeDistribution, "Company Type Distribution", <BarChart3 className="w-5 h-5" />)}
+                        {data && renderRankingChart(data.companyDistribution, "Company Distribution", <BarChart3 className="w-5 h-5" />)}
       </div>
 
       {/* Tools Ranking and Learning Methods */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         {data && renderRankingChart(data.toolsUsage, "Most Used Tools Ranking", <Trophy className="w-5 h-5" />)}
         {data &&
-          renderRankingChart(data.learningMethodsUsage, "Learning Methods Ranking", <BarChart3 className="w-5 h-5" />)}
+          renderRankingChart(data.learningMethods, "Learning Methods Ranking", <BarChart3 className="w-5 h-5" />)}
       </div>
 
       {/* Main Challenges Analysis */}
