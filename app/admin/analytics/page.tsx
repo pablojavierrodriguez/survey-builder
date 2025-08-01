@@ -281,32 +281,22 @@ export default function AnalyticsPage() {
   const fetchAnalyticsData = async () => {
     setIsLoading(true)
     try {
-      // Get dynamic database configuration
-      const { getSupabaseConfig } = await import('@/lib/database-config')
-      const config = await getSupabaseConfig()
-      
-      const endpoint = `${config.supabaseUrl}/rest/v1/${config.tableName}?select=*`
-      const headers = {
-        'apikey': config.anonKey,
-        'Authorization': `Bearer ${config.anonKey}`,
-        'Content-Type': 'application/json'
-      }
-      
-      const response = await fetch(endpoint, {
-        headers: headers
-      })
+      // Use the analytics API endpoint
+      const response = await fetch('/api/admin/analytics')
 
       if (response.ok) {
-        const responseText = await response.text()
+        const result = await response.json()
         
-        let responses
-        try {
-          responses = JSON.parse(responseText)
-        } catch (parseError) {
-          console.error('Analytics - JSON parse error:', parseError)
-          console.error('Analytics - Full response text:', responseText)
-          throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`)
+        if (result.success && result.data) {
+          // Use the processed data from the API
+          const analyticsData = result.data
+          setAnalyticsData(analyticsData)
+        } else {
+          throw new Error(result.error || 'Failed to fetch analytics data')
         }
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
 
         // Process data for analytics
         const roleDistribution: { [key: string]: number } = {}
