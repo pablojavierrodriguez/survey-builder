@@ -189,9 +189,9 @@ export default function ProductSurvey() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        // Check if user is admin
+        // Check if user is admin (only if user is authenticated)
         const userIsAdmin = user && profile?.role === 'admin'
-        setIsAdmin(userIsAdmin || false)
+        setIsAdmin(!!userIsAdmin) // Force boolean conversion
 
         // Validate database status
         const status = await validateDatabaseStatus()
@@ -237,7 +237,11 @@ export default function ProductSurvey() {
         
         console.log('✅ App loaded with database validation')
         console.log('Database status:', status)
-        console.log('User is admin:', userIsAdmin)
+        console.log('Auth state:', { 
+          user: user ? 'authenticated' : 'not authenticated', 
+          profile: profile ? `role: ${profile.role}` : 'no profile',
+          userIsAdmin 
+        })
       } catch (error) {
         console.error('❌ Error loading settings:', error)
         
