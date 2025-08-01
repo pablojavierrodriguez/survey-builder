@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { getTableName } from '@/lib/config-manager'
 
 export async function GET(request: NextRequest) {
@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if Supabase is configured
+    // Get Supabase client
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       logger.error('Supabase not configured for analytics', {
         requestId,
