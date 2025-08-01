@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { getTableName } from '@/lib/config-manager'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -18,9 +19,12 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Get dynamic table name from settings
+    const tableName = await getTableName()
+
     // Test basic database connection
     const { data: testData, error: testError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('count(*)', { count: 'exact', head: true })
 
     if (testError) {
@@ -34,25 +38,25 @@ export async function GET(request: NextRequest) {
 
     // Get actual data count
     const { count: totalCount, error: countError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('*', { count: 'exact', head: true })
 
     // Get sample data
     const { data: sampleData, error: sampleError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('id, role, seniority, company_type, industry, created_at')
       .limit(3)
 
     // Check table schema
     const { data: schemaData, error: schemaError } = await supabase
-      .rpc('get_table_schema', { table_name: 'pc_survey_data_dev' })
+      .rpc('get_table_schema', { table_name: tableName })
 
     const debugInfo = {
       success: true,
       timestamp: new Date().toISOString(),
       database: {
         connected: true,
-        tableName: 'pc_survey_data_dev',
+        tableName: tableName,
         totalCount: totalCount || 0,
         countError: countError?.message || null
       },

@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateSurveyResponse, sanitizeInput } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
+import { getTableName } from '@/lib/config-manager'
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   const ip = getClientIP(request)
   
-  // Log request start
   logger.logRequest(requestId, 'POST', '/api/survey', ip)
   
   try {
     // Rate limiting
-    const rateLimitResult = await rateLimit(ip, '/api/survey', 'SURVEY_SUBMISSION')
+    const rateLimitResult = await rateLimit(ip, '/api/survey', 'PUBLIC')
     if (!rateLimitResult.allowed) {
       logger.warn('Rate limit exceeded for survey submission', {
         requestId,
@@ -23,45 +22,10 @@ export async function POST(request: NextRequest) {
       })
       
       return NextResponse.json(
-        { 
-          success: false, 
-          error: rateLimitResult.error || 'Rate limit exceeded' 
-        },
+        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
         { status: 429 }
       )
     }
-
-    // Parse and validate request body
-    const body = await request.json()
-    
-    // Sanitize text inputs
-    if (body.main_challenge) {
-      body.main_challenge = sanitizeInput(body.main_challenge)
-    }
-    if (body.email) {
-      body.email = sanitizeInput(body.email)
-    }
-
-    // Validate survey response
-    const validation = validateSurveyResponse(body)
-    if (!validation.success) {
-      logger.warn('Survey validation failed', {
-        requestId,
-        ip,
-        errors: validation.details
-      })
-      
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid survey data',
-          details: validation.details 
-        },
-        { status: 400 }
-      )
-    }
-
-    const surveyData = validation.data
 
     // Check if Supabase is configured
     if (!supabase) {
@@ -76,17 +40,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Submit to database
+    // Parse request body
+    const body = await request.json()
+    
+    if (!body || typeof body !== 'object') {
+      logger.warn('Invalid survey data received', {
+        requestId,
+        ip,
+        data: body
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Invalid survey data' },
+        { status: 400 }
+      )
+    }
+
+    // Get dynamic table name from settings
+    const tableName = await getTableName()
+
+    // Prepare survey data
+    const surveyData = {
+      ...body,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      session_id: requestId,
+      source: 'web',
+      user_agent: request.headers.get('user-agent') || '',
+      ip_address: ip
+    }
+
+    // Insert survey response
     const dbStartTime = Date.now()
     const { data, error } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .insert([surveyData])
       .select()
+      .single()
 
     const dbDuration = Date.now() - dbStartTime
 
     if (error) {
-      logger.error('Database error during survey submission', {
+      logger.error('Database error inserting survey response', {
         requestId,
         ip,
         error: error.message,
@@ -99,22 +94,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Log successful submission
-    logger.logDatabaseOperation('INSERT', 'pc_survey_data_dev', true, dbDuration)
-    logger.info('Survey submitted successfully', {
+    logger.logDatabaseOperation('INSERT', tableName, true, dbDuration)
+    logger.info('Survey response saved successfully', {
       requestId,
       ip,
-      surveyId: data?.[0]?.id
+      responseId: data?.id,
+      tableName
     })
 
     const totalDuration = Date.now() - startTime
-    logger.logResponse(requestId, 200, totalDuration)
+    logger.logResponse(requestId, 201, totalDuration)
 
     return NextResponse.json({
       success: true,
-      data: { id: data?.[0]?.id },
-      message: 'Survey submitted successfully'
-    })
+      data: {
+        id: data.id,
+        message: 'Survey response saved successfully'
+      }
+    }, { status: 201 })
 
   } catch (error) {
     const totalDuration = Date.now() - startTime

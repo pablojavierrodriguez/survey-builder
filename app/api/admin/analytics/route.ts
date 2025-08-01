@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
+import { getTableName } from '@/lib/config-manager'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -39,12 +40,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Get dynamic table name from settings
+    const tableName = await getTableName()
+
     // Fetch analytics data
     const dbStartTime = Date.now()
     
     // Get total responses
     const { count: totalResponses, error: countError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('*', { count: 'exact', head: true })
 
     if (countError) {
@@ -63,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     // Get role distribution
     const { data: roleData, error: roleError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('role')
 
     if (roleError) {
@@ -81,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     // Get seniority distribution
     const { data: seniorityData, error: seniorityError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('seniority')
 
     if (seniorityError) {
@@ -99,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     // Get company type distribution
     const { data: companyData, error: companyError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('company_type')
 
     if (companyError) {
@@ -117,7 +121,7 @@ export async function GET(request: NextRequest) {
 
     // Get industry distribution
     const { data: industryData, error: industryError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('industry')
 
     if (industryError) {
@@ -135,7 +139,7 @@ export async function GET(request: NextRequest) {
 
     // Get tools usage
     const { data: toolsData, error: toolsError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('daily_tools')
 
     if (toolsError) {
@@ -153,7 +157,7 @@ export async function GET(request: NextRequest) {
 
     // Get learning methods
     const { data: learningData, error: learningError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('learning_methods')
 
     if (learningError) {
@@ -214,7 +218,7 @@ export async function GET(request: NextRequest) {
 
     // Get recent responses (last 10)
     const { data: recentResponses, error: recentError } = await supabase
-      .from('pc_survey_data_dev')
+      .from(tableName)
       .select('*')
       .order('created_at', { ascending: false })
       .limit(10)
@@ -238,11 +242,12 @@ export async function GET(request: NextRequest) {
       recentResponses: recentResponses || []
     }
 
-    logger.logDatabaseOperation('SELECT', 'pc_survey_data_dev', true, dbDuration)
+    logger.logDatabaseOperation('SELECT', tableName, true, dbDuration)
     logger.info('Analytics data fetched successfully', {
       requestId,
       ip,
-      totalResponses: analyticsData.totalResponses
+      totalResponses: analyticsData.totalResponses,
+      tableName
     })
 
     const totalDuration = Date.now() - startTime
