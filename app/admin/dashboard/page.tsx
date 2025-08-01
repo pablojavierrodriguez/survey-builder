@@ -80,27 +80,27 @@ export default function AdminDashboard() {
       
       let data = []
       
-      // Try to fetch from configured database
+      // Try to fetch from analytics API (authenticated)
       try {
-        const endpoint = `${config.supabaseUrl}/rest/v1/${config.tableName}?select=*&order=created_at.desc`
-        const headers = {
-          'apikey': config.anonKey,
-          'Authorization': `Bearer ${config.anonKey}`,
-          'Content-Type': 'application/json'
-        }
+        const response = await fetch('/api/admin/analytics')
         
-        const response = await fetch(endpoint, {
-          headers: headers
-        })
-        
-        console.log('Dashboard - API response status:', response.status)
+        console.log('Dashboard - Analytics API response status:', response.status)
         
         if (response.ok) {
-          const fetchedData = await response.json()
-          console.log('Dashboard - Fetched data length:', fetchedData?.length || 0)
-          if (Array.isArray(fetchedData)) {
-            data = fetchedData
+          const result = await response.json()
+          console.log('Dashboard - Analytics API result:', result)
+          
+          if (result.success && result.data) {
+            // Extract recent responses from analytics data
+            const recentResponses = result.data.recentResponses || []
+            console.log('Dashboard - Recent responses length:', recentResponses.length)
+            data = recentResponses
+          } else {
+            console.log('Dashboard - Analytics API returned error:', result.error)
           }
+        } else {
+          console.log('Dashboard - Analytics API failed with status:', response.status)
+        }
         } else {
           console.warn('Dashboard - API response not ok:', response.status, response.statusText)
         }
