@@ -256,7 +256,7 @@ export default function SettingsPage() {
       if (!settings) return
       const response = await fetch(`${settings.database.url}/rest/v1/`, {
         headers: {
-          apikey: settings.database.apiKey,
+          apikey: settings.database.apiKey || '',
         },
       })
       setTestResult({ success: response.ok, message: response.ok ? "Connected" : "Failed" })
