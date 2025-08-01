@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Debug auth error:', error)
+    logger.error('Debug auth error:', error as Error)
     return NextResponse.json({
       error: 'Internal server error',
       timestamp: new Date().toISOString()

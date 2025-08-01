@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Create function error:', error)
+    logger.error('Create function error:', error as Error)
     return NextResponse.json({
       error: 'Internal server error',
       timestamp: new Date().toISOString()

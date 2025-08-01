@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Clear session error:', error)
+    logger.error('Clear session error:', error as Error)
     return NextResponse.json({
       error: 'Internal server error',
       timestamp: new Date().toISOString()

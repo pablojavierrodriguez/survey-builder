@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Setup database error:', error)
+    logger.error('Setup database error:', error as Error)
     return NextResponse.json({
       error: 'Internal server error',
       timestamp: new Date().toISOString()
