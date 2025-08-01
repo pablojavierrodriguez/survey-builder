@@ -100,12 +100,11 @@ export const SignUpSchema = z.object({
   path: ["confirmPassword"],
 })
 
-// Admin Settings Validation
+// Admin Settings Validation (no database credentials)
 export const AdminSettingsSchema = z.object({
   database: z.object({
-    url: z.string().url('Invalid URL format'),
-    apiKey: z.string().min(1, 'API key is required'),
     tableName: z.string().min(1, 'Table name is required'),
+    environment: z.string().min(1, 'Environment is required'),
   }),
   general: z.object({
     appName: z.string().min(1, 'App name is required'),

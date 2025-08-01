@@ -76,8 +76,7 @@ export async function GET(request: NextRequest) {
       logger.info('Returning user-saved settings from database', {
         requestId,
         ip,
-        environment,
-        hasDatabaseConfig: !!(data.settings.database?.url && data.settings.database?.apiKey)
+        environment
       })
 
       return NextResponse.json({
@@ -88,11 +87,9 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // PRIORITY 2: Return environment variables as fallback
-    const envSettings = {
+    // PRIORITY 2: Return default settings (no database credentials)
+    const defaultSettings = {
       database: {
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
         tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
         environment: environment
       },
@@ -116,56 +113,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if we have at least basic database configuration from env vars
-    if (envSettings.database.url && envSettings.database.apiKey) {
-      logger.info('Returning environment variables as fallback', {
-        requestId,
-        ip,
-        environment,
-        hasDatabaseConfig: true
-      })
-
-      return NextResponse.json({
-        success: true,
-        data: envSettings,
-        environment: environment,
-        source: 'environment'
-      })
-    }
-
-    // PRIORITY 3: Return empty placeholders for admin to configure
-    const emptySettings = {
-      database: {
-        url: '', // Admin must configure
-        apiKey: '', // Admin must configure
-        tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
-        environment: environment
-      },
-      general: {
-        appName: isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)',
-        publicUrl: isProd ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
-        maintenanceMode: false,
-        analyticsEnabled: true
-      },
-      security: {
-        sessionTimeout: 28800000,
-        maxLoginAttempts: 3,
-        enableRateLimit: true,
-        enforceStrongPasswords: isProd,
-        enableTwoFactor: false
-      },
-      features: {
-        enableExport: true,
-        enableEmailNotifications: isProd,
-        enableAnalytics: true
-      }
-    }
-
-    logger.info('Returning empty placeholders for admin configuration', {
+    logger.info('Returning default settings', {
       requestId,
       ip,
-      environment,
-      hasDatabaseConfig: false
+      environment
     })
 
     const totalDuration = Date.now() - startTime
@@ -173,9 +124,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: emptySettings,
+      data: defaultSettings,
       environment: environment,
-      source: 'placeholder'
+      source: 'default'
     })
 
   } catch (error) {
@@ -274,7 +225,7 @@ export async function POST(request: NextRequest) {
     // Get environment from NODE_ENV
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
 
-    // Prepare settings for database
+    // Prepare settings for database (no database credentials)
     const apiSettings = {
       environment: environment,
       created_at: new Date().toISOString(),
@@ -326,8 +277,7 @@ export async function POST(request: NextRequest) {
       requestId,
       ip,
       settingsId: data?.id,
-      environment,
-      hasDatabaseConfig: !!(settings.database?.url && settings.database?.apiKey)
+      environment
     })
 
     const totalDuration = Date.now() - startTime

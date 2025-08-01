@@ -18,8 +18,6 @@ interface DatabaseConfig {
 
 interface SettingsConfig {
   database: {
-    url: string
-    apiKey: string
     tableName: string
     environment: string
   }
@@ -63,15 +61,34 @@ class ConfigManager {
     return process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
   }
 
-  // Get environment variables as fallback
-  private getEnvironmentFallback(): SettingsConfig {
+  // Get database configuration from environment variables (ALWAYS)
+  getDatabaseConfig(): DatabaseConfig {
+    const environment = this.getCurrentEnvironment()
+    const isProd = environment === 'prod'
+    
+    return {
+      supabaseUrl: 
+        process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
+        process.env.POSTGRES_SUPABASE_URL ||
+        process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        '',
+      anonKey: 
+        process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        process.env.POSTGRES_SUPABASE_ANON_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        '',
+      tableName: process.env.NEXT_PUBLIC_DB_TABLE || (isProd ? 'pc_survey_data' : 'pc_survey_data_dev'),
+      environment: environment
+    }
+  }
+
+  // Get default app settings (no database credentials)
+  private getDefaultAppSettings(): SettingsConfig {
     const environment = this.getCurrentEnvironment()
     const isProd = environment === 'prod'
     
     return {
       database: {
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
         tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
         environment: environment
       },
@@ -92,38 +109,6 @@ class ConfigManager {
         enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
         enableEmailNotifications: isProd,
         enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
-      }
-    }
-  }
-
-  // Get empty placeholder configuration
-  private getEmptyPlaceholder(): SettingsConfig {
-    const environment = this.getCurrentEnvironment()
-    
-    return {
-      database: {
-        url: '', // Admin must configure
-        apiKey: '', // Admin must configure
-        tableName: environment === 'prod' ? 'pc_survey_data' : 'pc_survey_data_dev',
-        environment: environment
-      },
-      general: {
-        appName: environment === 'prod' ? 'Product Community Survey' : 'Product Community Survey (DEV)',
-        publicUrl: environment === 'prod' ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
-        maintenanceMode: false,
-        analyticsEnabled: true
-      },
-      security: {
-        sessionTimeout: 28800000,
-        maxLoginAttempts: 3,
-        enableRateLimit: true,
-        enforceStrongPasswords: environment === 'prod',
-        enableTwoFactor: false
-      },
-      features: {
-        enableExport: true,
-        enableEmailNotifications: environment === 'prod',
-        enableAnalytics: true
       }
     }
   }
@@ -167,21 +152,8 @@ class ConfigManager {
           environment: 'development',
           isProduction: false
         },
-        database: {
-          supabaseUrl: 
-            process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
-            process.env.POSTGRES_SUPABASE_URL ||
-            process.env.NEXT_PUBLIC_SUPABASE_URL ||
-            '',
-          anonKey: 
-            process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-            process.env.POSTGRES_SUPABASE_ANON_KEY ||
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-            '',
-          tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
-          environment: process.env.NODE_ENV || 'development'
-        },
-        settings: this.getEnvironmentFallback()
+        database: this.getDatabaseConfig(),
+        settings: this.getDefaultAppSettings()
       }
       
       this.completeConfig = fallbackConfig
@@ -232,7 +204,7 @@ class ConfigManager {
     }
   }
 
-  // Get settings configuration with priority: DB > Env Vars > Placeholders
+  // Get settings configuration with priority: DB > Default
   async getSettingsConfig(): Promise<SettingsConfig> {
     const now = Date.now()
     
@@ -252,41 +224,21 @@ class ConfigManager {
         this.lastSettingsFetch = now
         return result.data
       } else {
-        // No saved settings - fall back to environment variables
-        console.warn('No saved settings found, using environment variables as fallback')
-        const envFallback = this.getEnvironmentFallback()
-        
-        // Check if we have at least some basic configuration
-        if (envFallback.database.url && envFallback.database.apiKey) {
-          this.settingsConfig = envFallback
-          this.lastSettingsFetch = now
-          return envFallback
-        } else {
-          // No environment variables either - return empty placeholders
-          console.warn('No environment variables found, using empty placeholders')
-          const emptyPlaceholder = this.getEmptyPlaceholder()
-          this.settingsConfig = emptyPlaceholder
-          this.lastSettingsFetch = now
-          return emptyPlaceholder
-        }
+        // No saved settings - use defaults
+        console.warn('No saved settings found, using default configuration')
+        const defaultSettings = this.getDefaultAppSettings()
+        this.settingsConfig = defaultSettings
+        this.lastSettingsFetch = now
+        return defaultSettings
       }
     } catch (error) {
       console.error('Error fetching settings config:', error)
       
-      // Try environment variables as fallback
-      const envFallback = this.getEnvironmentFallback()
-      
-      if (envFallback.database.url && envFallback.database.apiKey) {
-        this.settingsConfig = envFallback
-        this.lastSettingsFetch = now
-        return envFallback
-      } else {
-        // Return empty placeholders for admin to configure
-        const emptyPlaceholder = this.getEmptyPlaceholder()
-        this.settingsConfig = emptyPlaceholder
-        this.lastSettingsFetch = now
-        return emptyPlaceholder
-      }
+      // Return default settings
+      const defaultSettings = this.getDefaultAppSettings()
+      this.settingsConfig = defaultSettings
+      this.lastSettingsFetch = now
+      return defaultSettings
     }
   }
 
@@ -373,27 +325,6 @@ class ConfigManager {
     }
   }
 
-  // Get database configuration (server-side only)
-  getDatabaseConfig(): DatabaseConfig {
-    const environment = this.getCurrentEnvironment()
-    const isProd = environment === 'prod'
-    
-    return {
-      supabaseUrl: 
-        process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
-        process.env.POSTGRES_SUPABASE_URL ||
-        process.env.NEXT_PUBLIC_SUPABASE_URL ||
-        '',
-      anonKey: 
-        process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        process.env.POSTGRES_SUPABASE_ANON_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        '',
-      tableName: process.env.NEXT_PUBLIC_DB_TABLE || (isProd ? 'pc_survey_data' : 'pc_survey_data_dev'),
-      environment: environment
-    }
-  }
-
   // Get database configuration with dynamic table name (server-side only)
   async getDatabaseConfigWithDynamicTable(): Promise<DatabaseConfig> {
     const baseConfig = this.getDatabaseConfig()
@@ -451,13 +382,18 @@ class ConfigManager {
       const response = await fetch(`/api/admin/settings?environment=${environment}`)
       const result = await response.json()
       
-      return result.success && result.data && 
-             result.data.database && 
-             result.data.database.url && 
-             result.data.database.apiKey
+      return result.success && result.data
     } catch (error) {
       return false
     }
+  }
+
+  // Check if app needs initial setup
+  async needsInitialSetup(): Promise<boolean> {
+    const hasDatabaseConfig = this.isDatabaseConfigured()
+    const hasUserSettings = await this.hasUserConfiguredSettings()
+    
+    return !hasDatabaseConfig || !hasUserSettings
   }
 }
 
@@ -483,3 +419,4 @@ export const refreshConfig = () => configManager.refreshConfig()
 export const getEnvVar = (key: string) => configManager.getEnvVar(key)
 export const getEnvironment = () => configManager.getEnvironment()
 export const hasUserConfiguredSettings = () => configManager.hasUserConfiguredSettings()
+export const needsInitialSetup = () => configManager.needsInitialSetup()
