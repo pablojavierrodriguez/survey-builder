@@ -101,9 +101,6 @@ export default function AdminDashboard() {
         } else {
           console.log('Dashboard - Analytics API failed with status:', response.status)
         }
-        } else {
-          console.warn('Dashboard - API response not ok:', response.status, response.statusText)
-        }
       } catch (apiError) {
         console.warn('Dashboard - API fetch failed:', apiError)
       }
