@@ -52,10 +52,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         
         if (mounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
+          // FORCE CLEAR SESSION IF NO VALID USER
+          if (!session?.user?.id) {
+            console.log('🔐 [Auth] No valid user found - clearing session')
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+          } else {
+            setSession(session)
+            setUser(session.user)
 
-          if (session?.user) {
             // Fetch user profile only once
             try {
               const { data: profileData, error: profileError } = await supabase
@@ -75,8 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.warn('Could not fetch profile:', profileError)
               if (mounted) setProfile(null)
             }
-          } else {
-            console.log('🔐 [Auth] No session found - user should be unauthenticated')
           }
         }
 
@@ -94,27 +98,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (!mounted) return
               
               console.log('Auth state changed:', event, session?.user?.id)
-              setSession(session)
-              setUser(session?.user ?? null)
-
-              if (session?.user) {
-                // Fetch user profile
-                supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .single()
-                  .then(({ data: profileData, error }) => {
-                    if (error) {
-                      console.warn('Could not fetch profile:', error)
-                      if (mounted) setProfile(null)
-                    } else {
-                      if (mounted) setProfile(profileData)
-                    }
-                  })
-              } else {
-                if (mounted) setProfile(null)
+              
+              // FORCE CLEAR SESSION IF NO VALID USER
+              if (!session?.user?.id) {
+                console.log('🔐 [Auth] Clearing invalid session')
+                setSession(null)
+                setUser(null)
+                setProfile(null)
+                return
               }
+              
+              setSession(session)
+              setUser(session.user)
+
+              // Fetch user profile
+              supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single()
+                .then(({ data: profileData, error }) => {
+                  if (error) {
+                    console.warn('Could not fetch profile:', error)
+                    if (mounted) setProfile(null)
+                  } else {
+                    if (mounted) setProfile(profileData)
+                  }
+                })
             }, 100) // 100ms debounce
           }
         )

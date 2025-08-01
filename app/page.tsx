@@ -189,6 +189,20 @@ export default function ProductSurvey() {
   // Check maintenance mode on component mount
   useEffect(() => {
     const loadSettings = async () => {
+      // FORCE CLEAR CORRUPT SESSION ON LOAD
+      try {
+        if (user && !user.id) {
+          console.log('🔐 [Debug] Detected corrupt user session - clearing')
+          const response = await fetch('/api/debug/clear-session', { method: 'POST' })
+          const result = await response.json()
+          console.log('🔐 [Debug] Session cleared on load:', result)
+          window.location.reload()
+          return
+        }
+      } catch (error) {
+        console.error('❌ [Debug] Error checking session on load:', error)
+      }
+      
       try {
         // Check if user is admin (only if user is authenticated)
         const userIsAdmin = user && profile?.role === 'admin'
