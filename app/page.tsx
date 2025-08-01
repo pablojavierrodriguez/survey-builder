@@ -163,7 +163,6 @@ export default function ProductSurvey() {
     details: any
   } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [debugInfo, setDebugInfo] = useState<any>(null)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -258,15 +257,7 @@ export default function ProductSurvey() {
           userIsAdmin 
         })
         
-        // Debug: Check actual session state
-        try {
-          const debugResponse = await fetch('/api/debug/auth')
-          const debugData = await debugResponse.json()
-          console.log('🔍 [Debug] Actual session state:', debugData)
-          setDebugInfo(debugData)
-        } catch (error) {
-          console.error('❌ [Debug] Error checking session:', error)
-        }
+
       } catch (error) {
         console.error('❌ Error loading settings:', error)
         
