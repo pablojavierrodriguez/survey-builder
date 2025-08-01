@@ -40,13 +40,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch settings from database
+    // Get environment from query params or determine automatically
+    const { searchParams } = new URL(request.url)
+    let environment = searchParams.get('environment')
+    
+    if (!environment) {
+      // Auto-detect environment
+      const hostname = request.headers.get('host') || ''
+      if (hostname.includes('dev') || hostname.includes('localhost')) {
+        environment = 'dev'
+      } else {
+        environment = 'prod'
+      }
+    }
+
+    // Fetch settings from database for specific environment
     const dbStartTime = Date.now()
     const { data, error } = await supabase
       .from('app_settings')
       .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('environment', environment)
       .single()
 
     const dbDuration = Date.now() - dbStartTime
@@ -56,7 +69,8 @@ export async function GET(request: NextRequest) {
         requestId,
         ip,
         error: error.message,
-        duration: dbDuration
+        duration: dbDuration,
+        environment
       })
       
       return NextResponse.json(
@@ -67,17 +81,18 @@ export async function GET(request: NextRequest) {
 
     logger.logDatabaseOperation('SELECT', 'app_settings', true, dbDuration)
 
-    // Return settings or default configuration
+    // Return settings or default configuration based on environment
+    const isProd = environment === 'prod'
     const settings = data?.settings || {
       database: {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
         apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-        tableName: 'pc_survey_data_dev',
-        environment: 'dev'
+        tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
+        environment: environment
       },
       general: {
-        appName: 'Product Community Survey',
-        publicUrl: 'https://productcommunitysurvey-dev.vercel.app',
+        appName: isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)',
+        publicUrl: isProd ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
         maintenanceMode: false,
         analyticsEnabled: true
       },
@@ -85,12 +100,12 @@ export async function GET(request: NextRequest) {
         sessionTimeout: 28800000,
         maxLoginAttempts: 3,
         enableRateLimit: true,
-        enforceStrongPasswords: false,
+        enforceStrongPasswords: isProd, // Stricter in prod
         enableTwoFactor: false
       },
       features: {
         enableExport: true,
-        enableEmailNotifications: false,
+        enableEmailNotifications: isProd, // Only in prod
         enableAnalytics: true
       }
     }
@@ -100,7 +115,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: settings
+      data: settings,
+      environment: environment
     })
 
   } catch (error) {
@@ -196,21 +212,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get environment from query params or determine automatically
+    const { searchParams } = new URL(request.url)
+    let environment = searchParams.get('environment')
+    
+    if (!environment) {
+      // Auto-detect environment
+      const hostname = request.headers.get('host') || ''
+      if (hostname.includes('dev') || hostname.includes('localhost')) {
+        environment = 'dev'
+      } else {
+        environment = 'prod'
+      }
+    }
+
     // Prepare settings for database (simplified JSON structure)
     const apiSettings = {
-      id: 1, // Ensure we have an ID for upsert
+      environment: environment,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       settings: settings, // Store the entire validated settings object
       version: '2.0.0'
     }
 
-    // Update settings in database
+    // Update settings in database for specific environment
     const dbStartTime = Date.now()
     const { data, error } = await supabase
       .from('app_settings')
       .upsert([apiSettings], { 
-        onConflict: 'id',
+        onConflict: 'environment',
         ignoreDuplicates: false 
       })
       .select()
@@ -223,7 +253,8 @@ export async function POST(request: NextRequest) {
         requestId,
         ip,
         error: error.message,
-        duration: dbDuration
+        duration: dbDuration,
+        environment
       })
       
       // If table doesn't exist, return a more helpful error
@@ -246,7 +277,8 @@ export async function POST(request: NextRequest) {
     logger.info('Admin settings updated successfully', {
       requestId,
       ip,
-      settingsId: data?.id
+      settingsId: data?.id,
+      environment
     })
 
     const totalDuration = Date.now() - startTime
@@ -255,6 +287,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: data.settings,
+      environment: environment,
       message: 'Settings updated successfully'
     })
 
