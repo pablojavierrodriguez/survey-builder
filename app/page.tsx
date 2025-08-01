@@ -988,39 +988,7 @@ export default function ProductSurvey() {
             <span className="sm:hidden">Admin</span>
           </Button>
           
-          {/* Debug Buttons */}
-          <Button
-            onClick={clearSession}
-            variant="outline"
-            size="sm"
-            className="bg-red-50 dark:bg-red-900/20 backdrop-blur-sm border-red-200 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-300 shadow-lg text-xs sm:text-sm"
-          >
-            <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Clear Session</span>
-            <span className="sm:hidden">Debug</span>
-          </Button>
-          
-          <Button
-            onClick={createDatabaseFunction}
-            variant="outline"
-            size="sm"
-            className="bg-blue-50 dark:bg-blue-900/20 backdrop-blur-sm border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-300 shadow-lg text-xs sm:text-sm"
-          >
-            <Database className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Create DB Function</span>
-            <span className="sm:hidden">DB</span>
-          </Button>
-          
-          <Button
-            onClick={fixUserProfile}
-            variant="outline"
-            size="sm"
-            className="bg-green-50 dark:bg-green-900/20 backdrop-blur-sm border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-300 shadow-lg text-xs sm:text-sm"
-          >
-            <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Fix Profile</span>
-            <span className="sm:hidden">Profile</span>
-          </Button>
+
         </div>
         
         {/* Theme toggle */}
