@@ -517,6 +517,42 @@ export default function ProductSurvey() {
     }
   }
 
+  const fixUserProfile = async () => {
+    try {
+      // Get current user ID from auth context
+      const currentUser = user
+      if (!currentUser?.id || !currentUser?.email) {
+        alert('No user logged in')
+        return
+      }
+
+      const response = await fetch('/api/debug/profile', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          email: currentUser.email,
+          role: 'admin'
+        })
+      })
+      
+      const result = await response.json()
+      console.log('🔧 [Debug] Profile fixed:', result)
+      
+      if (result.success) {
+        alert('Profile fixed successfully! Please refresh the page.')
+        window.location.reload()
+      } else {
+        alert('Error fixing profile: ' + result.error)
+      }
+    } catch (error) {
+      console.error('❌ [Debug] Error fixing profile:', error)
+      alert('Error fixing profile')
+    }
+  }
+
   const submitSurvey = async () => {
     setIsSubmitting(true)
     
