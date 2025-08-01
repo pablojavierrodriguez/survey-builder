@@ -13,10 +13,10 @@ import { useAuth } from "@/lib/auth-context"
 
 interface AppSettings {
   database: {
-    url: string
-    apiKey: string
+    url?: string
+    apiKey?: string
     tableName: string
-    connectionTimeout: number
+    connectionTimeout?: number
     environment: string
   }
   general: {
@@ -24,6 +24,18 @@ interface AppSettings {
     publicUrl: string
     maintenanceMode: boolean
     analyticsEnabled: boolean
+  }
+  security?: {
+    sessionTimeout: number
+    maxLoginAttempts: number
+    enableRateLimit: boolean
+    enforceStrongPasswords: boolean
+    enableTwoFactor: boolean
+  }
+  features?: {
+    enableExport: boolean
+    enableEmailNotifications: boolean
+    enableAnalytics: boolean
   }
 }
 
@@ -71,18 +83,20 @@ export default function SettingsPage() {
       // Map to local AppSettings shape
       const apiSettings: AppSettings = {
         database: {
-          url: config.database.url,
-          apiKey: config.database.apiKey,
-          tableName: config.database.tableName,
+          url: config.database?.url || '',
+          apiKey: config.database?.apiKey || '',
+          tableName: config.database?.tableName || 'pc_survey_data_dev',
           connectionTimeout: 30,
-          environment: config.database.environment || 'production',
+          environment: config.database?.environment || 'development',
         },
         general: {
-          appName: config.general.appName,
-          publicUrl: config.general.publicUrl,
-          maintenanceMode: config.general.maintenanceMode,
-          analyticsEnabled: config.general.analyticsEnabled,
+          appName: config.general?.appName || 'Product Community Survey',
+          publicUrl: config.general?.publicUrl || '',
+          maintenanceMode: config.general?.maintenanceMode || false,
+          analyticsEnabled: config.general?.analyticsEnabled || true,
         },
+        security: config.security,
+        features: config.features,
       }
       setSettings(apiSettings)
       setSupabaseConfigured(!!(config.database.url && config.database.apiKey))

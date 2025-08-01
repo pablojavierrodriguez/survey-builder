@@ -14,20 +14,10 @@ interface AnalyticsData {
   roleDistribution: { [key: string]: number }
   seniorityDistribution: { [key: string]: number }
   industryDistribution: { [key: string]: number }
-  productTypeDistribution: { [key: string]: number }
-  customerSegmentDistribution: { [key: string]: number }
-  companyTypeDistribution: { [key: string]: number }
-  companySizeDistribution: { [key: string]: number }
+  companyDistribution: { [key: string]: number }
   toolsUsage: { [key: string]: number }
-  learningMethodsUsage: { [key: string]: number }
-  responsesByDate: { [key: string]: number }
-  mainChallenges: string[]
-  salaryData: {
-    averageByCurrency: { [key: string]: number }
-    averageByRole: { [key: string]: { ARS: number; USD: number } }
-    averageByIndustry: { [key: string]: { ARS: number; USD: number } }
-    rangeDistribution: { [key: string]: number }
-  }
+  learningMethods: { [key: string]: number }
+  recentResponses: any[]
   totalResponses: number
 }
 
@@ -313,15 +303,9 @@ export default function AnalyticsPage() {
       roleDistribution: data.roleDistribution,
       seniorityDistribution: data.seniorityDistribution,
       industryDistribution: data.industryDistribution,
-      productTypeDistribution: data.productTypeDistribution,
-      customerSegmentDistribution: data.customerSegmentDistribution,
-      companyTypeDistribution: data.companyTypeDistribution,
-      companySizeDistribution: data.companySizeDistribution,
+      companyDistribution: data.companyDistribution,
       toolsUsage: data.toolsUsage,
-      learningMethodsUsage: data.learningMethodsUsage,
-      responsesByDate: data.responsesByDate,
-      mainChallenges: data.mainChallenges,
-      salaryData: data.salaryData,
+      learningMethods: data.learningMethods,
     }
 
     const blob = new Blob([JSON.stringify(analyticsReport, null, 2)], { type: "application/json" })
@@ -350,21 +334,13 @@ export default function AnalyticsPage() {
     addDistributionToRows(data.roleDistribution, "Role Distribution", data.totalResponses)
     addDistributionToRows(data.seniorityDistribution, "Seniority Distribution", data.totalResponses)
     addDistributionToRows(data.industryDistribution, "Industry Distribution", data.totalResponses)
-    addDistributionToRows(data.productTypeDistribution, "Product Type Distribution", data.totalResponses)
-    addDistributionToRows(data.customerSegmentDistribution, "Customer Segment Distribution", data.totalResponses)
-    addDistributionToRows(data.companyTypeDistribution, "Company Type Distribution", data.totalResponses)
-    addDistributionToRows(data.companySizeDistribution, "Company Size Distribution", data.totalResponses)
+    addDistributionToRows(data.companyDistribution, "Company Distribution", data.totalResponses)
 
     const totalTools = Object.values(data.toolsUsage).reduce((sum, count) => sum + count, 0)
     addDistributionToRows(data.toolsUsage, "Tools Usage", totalTools)
 
-    const totalLearningMethods = Object.values(data.learningMethodsUsage).reduce((sum, count) => sum + count, 0)
-    addDistributionToRows(data.learningMethodsUsage, "Learning Methods Usage", totalLearningMethods)
-
-    // Add main challenges as individual rows
-    data.mainChallenges.forEach((challenge, index) => {
-      rows.push(["Main Challenges", `Response ${index + 1}`, "1", "N/A"])
-    })
+    const totalLearningMethods = Object.values(data.learningMethods).reduce((sum, count) => sum + count, 0)
+    addDistributionToRows(data.learningMethods, "Learning Methods Usage", totalLearningMethods)
 
     const csvContent = [
       headers.join(","),

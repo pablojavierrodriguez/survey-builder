@@ -118,32 +118,20 @@ export default function DatabasePage() {
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
-      // Get database configuration
-      const config = await getSupabaseConfig()
-      
-      // Check if we have valid database configuration
-      if (!config.supabaseUrl || !config.anonKey) {
-        setResponses([])
-        setConnectionStatus("disconnected")
-        return
-      }
-      
-      // Try to fetch from current database configuration
-      const response = await fetch(
-        `${config.supabaseUrl}/rest/v1/${config.tableName}?select=*&order=created_at.desc`,
-        {
-          headers: {
-            'apikey': config.anonKey,
-            'Authorization': `Bearer ${config.anonKey}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
+      // Use the authenticated database API endpoint
+      const response = await fetch('/api/admin/database')
 
       if (response.ok) {
-        const data = await response.json()
-        setResponses(data || [])
-        setConnectionStatus("connected")
+        const result = await response.json()
+        
+        if (result.success && result.data) {
+          setResponses(result.data || [])
+          setConnectionStatus("connected")
+        } else {
+          console.error('Database API error:', result.error)
+          setResponses([])
+          setConnectionStatus("disconnected")
+        }
       } else {
         console.error('Database connection failed:', response.status, response.statusText)
         setResponses([])
