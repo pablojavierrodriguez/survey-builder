@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   
   try {
     // Rate limiting
-    const rateLimitResult = await rateLimit(ip, '/api/survey', 'PUBLIC')
+    const rateLimitResult = await rateLimit(ip, '/api/survey', 'SURVEY_SUBMISSION')
     if (!rateLimitResult.allowed) {
       logger.warn('Rate limit exceeded for survey submission', {
         requestId,
