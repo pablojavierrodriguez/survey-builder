@@ -42,7 +42,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Get initial session
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        console.log('🔐 [Auth] Initial session check:', {
+          hasSession: !!session,
+          userId: session?.user?.id || null,
+          email: session?.user?.email || null,
+          sessionError: sessionError?.message || null
+        })
+        
         if (mounted) {
           setSession(session)
           setUser(session?.user ?? null)
@@ -50,16 +58,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (session?.user) {
             // Fetch user profile only once
             try {
-              const { data: profileData } = await supabase
+              const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single()
+              
+              console.log('🔐 [Auth] Profile fetch result:', {
+                hasProfile: !!profileData,
+                role: profileData?.role || null,
+                profileError: profileError?.message || null
+              })
+              
               if (mounted) setProfile(profileData)
             } catch (profileError) {
               console.warn('Could not fetch profile:', profileError)
               if (mounted) setProfile(null)
             }
+          } else {
+            console.log('🔐 [Auth] No session found - user should be unauthenticated')
           }
         }
 

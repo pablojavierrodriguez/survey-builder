@@ -163,6 +163,7 @@ export default function ProductSurvey() {
     details: any
   } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -242,6 +243,16 @@ export default function ProductSurvey() {
           profile: profile ? `role: ${profile.role}` : 'no profile',
           userIsAdmin 
         })
+        
+        // Debug: Check actual session state
+        try {
+          const debugResponse = await fetch('/api/debug/auth')
+          const debugData = await debugResponse.json()
+          console.log('🔍 [Debug] Actual session state:', debugData)
+          setDebugInfo(debugData)
+        } catch (error) {
+          console.error('❌ [Debug] Error checking session:', error)
+        }
       } catch (error) {
         console.error('❌ Error loading settings:', error)
         
@@ -459,6 +470,36 @@ export default function ProductSurvey() {
         return isValidEmail(surveyData.email)
       default:
         return true
+    }
+  }
+
+  const clearSession = async () => {
+    try {
+      const response = await fetch('/api/debug/clear-session', { method: 'POST' })
+      const result = await response.json()
+      console.log('🔍 [Debug] Session cleared:', result)
+      
+      // Reload the page to reset auth state
+      window.location.reload()
+    } catch (error) {
+      console.error('❌ [Debug] Error clearing session:', error)
+    }
+  }
+
+  const createDatabaseFunction = async () => {
+    try {
+      const response = await fetch('/api/admin/create-function', { method: 'POST' })
+      const result = await response.json()
+      console.log('🔧 [Debug] Database function created:', result)
+      
+      if (result.success) {
+        alert('Database function created successfully!')
+      } else {
+        alert('Error creating database function: ' + result.error)
+      }
+    } catch (error) {
+      console.error('❌ [Debug] Error creating database function:', error)
+      alert('Error creating database function')
     }
   }
 
@@ -948,17 +989,42 @@ export default function ProductSurvey() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4 xl:p-8">
       {/* Fixed header for mobile */}
       <div className="fixed top-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex justify-between items-center">
-        {/* Admin Login Button */}
-        <Button
-          onClick={() => window.open("/auth/login", "_blank")}
-          variant="outline"
-          size="sm"
-          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg text-xs sm:text-sm"
-        >
-          <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Admin Login</span>
-          <span className="sm:hidden">Admin</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Admin Login Button */}
+          <Button
+            onClick={() => window.open("/auth/login", "_blank")}
+            variant="outline"
+            size="sm"
+            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg text-xs sm:text-sm"
+          >
+            <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Admin Login</span>
+            <span className="sm:hidden">Admin</span>
+          </Button>
+          
+          {/* Debug Buttons */}
+          <Button
+            onClick={clearSession}
+            variant="outline"
+            size="sm"
+            className="bg-red-50 dark:bg-red-900/20 backdrop-blur-sm border-red-200 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-300 shadow-lg text-xs sm:text-sm"
+          >
+            <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Clear Session</span>
+            <span className="sm:hidden">Debug</span>
+          </Button>
+          
+          <Button
+            onClick={createDatabaseFunction}
+            variant="outline"
+            size="sm"
+            className="bg-blue-50 dark:bg-blue-900/20 backdrop-blur-sm border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-300 shadow-lg text-xs sm:text-sm"
+          >
+            <Database className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Create DB Function</span>
+            <span className="sm:hidden">DB</span>
+          </Button>
+        </div>
         
         {/* Theme toggle */}
         <ModeToggle />
