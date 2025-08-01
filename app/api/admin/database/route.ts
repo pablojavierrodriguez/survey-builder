@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { getSupabaseClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { getTableName } from '@/lib/config-manager'
 
 export async function GET(request: NextRequest) {
@@ -27,8 +27,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client
-    const supabase = await getSupabaseClient()
+    // Check if Supabase is configured
     if (!supabase) {
       logger.error('Supabase not configured for database access', {
         requestId,
@@ -143,8 +142,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Get Supabase client
-    const supabase = await getSupabaseClient()
+    // Check if Supabase is configured
     if (!supabase) {
       logger.error('Supabase not configured for database delete', {
         requestId,

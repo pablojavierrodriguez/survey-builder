@@ -487,71 +487,7 @@ export default function ProductSurvey() {
     }
   }
 
-  const clearSession = async () => {
-    try {
-      const response = await fetch('/api/debug/clear-session', { method: 'POST' })
-      const result = await response.json()
-      console.log('🔍 [Debug] Session cleared:', result)
-      
-      // Reload the page to reset auth state
-      window.location.reload()
-    } catch (error) {
-      console.error('❌ [Debug] Error clearing session:', error)
-    }
-  }
 
-  const createDatabaseFunction = async () => {
-    try {
-      const response = await fetch('/api/admin/create-function', { method: 'POST' })
-      const result = await response.json()
-      console.log('🔧 [Debug] Database function created:', result)
-      
-      if (result.success) {
-        alert('Database function created successfully!')
-      } else {
-        alert('Error creating database function: ' + result.error)
-      }
-    } catch (error) {
-      console.error('❌ [Debug] Error creating database function:', error)
-      alert('Error creating database function')
-    }
-  }
-
-  const fixUserProfile = async () => {
-    try {
-      // Get current user ID from auth context
-      const currentUser = user
-      if (!currentUser?.id || !currentUser?.email) {
-        alert('No user logged in')
-        return
-      }
-
-      const response = await fetch('/api/debug/profile', { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          email: currentUser.email,
-          role: 'admin'
-        })
-      })
-      
-      const result = await response.json()
-      console.log('🔧 [Debug] Profile fixed:', result)
-      
-      if (result.success) {
-        alert('Profile fixed successfully! Please refresh the page.')
-        window.location.reload()
-      } else {
-        alert('Error fixing profile: ' + result.error)
-      }
-    } catch (error) {
-      console.error('❌ [Debug] Error fixing profile:', error)
-      alert('Error fixing profile')
-    }
-  }
 
   const submitSurvey = async () => {
     setIsSubmitting(true)
