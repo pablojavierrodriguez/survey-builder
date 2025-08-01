@@ -99,7 +99,7 @@ export default function SettingsPage() {
         features: config.features,
       }
       setSettings(apiSettings)
-      setSupabaseConfigured(!!(config.database.url && config.database.apiKey))
+      setSupabaseConfigured(!!(config.database?.url && config.database?.apiKey))
     } catch (error) {
       console.error('Error loading settings:', error)
       setSettings(null)

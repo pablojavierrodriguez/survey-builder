@@ -125,7 +125,7 @@ export default function DatabasePage() {
         const result = await response.json()
         
         if (result.success && result.data) {
-          setResponses(result.data || [])
+          setResponses(result.data.records || [])
           setConnectionStatus("connected")
         } else {
           console.error('Database API error:', result.error)
