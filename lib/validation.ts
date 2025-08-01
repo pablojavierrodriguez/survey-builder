@@ -113,6 +113,18 @@ export const AdminSettingsSchema = z.object({
     maintenanceMode: z.boolean(),
     analyticsEnabled: z.boolean(),
   }),
+  security: z.object({
+    sessionTimeout: z.number().min(1000, 'Session timeout must be at least 1000ms'),
+    maxLoginAttempts: z.number().min(1, 'Max login attempts must be at least 1'),
+    enableRateLimit: z.boolean(),
+    enforceStrongPasswords: z.boolean(),
+    enableTwoFactor: z.boolean(),
+  }),
+  features: z.object({
+    enableExport: z.boolean(),
+    enableEmailNotifications: z.boolean(),
+    enableAnalytics: z.boolean(),
+  }),
 })
 
 // API Response Validation

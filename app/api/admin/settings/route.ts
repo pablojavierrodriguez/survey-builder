@@ -68,62 +68,39 @@ export async function GET(request: NextRequest) {
     logger.logDatabaseOperation('SELECT', 'app_settings', true, dbDuration)
 
     // Return settings or default configuration
-    const settings = data || {
-      id: 1,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      environment: 'dev',
-      survey_table_name: 'pc_survey_data_dev',
-      analytics_table_name: null,
-      app_name: 'Product Community Survey (DEV)',
-      app_url: 'https://productcommunitysurvey-dev.vercel.app',
-      maintenance_mode: false,
-      enable_analytics: true,
-      enable_email_notifications: false,
-      enable_export: true,
-      session_timeout: 28800000,
-      max_login_attempts: 20,
-      theme_default: 'system',
-      language_default: 'en',
-      settings: {},
-      description: 'Development environment configuration',
-      version: '1.0.0'
-    }
-
-    const totalDuration = Date.now() - startTime
-    logger.logResponse(requestId, 200, totalDuration)
-
-    // Transform settings to match frontend expectations with complete configuration
-    const transformedSettings = {
+    const settings = data?.settings || {
       database: {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
         apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-        tableName: settings.survey_table_name || 'pc_survey_data_dev',
-        environment: settings.environment || 'dev'
+        tableName: 'pc_survey_data_dev',
+        environment: 'dev'
       },
       general: {
-        appName: settings.app_name || 'Product Community Survey',
-        publicUrl: settings.app_url || '',
-        maintenanceMode: settings.maintenance_mode || false,
-        analyticsEnabled: settings.enable_analytics || true
+        appName: 'Product Community Survey',
+        publicUrl: 'https://productcommunitysurvey-dev.vercel.app',
+        maintenanceMode: false,
+        analyticsEnabled: true
       },
       security: {
-        sessionTimeout: settings.session_timeout || 28800000,
-        maxLoginAttempts: settings.max_login_attempts || 3,
+        sessionTimeout: 28800000,
+        maxLoginAttempts: 3,
         enableRateLimit: true,
         enforceStrongPasswords: false,
         enableTwoFactor: false
       },
       features: {
-        enableExport: settings.enable_export || true,
-        enableEmailNotifications: settings.enable_email_notifications || false,
-        enableAnalytics: settings.enable_analytics || true
+        enableExport: true,
+        enableEmailNotifications: false,
+        enableAnalytics: true
       }
     }
 
+    const totalDuration = Date.now() - startTime
+    logger.logResponse(requestId, 200, totalDuration)
+
     return NextResponse.json({
       success: true,
-      data: transformedSettings
+      data: settings
     })
 
   } catch (error) {
@@ -219,32 +196,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prepare settings for database with complete configuration
+    // Prepare settings for database (simplified JSON structure)
     const apiSettings = {
       id: 1, // Ensure we have an ID for upsert
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      survey_table_name: settings.database.tableName,
-      app_name: settings.general.appName,
-      app_url: settings.general.publicUrl,
-      maintenance_mode: settings.general.maintenanceMode,
-      enable_analytics: settings.features.enableAnalytics,
-      enable_email_notifications: settings.features.enableEmailNotifications,
-      enable_export: settings.features.enableExport,
-      session_timeout: settings.security.sessionTimeout,
-      max_login_attempts: settings.security.maxLoginAttempts,
-      theme_default: 'system',
-      language_default: 'en',
-      settings: {
-        supabase_url: settings.database.url,
-        supabase_anon_key: settings.database.apiKey,
-        require_https: true,
-        enable_rate_limit: settings.security.enableRateLimit,
-        enforce_strong_passwords: settings.security.enforceStrongPasswords,
-        enable_two_factor: settings.security.enableTwoFactor,
-        admin_email: "",
-        response_threshold: 10
-      }
+      settings: settings, // Store the entire validated settings object
+      version: '2.0.0'
     }
 
     // Update settings in database
@@ -296,7 +254,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: data,
+      data: data.settings,
       message: 'Settings updated successfully'
     })
 
