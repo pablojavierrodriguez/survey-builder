@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
             analyticsEnabled: true
           }
         }
+      }, {
+        onConflict: 'environment'
       })
 
     if (saveError) {

@@ -74,36 +74,61 @@ export default function SetupPage() {
     }
   }
 
-  const saveConfiguration = async () => {
-    setIsLoading(true)
-    setError("")
-    
-    try {
-      const response = await fetch('/api/setup/save-config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          supabaseUrl,
-          supabaseKey
-        })
-      })
+                const saveConfiguration = async () => {
+                setIsLoading(true)
+                setError("")
+                
+                try {
+                  const response = await fetch('/api/setup/save-config', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      supabaseUrl,
+                      supabaseKey
+                    })
+                  })
 
-      const data = await response.json()
-      
-      if (data.success) {
-        setSuccess("✅ Configuración guardada exitosamente")
-        setStep(3)
-      } else {
-        setError(data.error || "Error al guardar la configuración")
-      }
-    } catch (error) {
-      setError("Error de red al guardar la configuración")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+                  const data = await response.json()
+                  
+                  if (data.success) {
+                    setSuccess("✅ Configuración guardada exitosamente")
+                    setStep(3)
+                  } else {
+                    setError(data.error || "Error al guardar la configuración")
+                  }
+                } catch (error) {
+                  setError("Error de red al guardar la configuración")
+                } finally {
+                  setIsLoading(false)
+                }
+              }
+
+              const clearConfiguration = async () => {
+                setIsLoading(true)
+                setError("")
+                
+                try {
+                  const response = await fetch('/api/setup/clear-config', {
+                    method: 'POST'
+                  })
+
+                  const data = await response.json()
+                  
+                  if (data.success) {
+                    setStep(1)
+                    setSuccess("")
+                    setError("")
+                  } else {
+                    setError(data.error || "Error al limpiar la configuración")
+                  }
+                } catch (error) {
+                  setError("Error de red al limpiar la configuración")
+                } finally {
+                  setIsLoading(false)
+                }
+              }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
@@ -188,54 +213,96 @@ export default function SetupPage() {
               </div>
             )}
 
-            {/* Step 2: Save Configuration */}
-            {step === 2 && (
-              <div className="space-y-4">
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Conexión exitosa. Ahora guardaremos la configuración.
-                  </AlertDescription>
-                </Alert>
+                                    {/* Step 2: Save Configuration */}
+                        {step === 2 && (
+                          <div className="space-y-4">
+                            <Alert>
+                              <CheckCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                Conexión exitosa. Ahora guardaremos la configuración.
+                              </AlertDescription>
+                            </Alert>
 
-                <Button 
-                  onClick={saveConfiguration} 
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Settings className="w-4 h-4 mr-2" />
-                      Guardar Configuración
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
+                            <div className="space-y-2">
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>URL:</strong> {supabaseUrl}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>API Key:</strong> {supabaseKey.substring(0, 20)}...
+                              </div>
+                            </div>
 
-            {/* Step 3: Success */}
-            {step === 3 && (
-              <div className="space-y-4">
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    ¡Configuración completada! Ya puedes usar la aplicación.
-                  </AlertDescription>
-                </Alert>
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="outline"
+                                onClick={() => setStep(1)}
+                                className="flex-1"
+                              >
+                                ← Volver
+                              </Button>
+                              <Button 
+                                onClick={saveConfiguration} 
+                                disabled={isLoading}
+                                className="flex-1"
+                              >
+                                {isLoading ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Guardando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Settings className="w-4 h-4 mr-2" />
+                                    Guardar
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
-                <Button 
-                  onClick={() => window.location.href = '/'} 
-                  className="w-full"
-                >
-                  Ir a la Aplicación
-                </Button>
-              </div>
-            )}
+                                    {/* Step 3: Success */}
+                        {step === 3 && (
+                          <div className="space-y-4">
+                            <Alert>
+                              <CheckCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                ¡Configuración completada! Ya puedes usar la aplicación.
+                              </AlertDescription>
+                            </Alert>
+
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="outline"
+                                onClick={() => {
+                                  setStep(1)
+                                  setSuccess("")
+                                }}
+                                className="flex-1"
+                              >
+                                Reconfigurar
+                              </Button>
+                              <Button 
+                                onClick={() => window.location.href = '/'} 
+                                className="flex-1"
+                              >
+                                Ir a la Aplicación
+                              </Button>
+                            </div>
+                            
+                            <div className="pt-4 border-t">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={clearConfiguration}
+                                disabled={isLoading}
+                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                Limpiar Configuración
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
             {/* Error Message */}
             {error && (
