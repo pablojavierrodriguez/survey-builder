@@ -203,7 +203,12 @@ export default function AnalyticsPage() {
     if (!data) return
 
     const addDistributionToRows = (dist: { [key: string]: number }, category: string, total: number) => {
-      const rows = []
+      const rows: Array<{
+        category: string
+        value: string
+        count: number
+        percentage: string
+      }> = []
       Object.entries(dist).forEach(([key, count]) => {
         rows.push({
           category,
