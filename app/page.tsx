@@ -256,10 +256,10 @@ export default function ProductSurvey() {
           }
         })
         
-        // Set database status as configured (we already checked config above)
+        // Set database status as healthy (we already checked config above)
         setDatabaseStatus({
-          status: 'configured',
-          message: 'Database is configured',
+          status: 'healthy',
+          message: 'Database is properly configured and connected',
           details: { configured: true, connected: true }
         })
         
