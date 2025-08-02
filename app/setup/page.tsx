@@ -11,6 +11,7 @@ export default function SetupPage() {
   const [step, setStep] = useState(1)
   const [supabaseUrl, setSupabaseUrl] = useState("")
   const [supabaseKey, setSupabaseKey] = useState("")
+  const [publicUrl, setPublicUrl] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -87,7 +88,8 @@ export default function SetupPage() {
                     },
                     body: JSON.stringify({
                       supabaseUrl,
-                      supabaseKey
+                      supabaseKey,
+                      publicUrl
                     })
                   })
 
@@ -181,18 +183,31 @@ export default function SetupPage() {
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Supabase Anon Key
-                  </label>
-                  <Input
-                    type="password"
-                    value={supabaseKey}
-                    onChange={(e) => setSupabaseKey(e.target.value)}
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    className="w-full"
-                  />
-                </div>
+                                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Supabase Anon Key
+                              </label>
+                              <Input
+                                type="password"
+                                value={supabaseKey}
+                                onChange={(e) => setSupabaseKey(e.target.value)}
+                                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                className="w-full"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Public URL (Opcional)
+                              </label>
+                              <Input
+                                type="url"
+                                value={publicUrl}
+                                onChange={(e) => setPublicUrl(e.target.value)}
+                                placeholder="https://tu-dominio.com"
+                                className="w-full"
+                              />
+                            </div>
 
                 <Button 
                   onClick={testConnection} 
