@@ -76,7 +76,11 @@ export async function GET(request: NextRequest) {
       logger.info('Returning user-saved settings from database', {
         requestId,
         ip,
-        environment
+        environment,
+        hasDatabaseUrl: !!data.settings.database?.url,
+        hasDatabaseKey: !!data.settings.database?.apiKey,
+        hasEnvUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       })
 
       return NextResponse.json({
@@ -116,7 +120,9 @@ export async function GET(request: NextRequest) {
     logger.info('Returning default settings', {
       requestId,
       ip,
-      environment
+      environment,
+      hasEnvUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     })
 
     const totalDuration = Date.now() - startTime

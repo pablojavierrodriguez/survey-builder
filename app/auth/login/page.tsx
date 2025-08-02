@@ -37,17 +37,13 @@ function LoginForm() {
     checkSupabase()
   }, [])
 
-  // Redirect if already authenticated - only redirect after successful login
+  // Redirect if already authenticated
   useEffect(() => {
-    if (user && !authLoading && !isLoading) {
-      // Only redirect if we just logged in, not on page load
-      const hasJustLoggedIn = sessionStorage.getItem('justLoggedIn')
-      if (hasJustLoggedIn) {
-        sessionStorage.removeItem('justLoggedIn')
-        router.push(redirectTo)
-      }
+    if (user && !authLoading) {
+      console.log('🔧 [Login] User already authenticated, redirecting to:', redirectTo)
+      router.push(redirectTo)
     }
-  }, [user, router, redirectTo, isLoading, authLoading])
+  }, [user, authLoading, router, redirectTo])
 
   // Show loading while checking authentication
   if (authLoading) {

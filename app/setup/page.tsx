@@ -22,12 +22,21 @@ export default function SetupPage() {
 
   const checkConfiguration = async () => {
     try {
-      const response = await fetch('/api/config/supabase')
+      const response = await fetch('/api/config/check')
       const data = await response.json()
       
-      if (data.hasUrl && data.hasKey) {
+      console.log('🔧 [Setup] Configuration check:', data)
+      
+      if (data.configured) {
         setSuccess("✅ Supabase ya está configurado correctamente")
         setStep(3)
+      } else {
+        console.log('🔧 [Setup] Configuration missing:', {
+          hasEnvUrl: data.hasEnvUrl,
+          hasEnvKey: data.hasEnvKey,
+          canConnect: data.canConnect,
+          error: data.error
+        })
       }
     } catch (error) {
       console.error('Error checking configuration:', error)

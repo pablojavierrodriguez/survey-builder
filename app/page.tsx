@@ -188,6 +188,21 @@ export default function ProductSurvey() {
   // Check maintenance mode on component mount
   useEffect(() => {
     const loadSettings = async () => {
+      // Check if Supabase is configured first
+      try {
+        const configResponse = await fetch('/api/config/check')
+        const configData = await configResponse.json()
+        
+        console.log('🔧 [Main] Configuration check:', configData)
+        
+        if (!configData.configured) {
+          console.log('🔧 [Main] Supabase not configured, redirecting to setup')
+          window.location.href = '/setup'
+          return
+        }
+      } catch (error) {
+        console.error('❌ Error checking configuration:', error)
+      }
       // FORCE CLEAR CORRUPT SESSION ON LOAD
       try {
         if (user && !user.id) {
