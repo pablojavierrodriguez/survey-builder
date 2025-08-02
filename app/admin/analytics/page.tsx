@@ -152,7 +152,8 @@ export default function AnalyticsPage() {
 
   // Memoized permissions check
   const permissions = useMemo(() => {
-    return getCurrentUserPermissions(user)
+    const userRole = user?.role || 'viewer'
+    return getCurrentUserPermissions(userRole as any)
   }, [user])
 
   // Memoized fetch function
