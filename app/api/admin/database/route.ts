@@ -60,86 +60,44 @@ export async function GET(request: NextRequest) {
     // Calculate offset
     const offset = (page - 1) * limit
 
-    // Try to use optimized RPC function first
+    // Temporarily disable RPC and use direct query only
     const dbStartTime = Date.now()
-    const { data: rpcData, error: rpcError } = await supabase
-      .rpc('get_paginated_survey_data', {
-        table_name: tableName,
-        page_limit: limit,
-        page_offset: offset,
-        filters: filters
-      })
+    
+    // Direct query with filters
+    let query = supabase
+      .from(tableName)
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    // Apply filters
+    Object.entries(filters).forEach(([key, value]) => {
+      query = query.eq(key, value)
+    })
+
+    const { data, error, count } = await query
 
     const dbDuration = Date.now() - dbStartTime
 
-    if (rpcError) {
-      logger.warn('RPC function not available, falling back to direct query', {
+    if (error) {
+      logger.error('Database error fetching data', {
         requestId,
         ip,
-        error: rpcError.message
+        error: error.message,
+        duration: dbDuration
       })
-
-      // Fallback to direct query with filters
-      let query = supabase
-        .from(tableName)
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1)
-
-      // Apply filters
-      Object.entries(filters).forEach(([key, value]) => {
-        query = query.eq(key, value)
-      })
-
-      const { data, error, count } = await query
-
-      if (error) {
-        logger.error('Database error fetching data', {
-          requestId,
-          ip,
-          error: error.message,
-          duration: dbDuration
-        })
-        
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch database data' },
-          { status: 500 }
-        )
-      }
-
-      logger.logDatabaseOperation('SELECT', tableName, true, dbDuration)
-      logger.info('Database data fetched successfully (fallback)', {
-        requestId,
-        ip,
-        totalCount: count,
-        page,
-        limit,
-        tableName,
-        filters
-      })
-
-      const totalDuration = Date.now() - startTime
-      logger.logResponse(requestId, 200, totalDuration)
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          records: data || [],
-          pagination: {
-            page,
-            limit,
-            total: count || 0,
-            totalPages: Math.ceil((count || 0) / limit)
-          }
-        }
-      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch database data' },
+        { status: 500 }
+      )
     }
 
-    // Use RPC result
-    logger.logDatabaseOperation('RPC', 'get_paginated_survey_data', true, dbDuration)
-    logger.info('Database data fetched successfully via RPC', {
+    logger.logDatabaseOperation('SELECT', tableName, true, dbDuration)
+    logger.info('Database data fetched successfully', {
       requestId,
       ip,
+      totalCount: count,
       page,
       limit,
       tableName,
@@ -151,7 +109,15 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: rpcData
+      data: {
+        records: data || [],
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / limit)
+        }
+      }
     })
 
   } catch (error) {
