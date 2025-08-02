@@ -1,4 +1,4 @@
--- Database Performance Optimization Indexes
+-- Database Performance Optimization Indexes (FIXED)
 -- This script adds indexes to improve query performance
 
 -- =====================================================
@@ -38,9 +38,6 @@ CREATE INDEX IF NOT EXISTS idx_survey_data_source ON pc_survey_data_dev(source);
 
 -- Role-based access (most important for auth)
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
-
--- Email lookup (assuming email column exists)
--- CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
 
 -- =====================================================
 -- APP SETTINGS TABLE INDEXES
