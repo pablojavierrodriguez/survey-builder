@@ -4,6 +4,13 @@ import { getTableName } from '@/lib/config-manager'
 
 export async function GET(request: NextRequest) {
   try {
+    if (!supabase) {
+      return NextResponse.json({
+        success: false,
+        error: 'Supabase not configured'
+      }, { status: 503 })
+    }
+
     const tableName = await getTableName()
     
     // Test 1: Direct query
