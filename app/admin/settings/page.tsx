@@ -234,14 +234,36 @@ export default function SettingsPage() {
     if (!settings) return
     setSaving(true)
     try {
-      // POST to /api/admin/settings with the full AppConfig shape
+      // Format settings for the API
+      const apiSettings = {
+        environment: 'dev',
+        settings: {
+          database: {
+            url: settings.database.url,
+            apiKey: settings.database.apiKey,
+            tableName: settings.database.tableName,
+            environment: settings.database.environment
+          },
+          general: {
+            appName: settings.general.appName,
+            publicUrl: settings.general.publicUrl,
+            maintenanceMode: settings.general.maintenanceMode,
+            analyticsEnabled: settings.general.analyticsEnabled
+          },
+          security: settings.security,
+          features: settings.features
+        }
+      }
+
+      // POST to /api/admin/settings with the correct format
       const response = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(settings)
+        body: JSON.stringify(apiSettings)
       })
+      
       if (response.ok) {
         await loadSettings()
         alert("Settings saved successfully!")
@@ -325,6 +347,13 @@ export default function SettingsPage() {
             {debugMode ? "Hide Debug" : "Show Debug"}
           </Button>
           <Button 
+            onClick={() => window.location.href = '/setup'} 
+            variant="outline"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Setup Wizard
+          </Button>
+          <Button 
             onClick={saveSettings} 
             disabled={saving || !permissions.canEditSettings}
           >
@@ -345,14 +374,16 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Supabase URL</label>
-                             <Input
-                 value={settings.database.url}
-                 onChange={(e) => updateSettings("database", "url", e.target.value)}
-                 placeholder="https://your-project.supabase.co"
-                 className="bg-background text-foreground border-border"
-                 disabled={!permissions.canEditSettings}
-               />
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Supabase URL {debugMode && <Badge variant="outline" className="ml-2">Debug</Badge>}
+              </label>
+              <Input
+                value={debugMode ? (process.env.NEXT_PUBLIC_SUPABASE_URL || '') : (settings.database.url || '')}
+                onChange={(e) => updateSettings("database", "url", e.target.value)}
+                placeholder="https://your-project.supabase.co"
+                className="bg-background text-foreground border-border"
+                disabled={!permissions.canEditSettings || debugMode}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Table Name</label>
@@ -367,17 +398,19 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground mb-2">API Key</label>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              API Key {debugMode && <Badge variant="outline" className="ml-2">Debug</Badge>}
+            </label>
             <div className="flex gap-2">
-                             <Input
-                 type={showApiKey ? "text" : "password"}
-                 value={settings.database.apiKey}
-                 onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
-                 placeholder="Your Supabase anon key"
-                 className="flex-1 bg-background text-foreground border-border"
-                 disabled={!permissions.canEditSettings}
-               />
-              <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)}>
+              <Input
+                type={showApiKey ? "text" : "password"}
+                value={debugMode ? (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '') : (settings.database.apiKey || '')}
+                onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
+                placeholder="Your Supabase anon key"
+                className="flex-1 bg-background text-foreground border-border"
+                disabled={!permissions.canEditSettings || debugMode}
+              />
+              <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)} disabled={debugMode}>
                 {showApiKey ? <Eye className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
             </div>
