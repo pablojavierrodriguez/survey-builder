@@ -28,8 +28,9 @@ export default function SetupPage() {
       console.log('🔧 [Setup] Configuration check:', data)
       
       if (data.configured) {
-        setSuccess("✅ Supabase ya está configurado correctamente")
-        setStep(3)
+        // Show current configuration but allow reconfiguration
+        setSuccess("✅ Supabase está configurado. Puedes modificar la configuración actual.")
+        // Don't auto-advance to step 3, let user choose
       } else {
         console.log('🔧 [Setup] Configuration missing:', {
           hasEnvUrl: data.hasEnvUrl,
@@ -323,24 +324,21 @@ export default function SetupPage() {
               </Alert>
             )}
 
-            {/* Quick Setup */}
-            {step === 1 && (
-              <div className="pt-4 border-t">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  ¿No tienes Supabase? Usa estas credenciales de prueba:
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSupabaseUrl("https://pzfujrbrsfcevektarjv.supabase.co")
-                    setSupabaseKey("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY")
-                  }}
-                  className="w-full text-xs"
-                >
-                  Usar Credenciales de Prueba
-                </Button>
-              </div>
-            )}
+                                    {/* Quick Setup */}
+                        {step === 1 && (
+                          <div className="pt-4 border-t">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                              ¿No tienes Supabase? Puedes crear una cuenta gratuita en:
+                            </p>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => window.open("https://supabase.com", "_blank")}
+                              className="w-full text-xs"
+                            >
+                              Crear Cuenta en Supabase
+                            </Button>
+                          </div>
+                        )}
           </CardContent>
         </Card>
       </div>

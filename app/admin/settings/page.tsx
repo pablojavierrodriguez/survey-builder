@@ -339,13 +339,13 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => setDebugMode(!debugMode)} 
-            variant="outline"
-          >
-            <Info className="w-4 h-4 mr-2" />
-            {debugMode ? "Hide Debug" : "Show Debug"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Debug Mode</span>
+            <Switch
+              checked={debugMode}
+              onCheckedChange={setDebugMode}
+            />
+          </div>
           <Button 
             onClick={() => window.location.href = '/setup'} 
             variant="outline"

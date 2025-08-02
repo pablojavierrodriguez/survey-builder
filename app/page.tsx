@@ -995,16 +995,26 @@ export default function ProductSurvey() {
       {/* Fixed header for mobile */}
       <div className="fixed top-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          {/* Admin Login Button */}
+          {/* Admin Login/Admin Panel Button */}
           <Button
-            onClick={() => window.open("/auth/login", "_blank")}
+            onClick={() => {
+              if (user && profile?.role === 'admin') {
+                window.location.href = '/admin/dashboard'
+              } else {
+                window.open("/auth/login", "_blank")
+              }
+            }}
             variant="outline"
             size="sm"
             className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg text-xs sm:text-sm"
           >
             <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Admin Login</span>
-            <span className="sm:hidden">Admin</span>
+            <span className="hidden sm:inline">
+              {user && profile?.role === 'admin' ? 'Admin Panel' : 'Iniciar Sesión'}
+            </span>
+            <span className="sm:hidden">
+              {user && profile?.role === 'admin' ? 'Admin' : 'Login'}
+            </span>
           </Button>
           
 
