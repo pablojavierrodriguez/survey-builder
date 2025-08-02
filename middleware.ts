@@ -4,25 +4,17 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Skip middleware for setup page and API routes
-  if (pathname.startsWith('/setup') || pathname.startsWith('/api/')) {
+  // Skip middleware for setup page, API routes, auth routes, and static files
+  if (pathname.startsWith('/setup') || 
+      pathname.startsWith('/api/') || 
+      pathname.startsWith('/auth/') ||
+      pathname.startsWith('/_next/') ||
+      pathname === '/favicon.ico') {
     return NextResponse.next()
   }
 
-  // Check if we're trying to access admin routes
-  if (pathname.startsWith('/admin')) {
-    // Check for Supabase configuration in cookies or headers
-    const hasSupabaseConfig = request.cookies.has('supabase_configured') || 
-                             request.headers.get('x-supabase-configured') === 'true'
-
-    if (!hasSupabaseConfig) {
-      // Redirect to setup wizard
-      const setupUrl = new URL('/setup', request.url)
-      setupUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(setupUrl)
-    }
-  }
-
+  // For now, let all requests through and let client-side handle configuration
+  // This prevents middleware from interfering with authentication flow
   return NextResponse.next()
 }
 

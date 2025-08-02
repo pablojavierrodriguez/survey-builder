@@ -41,9 +41,10 @@ function LoginForm() {
   useEffect(() => {
     if (user && !authLoading) {
       console.log('🔧 [Login] User already authenticated, redirecting to:', redirectTo)
-      router.push(redirectTo)
+      // Use window.location for more reliable redirect
+      window.location.href = redirectTo
     }
-  }, [user, authLoading, router, redirectTo])
+  }, [user, authLoading, redirectTo])
 
   // Show loading while checking authentication
   if (authLoading) {
