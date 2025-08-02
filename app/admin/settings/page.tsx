@@ -48,7 +48,7 @@ export default function SettingsPage() {
   const [creatingUser, setCreatingUser] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'viewer' as UserRole })
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [debugMode, setDebugMode] = useState(false)
+  // Debug mode removed - not functional
   const [showApiKey, setShowApiKey] = useState(false)
 
   // Permissions and role management
@@ -66,12 +66,7 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Reload settings when debug mode changes
-  useEffect(() => {
-    if (settings) {
-      loadSettings()
-    }
-  }, [debugMode])
+  // Debug mode removed - not functional
 
   const loadSettings = async () => {
     setLoading(true)
@@ -92,8 +87,8 @@ export default function SettingsPage() {
       
       const apiSettings: AppSettings = {
         database: {
-          url: config.database?.url || (debugMode ? process.env.NEXT_PUBLIC_SUPABASE_URL || '' : ''),
-          apiKey: config.database?.apiKey || (debugMode ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' : ''),
+          url: config.database?.url || '',
+          apiKey: config.database?.apiKey || '',
           tableName: config.database?.tableName || 'pc_survey_data_dev',
           connectionTimeout: 30,
           environment: config.database?.environment || 'development',
@@ -343,13 +338,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Debug Mode</span>
-            <Switch
-              checked={debugMode}
-              onCheckedChange={setDebugMode}
-            />
-          </div>
+          {/* Debug mode removed - not functional */}
           <Button 
             onClick={() => window.location.href = '/setup'} 
             variant="outline"
@@ -378,15 +367,16 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Supabase URL {debugMode && <Badge variant="outline" className="ml-2">Debug</Badge>}
-              </label>
+                              <label className="block text-sm font-medium text-foreground mb-2">
+                  Supabase URL
+                </label>
               <Input
-                value={debugMode ? (process.env.NEXT_PUBLIC_SUPABASE_URL || '') : (settings.database.url || '')}
+                value={settings.database.url || ''}
                 onChange={(e) => updateSettings("database", "url", e.target.value)}
                 placeholder="https://your-project.supabase.co"
                 className="bg-background text-foreground border-border"
-                disabled={!permissions.canEditSettings || debugMode}
+                disabled={true}
+                title="Configurar desde Setup Wizard"
               />
             </div>
             <div>
@@ -402,19 +392,20 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              API Key {debugMode && <Badge variant="outline" className="ml-2">Debug</Badge>}
-            </label>
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                  API Key
+                </label>
             <div className="flex gap-2">
               <Input
                 type={showApiKey ? "text" : "password"}
-                value={debugMode ? (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '') : (settings.database.apiKey || '')}
+                value={settings.database.apiKey || ''}
                 onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
                 placeholder="Your Supabase anon key"
                 className="flex-1 bg-background text-foreground border-border"
-                disabled={!permissions.canEditSettings || debugMode}
+                disabled={true}
+                title="Configurar desde Setup Wizard"
               />
-              <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)} disabled={debugMode}>
+              <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)} disabled={true}>
                 {showApiKey ? <Eye className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
             </div>

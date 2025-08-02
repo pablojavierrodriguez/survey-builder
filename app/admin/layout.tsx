@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { getPermissions, getUserRole } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/mode-toggle"
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -217,6 +218,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="hidden sm:block">
               <h1 className="text-lg font-semibold">Product Community Survey</h1>
             </div>
+            <ModeToggle />
           </div>
         </header>
 

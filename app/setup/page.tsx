@@ -12,6 +12,7 @@ export default function SetupPage() {
   const [supabaseUrl, setSupabaseUrl] = useState("")
   const [supabaseKey, setSupabaseKey] = useState("")
   const [publicUrl, setPublicUrl] = useState("")
+  const [appName, setAppName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -89,7 +90,8 @@ export default function SetupPage() {
                     body: JSON.stringify({
                       supabaseUrl,
                       supabaseKey,
-                      publicUrl
+                      publicUrl,
+                      appName
                     })
                   })
 
@@ -170,18 +172,31 @@ export default function SetupPage() {
             {/* Step 1: Configuration */}
             {step === 1 && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Supabase URL
-                  </label>
-                  <Input
-                    type="url"
-                    value={supabaseUrl}
-                    onChange={(e) => setSupabaseUrl(e.target.value)}
-                    placeholder="https://your-project.supabase.co"
-                    className="w-full"
-                  />
-                </div>
+                                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Nombre de la Aplicación
+                              </label>
+                              <Input
+                                type="text"
+                                value={appName}
+                                onChange={(e) => setAppName(e.target.value)}
+                                placeholder="Product Community Survey"
+                                className="w-full"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Supabase URL
+                              </label>
+                              <Input
+                                type="url"
+                                value={supabaseUrl}
+                                onChange={(e) => setSupabaseUrl(e.target.value)}
+                                placeholder="https://your-project.supabase.co"
+                                className="w-full"
+                              />
+                            </div>
                 
                                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

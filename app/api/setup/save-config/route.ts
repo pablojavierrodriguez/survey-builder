@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabaseUrl, supabaseKey, publicUrl } = await request.json()
+    const { supabaseUrl, supabaseKey, publicUrl, appName } = await request.json()
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
             environment: 'development'
           },
           general: {
-            appName: 'Product Community Survey (DEV)',
+            appName: appName || 'Product Community Survey (DEV)',
             publicUrl: publicUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://productcommunitysurvey-dev.vercel.app',
             maintenanceMode: false,
             analyticsEnabled: true
