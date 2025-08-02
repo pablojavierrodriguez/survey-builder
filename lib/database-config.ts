@@ -67,12 +67,14 @@ export async function checkDatabaseConnection(): Promise<{ success: boolean; err
       .limit(1)
 
     if (error) {
+      console.error('🔧 Database connection test error:', error)
       return { success: false, error: `Database connection failed: ${error.message}` }
     }
 
     return { success: true }
   } catch (error) {
-    return { success: false, error: `Database connection error: ${error}` }
+    console.error('🔧 Database connection exception:', error)
+    return { success: false, error: `Database connection error: ${error instanceof Error ? error.message : 'Unknown error'}` }
   }
 }
 

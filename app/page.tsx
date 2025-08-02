@@ -191,6 +191,13 @@ export default function ProductSurvey() {
       // Check if Supabase is configured first
       try {
         const configResponse = await fetch('/api/config/check')
+        
+        if (!configResponse.ok) {
+          console.error('❌ Config check failed with status:', configResponse.status)
+          // Don't redirect on error, just log it
+          return
+        }
+        
         const configData = await configResponse.json()
         
         console.log('🔧 [Main] Configuration check:', configData)
@@ -202,19 +209,11 @@ export default function ProductSurvey() {
         }
       } catch (error) {
         console.error('❌ Error checking configuration:', error)
+        // Don't redirect on error, just log it
       }
-      // FORCE CLEAR CORRUPT SESSION ON LOAD
-      try {
-        if (user && !user.id) {
-          console.log('🔐 [Debug] Detected corrupt user session - clearing')
-          const response = await fetch('/api/debug/clear-session', { method: 'POST' })
-          const result = await response.json()
-          console.log('🔐 [Debug] Session cleared on load:', result)
-          window.location.reload()
-          return
-        }
-      } catch (error) {
-        console.error('❌ [Debug] Error checking session on load:', error)
+      // Check for corrupt session
+      if (user && !user.id) {
+        console.log('🔐 [Debug] Detected corrupt user session - will be handled by auth context')
       }
       
       try {
@@ -223,12 +222,21 @@ export default function ProductSurvey() {
         setIsAdmin(!!userIsAdmin) // Force boolean conversion
 
         // Validate database status
-        const status = await validateDatabaseStatus()
-        setDatabaseStatus({
-          status: status.connected ? 'healthy' : (status.configured ? 'configured' : 'unconfigured'),
-          message: status.connected ? 'Database is properly configured and connected' : (status.error || 'Database not configured'),
-          details: status
-        })
+        try {
+          const status = await validateDatabaseStatus()
+          setDatabaseStatus({
+            status: status.connected ? 'healthy' : (status.configured ? 'configured' : 'unconfigured'),
+            message: status.connected ? 'Database is properly configured and connected' : (status.error || 'Database not configured'),
+            details: status
+          })
+        } catch (error) {
+          console.error('❌ Error validating database status:', error)
+          setDatabaseStatus({
+            status: 'error',
+            message: 'Error checking database status',
+            details: { error: error instanceof Error ? error.message : 'Unknown error' }
+          })
+        }
 
         // Check for survey configuration first
         const surveyConfig = localStorage.getItem("survey_config")
