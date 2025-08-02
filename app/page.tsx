@@ -187,7 +187,13 @@ export default function ProductSurvey() {
 
   // Check maintenance mode on component mount
   useEffect(() => {
+    let isMounted = true
+    let hasCheckedConfig = false
+    
     const loadSettings = async () => {
+      // Prevent multiple executions
+      if (!isMounted || hasCheckedConfig) return
+      hasCheckedConfig = true
       // Check if Supabase is configured first
       try {
         const configResponse = await fetch('/api/config/check')
@@ -204,7 +210,12 @@ export default function ProductSurvey() {
         
         if (!configData.configured) {
           console.log('🔧 [Main] Supabase not configured, redirecting to setup')
-          window.location.href = '/setup'
+          // Add a small delay to prevent rapid redirects
+          setTimeout(() => {
+            if (isMounted) {
+              window.location.href = '/setup'
+            }
+          }, 100)
           return
         }
       } catch (error) {
@@ -299,7 +310,11 @@ export default function ProductSurvey() {
     }
 
     loadSettings()
-  }, [user, profile])
+    
+    return () => {
+      isMounted = false
+    }
+  }, []) // Only run once on mount
 
   // Show loading state
   if (isLoading) {

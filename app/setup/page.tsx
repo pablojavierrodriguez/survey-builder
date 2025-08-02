@@ -282,12 +282,15 @@ export default function SetupPage() {
                               >
                                 Reconfigurar
                               </Button>
-                              <Button 
-                                onClick={() => window.location.href = '/'} 
-                                className="flex-1"
-                              >
-                                Ir a la Aplicación
-                              </Button>
+                                                          <Button 
+                              onClick={() => {
+                                // Redirect to home page, not admin
+                                window.location.href = '/'
+                              }} 
+                              className="flex-1"
+                            >
+                              Ir a la Aplicación
+                            </Button>
                             </div>
                             
                             <div className="pt-4 border-t">
