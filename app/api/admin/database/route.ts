@@ -46,16 +46,36 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const tableName = await getTableName()
 
+    // Build filters from query parameters
+    const filters: any = {}
+    const filterParams = ['role', 'seniority', 'company_type', 'industry']
+    
+    filterParams.forEach(param => {
+      const value = searchParams.get(param)
+      if (value) {
+        filters[param] = value
+      }
+    })
+
     // Calculate offset
     const offset = (page - 1) * limit
 
-    // Fetch data with pagination
+    // Temporarily disable RPC and use direct query only
     const dbStartTime = Date.now()
-    const { data, error, count } = await supabase
+    
+    // Direct query with filters
+    let query = supabase
       .from(tableName)
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
+
+    // Apply filters
+    Object.entries(filters).forEach(([key, value]) => {
+      query = query.eq(key, value)
+    })
+
+    const { data, error, count } = await query
 
     const dbDuration = Date.now() - dbStartTime
 
@@ -80,7 +100,8 @@ export async function GET(request: NextRequest) {
       totalCount: count,
       page,
       limit,
-      tableName
+      tableName,
+      filters
     })
 
     const totalDuration = Date.now() - startTime
