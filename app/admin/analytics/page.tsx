@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback, memo } from "react"
 import { getCurrentUserPermissions, getUserRole, getRoleDisplayName } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,547 +21,404 @@ interface AnalyticsData {
   totalResponses: number
 }
 
+// Memoized stop words set
 const stopWords = new Set([
-  "a",
-  "an",
-  "the",
-  "and",
-  "or",
-  "but",
-  "is",
-  "are",
-  "was",
-  "were",
-  "be",
-  "been",
-  "being",
-  "to",
-  "of",
-  "in",
-  "on",
-  "at",
-  "by",
-  "for",
-  "with",
-  "as",
-  "from",
-  "up",
-  "down",
-  "out",
-  "off",
-  "over",
-  "under",
-  "again",
-  "further",
-  "then",
-  "once",
-  "here",
-  "there",
-  "when",
-  "where",
-  "why",
-  "how",
-  "all",
-  "any",
-  "both",
-  "each",
-  "few",
-  "more",
-  "most",
-  "other",
-  "some",
-  "such",
-  "no",
-  "nor",
-  "not",
-  "only",
-  "own",
-  "same",
-  "so",
-  "than",
-  "too",
-  "very",
-  "s",
-  "t",
-  "can",
-  "will",
-  "just",
-  "don",
-  "should",
-  "now",
-  "this",
-  "that",
-  "what",
-  "with",
-  "from",
-  "your",
-  "they",
-  "have",
-  "been",
-  "will",
-  "when",
-  "where",
-  "which",
-  "such",
-  "some",
-  "more",
-  "most",
-  "also",
-  "into",
-  "than",
-  "then",
-  "there",
-  "these",
-  "those",
-  "about",
-  "after",
-  "before",
-  "below",
-  "above",
-  "under",
-  "over",
-  "through",
-  "between",
-  "among",
-  "while",
-  "until",
-  "since",
-  "upon",
-  "within",
-  "without",
-  "around",
-  "along",
-  "across",
-  "behind",
-  "beyond",
-  "beside",
-  "except",
-  "inside",
-  "outside",
-  "towards",
-  "against",
-  "amongst",
-  "because",
-  "before",
-  "during",
-  "through",
-  "without",
-  "however",
-  "therefore",
-  "although",
-  "though",
-  "unless",
-  "until",
-  "whereas",
-  "wherever",
-  "whether",
-  "whilst",
-  "would",
-  "could",
-  "should",
-  "might",
-  "must",
-  "shall",
-  "ought",
-  "used",
-  "need",
-  "dare",
-  "like",
-  "just",
-  "even",
-  "only",
-  "much",
-  "many",
-  "very",
-  "quite",
-  "rather",
-  "hardly",
-  "scarcely",
-  "barely",
-  "always",
-  "never",
-  "often",
-  "seldom",
-  "usually",
-  "rarely",
-  "already",
-  "still",
-  "soon",
-  "today",
-  "tomorrow",
-  "yesterday",
-  "tonight",
-  "daily",
-  "weekly",
-  "monthly",
-  "yearly",
-  "once",
-  "twice",
-  "thrice",
-  "first",
-  "second",
-  "third",
-  "fourth",
-  "fifth",
-  "sixth",
-  "seventh",
-  "eighth",
-  "ninth",
-  "tenth",
-  "eleventh",
-  "twelfth",
-  "etc",
+  "a", "an", "the", "and", "or", "but", "is", "are", "was", "were", "be", "been", "being",
+  "to", "of", "in", "on", "at", "by", "for", "with", "as", "from", "up", "down", "out", "off", "over", "under",
+  "again", "further", "then", "once", "here", "there", "when", "where", "why", "how",
+  "all", "any", "both", "each", "few", "more", "most", "other", "some", "such",
+  "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
+  "s", "t", "can", "will", "just", "don", "should", "now", "this", "that", "what", "with", "from", "your", "they", "have", "been"
 ])
 
+// Memoized utility functions
 const getNGrams = (text: string, n: number) => {
-  const cleanedWords = text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, "") // Remove punctuation
-    .split(/\s+/) // Split by whitespace
-    .filter((word) => word.length > 0 && !stopWords.has(word)) // Filter empty words and stopwords
-
-  const ngrams: string[] = []
-  for (let i = 0; i <= cleanedWords.length - n; i++) {
-    ngrams.push(cleanedWords.slice(i, i + n).join(" "))
+  const words = text.toLowerCase().split(/\s+/).filter(word => !stopWords.has(word))
+  const ngrams = []
+  for (let i = 0; i <= words.length - n; i++) {
+    ngrams.push(words.slice(i, i + n).join(' '))
   }
   return ngrams
 }
 
-// Helper function to categorize salaries into ranges
 const getSalaryRange = (salary: number, currency: string): string => {
-  if (currency === "USD") {
-    if (salary < 50000) return "< $50K USD"
-    if (salary < 80000) return "$50K - $80K USD"
-    if (salary < 120000) return "$80K - $120K USD"
-    if (salary < 180000) return "$120K - $180K USD"
-    return "> $180K USD"
-  } else { // ARS
-    if (salary < 1000000) return "< $1M ARS"
-    if (salary < 2000000) return "$1M - $2M ARS"
-    if (salary < 3500000) return "$2M - $3.5M ARS"
-    if (salary < 5000000) return "$3.5M - $5M ARS"
-    return "> $5M ARS"
-  }
+  if (salary < 30000) return `$${currency} < 30k`
+  if (salary < 50000) return `$${currency} 30k-50k`
+  if (salary < 80000) return `$${currency} 50k-80k`
+  if (salary < 120000) return `$${currency} 80k-120k`
+  return `$${currency} > 120k`
 }
 
-export default function AnalyticsPage() {
-  const [data, setData] = useState<AnalyticsData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const { user, profile } = useAuth()
-  const userRole = profile?.role || 'viewer'
-  const permissions = getCurrentUserPermissions(userRole as any)
+// Memoized chart component
+const RankingChart = memo(({ 
+  data, 
+  title, 
+  icon, 
+  maxItems = 10 
+}: { 
+  data: { [key: string]: number }
+  title: string
+  icon: React.ReactNode
+  maxItems?: number
+}) => {
+  const sortedData = useMemo(() => {
+    return Object.entries(data)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, maxItems)
+  }, [data, maxItems])
 
-  useEffect(() => {
-    // Get user role from auth
-    // const authStr = localStorage.getItem("survey_auth")
-    // if (authStr) {
-    //   try {
-    //     const auth = JSON.parse(authStr)
-    //     setUserRole(auth.role)
-    //   } catch (error) {
-    //     console.error("Error getting user role:", error)
-    //   }
-    // }
-  }, [])
+  const total = useMemo(() => {
+    return Object.values(data).reduce((sum, count) => sum + count, 0)
+  }, [data])
 
-  useEffect(() => {
-    fetchAnalyticsData()
-  }, [])
-
-  const fetchAnalyticsData = async () => {
-    setIsLoading(true)
-    try {
-      // Use the analytics API endpoint
-      const response = await fetch('/api/admin/analytics')
-
-      if (response.ok) {
-        const result = await response.json()
-        
-        if (result.success && result.data) {
-          // Use the processed data from the API
-          const analyticsData = result.data
-          setData(analyticsData)
-        } else {
-          throw new Error(result.error || 'Failed to fetch analytics data')
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-    } catch (error) {
-      console.error("Error fetching analytics data:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const exportAnalyticsJson = () => {
-    if (!data) return
-
-    const analyticsReport = {
-      generatedAt: new Date().toISOString(),
-      totalResponses: data.totalResponses,
-      roleDistribution: data.roleDistribution,
-      seniorityDistribution: data.seniorityDistribution,
-      industryDistribution: data.industryDistribution,
-      companyDistribution: data.companyDistribution,
-      toolsUsage: data.toolsUsage,
-      learningMethods: data.learningMethods,
-    }
-
-    const blob = new Blob([JSON.stringify(analyticsReport, null, 2)], { type: "application/json" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `analytics-report-${new Date().toISOString().split("T")[0]}.json`
-    a.click()
-    window.URL.revokeObjectURL(url)
-  }
-
-  const exportAnalyticsCsv = () => {
-    if (!data) return
-
-    const headers = ["Category", "Item", "Count", "Percentage"]
-
-    const rows: string[][] = []
-
-    const addDistributionToRows = (dist: { [key: string]: number }, category: string, total: number) => {
-      Object.entries(dist).forEach(([item, count]) => {
-        const percentage = total > 0 ? ((count / total) * 100).toFixed(2) : "0.00"
-        rows.push([category, item, count.toString(), percentage])
-      })
-    }
-
-    addDistributionToRows(data.roleDistribution, "Role Distribution", data.totalResponses)
-    addDistributionToRows(data.seniorityDistribution, "Seniority Distribution", data.totalResponses)
-    addDistributionToRows(data.industryDistribution, "Industry Distribution", data.totalResponses)
-    addDistributionToRows(data.companyDistribution, "Company Distribution", data.totalResponses)
-
-    const totalTools = Object.values(data.toolsUsage).reduce((sum, count) => sum + count, 0)
-    addDistributionToRows(data.toolsUsage, "Tools Usage", totalTools)
-
-    const totalLearningMethods = Object.values(data.learningMethods).reduce((sum, count) => sum + count, 0)
-    addDistributionToRows(data.learningMethods, "Learning Methods Usage", totalLearningMethods)
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((field) => `"${field.replace(/"/g, '""')}"`).join(",")),
-    ].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    link.setAttribute("download", `analytics-report-${new Date().toISOString().split("T")[0]}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  const renderRankingChart = (data: { [key: string]: number }, title: string, icon: React.ReactNode) => {
-    const entries = Object.entries(data).sort(([, a], [, b]) => b - a)
-    const total = entries.reduce((sum, [, value]) => sum + value, 0)
-
+  if (sortedData.length === 0) {
     return (
-      <Card className="dark:bg-gray-800 dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-50">
-            {icon}
-            {title}
-          </CardTitle>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          {icon}
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {entries.slice(0, 10).map(([key, value], index) => {
-              const percentage = total > 0 ? Math.round((value / total) * 100) : 0
-              return (
-                <div key={key} className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 w-8">
-                    {index < 3 ? (
-                      <Trophy
-                        className={`w-4 h-4 ${index === 0 ? "text-yellow-500" : index === 1 ? "text-gray-400" : "text-orange-600"}`}
-                      />
-                    ) : (
-                      <span className="text-sm text-gray-500 font-medium dark:text-gray-400">#{index + 1}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate dark:text-gray-50" title={key}>
-                      {key}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-gray-500 w-12 text-right dark:text-gray-400">{percentage}%</div>
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold text-gray-900 w-8 text-right dark:text-gray-50">{value}</div>
-                </div>
-              )
-            })}
-          </div>
+          <p className="text-sm text-muted-foreground">No data available</p>
         </CardContent>
       </Card>
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">Analytics Dashboard</h1>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse dark:bg-gray-800 dark:border-gray-700">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4 dark:bg-gray-700"></div>
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, j) => (
-                    <div key={j} className="h-6 bg-gray-200 rounded dark:bg-gray-700"></div>
-                  ))}
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {sortedData.map(([key, count]) => (
+            <div key={key} className="flex items-center justify-between">
+              <span className="text-sm truncate flex-1">{key}</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-16 bg-secondary rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full"
+                    style={{ width: `${(count / total) * 100}%` }}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <span className="text-sm font-medium min-w-[3rem] text-right">
+                  {count}
+                </span>
+              </div>
+            </div>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  )
+})
+
+RankingChart.displayName = 'RankingChart'
+
+// Memoized stats card component
+const StatsCard = memo(({ 
+  title, 
+  value, 
+  icon, 
+  description 
+}: { 
+  title: string
+  value: string | number
+  icon: React.ReactNode
+  description?: string
+}) => (
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      {icon}
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{value}</div>
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
+    </CardContent>
+  </Card>
+))
+
+StatsCard.displayName = 'StatsCard'
+
+export default function AnalyticsPage() {
+  const { user } = useAuth()
+  const [data, setData] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
+  // Memoized permissions check
+  const permissions = useMemo(() => {
+    return getCurrentUserPermissions(user)
+  }, [user])
+
+  // Memoized fetch function
+  const fetchAnalyticsData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch('/api/admin/analytics')
+      const result = await response.json()
+      
+      if (result.success) {
+        setData(result.data)
+        setLastUpdated(new Date())
+      } else {
+        setError(result.error || 'Failed to fetch analytics data')
+      }
+    } catch (err) {
+      setError('Network error occurred')
+      console.error('Error fetching analytics:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Memoized export functions
+  const exportAnalyticsJson = useCallback(() => {
+    if (!data) return
+    
+    const exportData = {
+      ...data,
+      exportedAt: new Date().toISOString()
+    }
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `analytics-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [data])
+
+  const exportAnalyticsCsv = useCallback(() => {
+    if (!data) return
+
+    const addDistributionToRows = (dist: { [key: string]: number }, category: string, total: number) => {
+      const rows = []
+      Object.entries(dist).forEach(([key, count]) => {
+        rows.push({
+          category,
+          value: key,
+          count,
+          percentage: ((count / total) * 100).toFixed(2)
+        })
+      })
+      return rows
+    }
+
+    const csvRows = []
+    csvRows.push(['Category', 'Value', 'Count', 'Percentage'])
+
+    // Add all distributions
+    const total = data.totalResponses
+    if (total > 0) {
+      csvRows.push(...addDistributionToRows(data.roleDistribution, 'Role', total).map(row => 
+        [row.category, row.value, row.count, row.percentage]
+      ))
+      csvRows.push(...addDistributionToRows(data.seniorityDistribution, 'Seniority', total).map(row => 
+        [row.category, row.value, row.count, row.percentage]
+      ))
+      csvRows.push(...addDistributionToRows(data.companyDistribution, 'Company Type', total).map(row => 
+        [row.category, row.value, row.count, row.percentage]
+      ))
+      csvRows.push(...addDistributionToRows(data.industryDistribution, 'Industry', total).map(row => 
+        [row.category, row.value, row.count, row.percentage]
+      ))
+      csvRows.push(...addDistributionToRows(data.toolsUsage, 'Tools', total).map(row => 
+        [row.category, row.value, row.count, row.percentage]
+      ))
+      csvRows.push(...addDistributionToRows(data.learningMethods, 'Learning Methods', total).map(row => 
+        [row.category, row.value, row.count, row.percentage]
+      ))
+    }
+
+    const csvContent = csvRows.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [data])
+
+  // Load data on mount
+  useEffect(() => {
+    fetchAnalyticsData()
+  }, [fetchAnalyticsData])
+
+  // Memoized loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <span>Loading analytics...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={fetchAnalyticsData}>Retry</Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-muted-foreground">No data available</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
-            {userRole === "admin" ? "Analytics Dashboard" : "Survey Analytics"}
-          </h1>
-          {userRole === "viewer" && (
-            <p className="text-gray-600 mt-1 dark:text-gray-400">View survey response analytics and insights</p>
-          )}
+          <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+          <p className="text-muted-foreground">
+            Survey response analytics and insights
+            {lastUpdated && (
+              <span className="ml-2 text-xs">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+          </p>
         </div>
-        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+        
+        <div className="flex items-center space-x-2">
           <Button
-            onClick={fetchAnalyticsData}
             variant="outline"
-            className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 bg-transparent cursor-pointer"
+            size="sm"
+            onClick={fetchAnalyticsData}
+            disabled={loading}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          {permissions.canExportData && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Report
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="dark:bg-gray-800 dark:border-gray-700">
-                <DropdownMenuItem
-                  onClick={exportAnalyticsJson}
-                  className="cursor-pointer dark:hover:bg-gray-700 dark:text-gray-50"
-                >
-                  Export JSON
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={exportAnalyticsCsv}
-                  className="cursor-pointer dark:hover:bg-gray-700 dark:text-gray-50"
-                >
-                  Export CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={exportAnalyticsJson}>
+                Export as JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportAnalyticsCsv}>
+                Export as CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Responses</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">{data?.totalResponses || 0}</p>
-              </div>
-              <Users className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Unique Roles</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.roleDistribution).length : 0}
-                </p>
-              </div>
-              <PieChart className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Company Types</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.companyDistribution).length : 0}
-                </p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Unique Tools</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.toolsUsage).length : 0}
-                </p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Learning Methods</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  {data ? Object.keys(data.learningMethods).length : 0}
-                </p>
-              </div>
-              <MessageSquare className="w-8 h-8 text-indigo-500" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Total Responses"
+          value={data.totalResponses}
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+        />
+        <StatsCard
+          title="Roles"
+          value={Object.keys(data.roleDistribution).length}
+          icon={<Trophy className="h-4 w-4 text-muted-foreground" />}
+        />
+        <StatsCard
+          title="Industries"
+          value={Object.keys(data.industryDistribution).length}
+          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+        />
+        <StatsCard
+          title="Tools Used"
+          value={Object.keys(data.toolsUsage).length}
+          icon={<MessageSquare className="h-4 w-4 text-muted-foreground" />}
+        />
       </div>
 
-      {/* Analytics Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        {data && renderRankingChart(data.roleDistribution, "Role Distribution", <Users className="w-5 h-5" />)}
-                        {data && renderRankingChart(data.companyDistribution, "Company Distribution", <BarChart3 className="w-5 h-5" />)}
+      {/* Charts Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <RankingChart
+          data={data.roleDistribution}
+          title="Role Distribution"
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+        />
+        <RankingChart
+          data={data.seniorityDistribution}
+          title="Seniority Distribution"
+          icon={<Trophy className="h-4 w-4 text-muted-foreground" />}
+        />
+        <RankingChart
+          data={data.companyDistribution}
+          title="Company Type"
+          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+        />
+        <RankingChart
+          data={data.industryDistribution}
+          title="Industry Distribution"
+          icon={<PieChart className="h-4 w-4 text-muted-foreground" />}
+        />
+        <RankingChart
+          data={data.toolsUsage}
+          title="Most Used Tools"
+          icon={<MessageSquare className="h-4 w-4 text-muted-foreground" />}
+          maxItems={8}
+        />
+        <RankingChart
+          data={data.learningMethods}
+          title="Learning Methods"
+          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+          maxItems={8}
+        />
       </div>
 
-      {/* Tools Ranking and Learning Methods */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        {data && renderRankingChart(data.toolsUsage, "Most Used Tools Ranking", <Trophy className="w-5 h-5" />)}
-        {data &&
-          renderRankingChart(data.learningMethods, "Learning Methods Ranking", <BarChart3 className="w-5 h-5" />)}
-      </div>
-
-
+      {/* Recent Responses */}
+      {data.recentResponses && data.recentResponses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Responses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {data.recentResponses.slice(0, 5).map((response: any) => (
+                <div key={response.id} className="flex items-center justify-between p-2 border rounded">
+                  <div>
+                    <p className="font-medium">{response.role || 'Unknown Role'}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {response.company_type} • {response.industry}
+                    </p>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(response.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
