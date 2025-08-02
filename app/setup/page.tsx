@@ -206,7 +206,7 @@ export default function SetupPage() {
                                 type="password"
                                 value={supabaseKey}
                                 onChange={(e) => setSupabaseKey(e.target.value)}
-                                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                placeholder="Ingresa tu Supabase Anon Key"
                                 className="w-full"
                               />
                             </div>
