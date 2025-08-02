@@ -180,7 +180,7 @@ export default function SetupPage() {
                                 type="text"
                                 value={appName}
                                 onChange={(e) => setAppName(e.target.value)}
-                                placeholder="Product Community Survey"
+                                placeholder="Nombre de tu aplicación"
                                 className="w-full"
                               />
                             </div>
