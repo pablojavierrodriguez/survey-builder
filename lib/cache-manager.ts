@@ -21,7 +21,7 @@ class CacheManager {
   }
 
   // Default TTL: 5 minutes
-  private defaultTTL = 5 * 60 * 1000
+  public readonly defaultTTL = 5 * 60 * 1000
 
   /**
    * Get data from cache
