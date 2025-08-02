@@ -123,15 +123,15 @@ export default function SettingsPage() {
         setUsers([])
         return
       }
-      // Try to fetch from user_management view first
-      const { data: viewData, error: viewError } = await client
-        .from('user_management')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (!viewError && viewData) {
-        setUsers(viewData || [])
+      
+      // Use the secure function instead of the problematic view
+      const { data: userData, error: userError } = await client
+        .rpc('get_user_management_data')
+      
+      if (!userError && userData) {
+        setUsers(userData || [])
       } else {
-        // Fallback to profiles table
+        // Fallback to profiles table if function fails
         const { data: profileData, error: profileError } = await client
           .from('profiles')
           .select('*')
