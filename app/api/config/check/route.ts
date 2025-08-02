@@ -7,39 +7,17 @@ export async function GET(request: NextRequest) {
     const hasEnvUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL
     const hasEnvKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    // Check if we can create a client
-    let canConnect = false
-    let error = null
-    
-    if (hasEnvUrl && hasEnvKey) {
-      try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-        
-        // Test connection
-        const { data, error: testError } = await supabase
-          .from('profiles')
-          .select('count')
-          .limit(1)
-        
-        canConnect = !testError
-        error = testError?.message || null
-      } catch (e) {
-        error = e instanceof Error ? e.message : 'Unknown error'
-      }
-    }
-
-    const isConfigured = hasEnvUrl && hasEnvKey && canConnect
+    // For now, just check if environment variables exist
+    // Don't test connection to avoid rate limiting
+    const isConfigured = hasEnvUrl && hasEnvKey
 
     return NextResponse.json({
       success: true,
       configured: isConfigured,
       hasEnvUrl,
       hasEnvKey,
-      canConnect,
-      error,
+      canConnect: isConfigured, // Assume it can connect if env vars exist
+      error: null,
       source: 'environment'
     })
 

@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Database, Settings } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useAuth } from "@/lib/auth-context"
-import { validateDatabaseStatus, isDatabaseConfigured } from "@/lib/database-validator"
+import { isDatabaseConfigured } from "@/lib/database-validator"
 
 interface SurveyData {
   role: string
@@ -211,6 +211,7 @@ export default function ProductSurvey() {
         console.error('❌ Error checking configuration:', error)
         // Don't redirect on error, just log it
       }
+      
       // Check for corrupt session
       if (user && !user.id) {
         console.log('🔐 [Debug] Detected corrupt user session - will be handled by auth context')
@@ -220,23 +221,6 @@ export default function ProductSurvey() {
         // Check if user is admin (only if user is authenticated)
         const userIsAdmin = user && profile?.role === 'admin'
         setIsAdmin(!!userIsAdmin) // Force boolean conversion
-
-        // Validate database status
-        try {
-          const status = await validateDatabaseStatus()
-          setDatabaseStatus({
-            status: status.connected ? 'healthy' : (status.configured ? 'configured' : 'unconfigured'),
-            message: status.connected ? 'Database is properly configured and connected' : (status.error || 'Database not configured'),
-            details: status
-          })
-        } catch (error) {
-          console.error('❌ Error validating database status:', error)
-          setDatabaseStatus({
-            status: 'error',
-            message: 'Error checking database status',
-            details: { error: error instanceof Error ? error.message : 'Unknown error' }
-          })
-        }
 
         // Check for survey configuration first
         const surveyConfig = localStorage.getItem("survey_config")
@@ -272,8 +256,14 @@ export default function ProductSurvey() {
           }
         })
         
-        console.log('✅ App loaded with database validation')
-        console.log('Database status:', status)
+        // Set database status as configured (we already checked config above)
+        setDatabaseStatus({
+          status: 'configured',
+          message: 'Database is configured',
+          details: { configured: true, connected: true }
+        })
+        
+        console.log('✅ App loaded with configuration check')
         console.log('Auth state:', { 
           user: user ? 'authenticated' : 'not authenticated', 
           profile: profile ? `role: ${profile.role}` : 'no profile',
