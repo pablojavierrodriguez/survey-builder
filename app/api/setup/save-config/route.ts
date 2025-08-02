@@ -27,32 +27,39 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use the setup function to handle configuration
-    const { data: setupResult, error: setupError } = await supabase
-      .rpc('setup_initial_config', {
-        supabase_url: supabaseUrl,
-        supabase_key: supabaseKey,
-        public_url: publicUrl,
-        app_name: appName
+    // Save configuration to database (RLS policy handles first-time access)
+    const { error: saveError } = await supabase
+      .from('app_settings')
+      .upsert({
+        environment: 'dev',
+        settings: {
+          database: {
+            url: supabaseUrl,
+            apiKey: supabaseKey,
+            tableName: 'pc_survey_data_dev',
+            environment: 'development'
+          },
+          general: {
+            appName: appName || 'Product Community Survey (DEV)',
+            publicUrl: publicUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://productcommunitysurvey-dev.vercel.app',
+            maintenanceMode: false,
+            analyticsEnabled: true
+          }
+        }
+      }, {
+        onConflict: 'environment'
       })
 
-    if (setupError) {
+    if (saveError) {
       return NextResponse.json(
-        { success: false, error: `Error al guardar: ${setupError.message}` },
-        { status: 500 }
-      )
-    }
-
-    if (!setupResult?.success) {
-      return NextResponse.json(
-        { success: false, error: setupResult?.error || 'Error desconocido al guardar' },
+        { success: false, error: `Error al guardar: ${saveError.message}` },
         { status: 500 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      message: setupResult.message || 'Configuración guardada exitosamente'
+      message: 'Configuración guardada exitosamente'
     })
 
   } catch (error) {
