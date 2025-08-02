@@ -88,6 +88,8 @@ export default function SettingsPage() {
       const config = result.data
       
       // Map to local AppSettings shape
+      console.log('🔧 [Settings] Loading config:', config)
+      
       const apiSettings: AppSettings = {
         database: {
           url: config.database?.url || (debugMode ? process.env.NEXT_PUBLIC_SUPABASE_URL || '' : ''),
@@ -105,6 +107,8 @@ export default function SettingsPage() {
         security: config.security,
         features: config.features,
       }
+      
+      console.log('🔧 [Settings] Mapped settings:', apiSettings)
       setSettings(apiSettings)
       setSupabaseConfigured(!!(config.database?.url && config.database?.apiKey))
     } catch (error) {
