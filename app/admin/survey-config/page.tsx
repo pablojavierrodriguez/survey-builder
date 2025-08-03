@@ -361,19 +361,20 @@ export default function SurveyConfigPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">Survey Configuration</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage survey settings and questions</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">Survey Configuration</h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage survey settings and questions</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:gap-3">
           <Button
             onClick={() => saveConfig()}
             disabled={saveStatus === "saving"}
-            className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700"
+            size="sm"
+            className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 text-xs sm:text-sm"
           >
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved!" : "Save Changes"}
           </Button>
         </div>
@@ -442,10 +443,14 @@ export default function SurveyConfigPage() {
                 {config.questions.length} visible)
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 sm:gap-3">
               {userRole === "admin" && (
-                <Button onClick={addQuestion} className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700">
-                  <Plus className="w-4 h-4 mr-2" />
+                <Button 
+                  onClick={addQuestion} 
+                  size="sm"
+                  className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 text-xs sm:text-sm"
+                >
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                   Add Question
                 </Button>
               )}

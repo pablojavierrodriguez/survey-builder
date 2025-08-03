@@ -898,7 +898,7 @@ export default function ProductSurvey() {
                   }}
                   variant="outline"
                   size="sm"
-                  className="ml-1 px-2 h-7 text-xs"
+                  className="ml-1 px-2 h-7 text-xs hidden sm:inline-flex"
                 >
                   Clear
                 </Button>

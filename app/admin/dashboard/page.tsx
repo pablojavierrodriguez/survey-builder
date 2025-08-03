@@ -364,18 +364,18 @@ export default function AdminDashboard() {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
-              <Activity className="h-5 w-5" />
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
               Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
             {stats?.recentResponses && stats.recentResponses.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {stats.recentResponses.slice(0, 5).map((response, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <div key={index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-primary rounded-full flex-shrink-0"></div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
+                      <p className="text-xs sm:text-sm font-medium text-foreground truncate">
                         {response.role || "Anonymous"} from {response.industry || "Unknown Industry"}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -386,9 +386,9 @@ export default function AdminDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No responses yet</p>
+              <div className="text-center py-6 sm:py-8">
+                <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2 sm:mb-3" />
+                <p className="text-xs sm:text-sm text-muted-foreground">No responses yet</p>
                 <p className="text-xs text-muted-foreground">Survey responses will appear here</p>
               </div>
             )}

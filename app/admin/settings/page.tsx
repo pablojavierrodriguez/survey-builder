@@ -327,30 +327,34 @@ export default function SettingsPage() {
         </Alert>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Settings</h1>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline">{getRoleDisplayName(userRole as UserRole)}</Badge>
+            <Badge variant="outline" className="text-xs">{getRoleDisplayName(userRole as UserRole)}</Badge>
             {!permissions.canEditSettings && (
               <Badge variant="secondary" className="text-xs">Read-Only</Badge>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:gap-3">
           {/* Debug mode removed - not functional */}
           <Button 
             onClick={() => window.location.href = '/setup'} 
             variant="outline"
+            size="sm"
+            className="text-xs sm:text-sm"
           >
-            <Settings className="w-4 h-4 mr-2" />
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             Setup Wizard
           </Button>
           <Button 
             onClick={saveSettings} 
             disabled={saving || !permissions.canEditSettings}
+            size="sm"
+            className="text-xs sm:text-sm"
           >
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
