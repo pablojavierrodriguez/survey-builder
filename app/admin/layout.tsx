@@ -137,36 +137,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       `}>
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex h-16 items-center justify-between px-6 border-b border-border">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">PC</span>
+          <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 border-b border-border">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-xs sm:text-sm">PC</span>
               </div>
-              <span className="font-semibold text-lg">Panel</span>
+              <span className="font-semibold text-base sm:text-lg">Panel</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-md hover:bg-accent"
+              className="lg:hidden p-2 rounded-md hover:bg-accent transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* User Info */}
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
+          <div className="p-3 sm:p-4 border-b border-border">
+            <div className="flex items-center space-x-2.5 sm:space-x-3">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user.email}</p>
+                <p className="text-xs sm:text-sm font-medium truncate">{user.email}</p>
                 <p className="text-xs text-muted-foreground capitalize">{currentUserRole}</p>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 sm:px-4 py-3 sm:py-4 space-y-1 overflow-y-auto">
             {filteredNavigation.map((item) => {
               const isActive = pathname === item.href
               return (
@@ -175,14 +175,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
                   className={`
-                    flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    flex items-center space-x-2.5 sm:space-x-3 px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors
                     ${isActive 
                       ? 'bg-primary text-primary-foreground' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                     }
                   `}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span>{item.name}</span>
                 </Link>
               )
@@ -190,13 +190,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-border">
+          <div className="p-3 sm:p-4 border-t border-border">
             <Button
               variant="outline"
               onClick={handleLogout}
-              className="w-full justify-start"
+              size="sm"
+              className="w-full justify-start text-xs sm:text-sm"
             >
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
               Sign Out
             </Button>
           </div>
@@ -206,25 +207,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex h-16 items-center justify-between px-6 border-b border-border bg-background">
+        <header className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 border-b border-border bg-background">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 rounded-md hover:bg-accent"
+            className="lg:hidden p-2 rounded-md hover:bg-accent transition-colors"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 sm:space-x-4">
             <div className="hidden sm:block">
-              <h1 className="text-lg font-semibold">Product Community Survey</h1>
+              <h1 className="text-base sm:text-lg font-semibold">Product Community Survey</h1>
             </div>
             <ModeToggle />
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

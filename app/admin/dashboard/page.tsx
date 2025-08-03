@@ -234,7 +234,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Demo Mode Banner */}
       {userRole === 'admin-demo' && (
         <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
@@ -247,31 +247,31 @@ export default function AdminDashboard() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Overview of your survey responses and analytics • {getRoleDisplayName(userRole as UserRole)}
           </p>
         </div>
-        <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading}>
-          <Activity className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+        <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading} className="text-xs sm:text-sm">
+          <Activity className={`w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           {isLoading ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Total Responses
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{stats?.totalResponses || 0}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="pt-2">
+            <div className="text-xl sm:text-2xl font-bold text-foreground">{stats?.totalResponses || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               +{stats?.todayResponses || 0} today
             </p>
           </CardContent>
