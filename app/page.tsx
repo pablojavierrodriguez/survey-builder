@@ -294,7 +294,7 @@ export default function ProductSurvey() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return surveyData.role !== ""
+        return surveyData.role !== "" && (surveyData.role !== "Other" || surveyData.other_role.trim() !== "")
       case 2:
         return surveyData.seniority !== ""
       case 3:
@@ -353,7 +353,7 @@ export default function ProductSurvey() {
     const hasPrevious = currentStep > 1
     const hasNext = currentStep < totalSteps
     const isRequired = currentStep !== 10 // Salary is optional
-    const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
+    const isAutoAdvance = currentStep >= 2 && currentStep <= 6 // Single-choice questions (excluding case 1 which can have "Other")
     const canProceedResult = canProceed()
 
     return {
@@ -370,14 +370,67 @@ export default function ProductSurvey() {
     switch (currentStep) {
       case 1:
         return (
-          <SingleChoiceQuestion
-            question="What's your current role?"
-            options={roleOptions}
-            onSelect={handleRoleSelect}
-            onNext={handleNext}
-            autoAdvance={true}
-            delay={500}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              What's your current role?
+            </motion.h2>
+            
+            {/* Role Options */}
+            <div className="space-y-3">
+              {roleOptions.map((role) => (
+                <motion.button
+                  key={role}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleRoleSelect(role)}
+                  className={`
+                    w-full p-4 md:p-5 text-left rounded-xl border-2 transition-all duration-200
+                    min-h-[56px] md:min-h-[64px] flex items-center justify-between
+                    ${surveyData.role === role
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
+                    }
+                  `}
+                >
+                  <span className="text-base md:text-lg font-medium leading-relaxed">
+                    {role}
+                  </span>
+                  
+                  {surveyData.role === role && (
+                    <Check className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  )}
+                </motion.button>
+              ))}
+            </div>
+
+            {/* Other Role Input */}
+            {surveyData.role === "Other" && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3"
+              >
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Please specify your role:
+                </label>
+                <Input
+                  type="text"
+                  value={surveyData.other_role}
+                  onChange={(e) => handleOtherRoleChange(e.target.value)}
+                  placeholder="Enter your role..."
+                  className="w-full p-4 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </motion.div>
+            )}
+          </motion.div>
         )
 
       case 2:
@@ -714,23 +767,7 @@ export default function ProductSurvey() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-between items-center mt-6">
-              <Button
-                onClick={handlePrevious}
-                variant="outline"
-                className="px-6 py-2"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                onClick={handleNext}
-                className="px-8 py-3"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+
           </motion.div>
         )
 
@@ -762,23 +799,7 @@ export default function ProductSurvey() {
             {surveyData.email && !isValidEmail(surveyData.email) && (
               <p className="text-red-500 dark:text-red-400 text-sm">Please enter a valid email address</p>
             )}
-            <div className="flex justify-between items-center">
-              <Button
-                onClick={handlePrevious}
-                variant="outline"
-                className="px-6 py-2"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                onClick={handleNext}
-                className="px-8 py-3"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+
           </motion.div>
         )
 
@@ -958,7 +979,7 @@ export default function ProductSurvey() {
           </AnimatePresence>
 
           {/* Centralized Navigation */}
-          {currentStep <= totalSteps && (
+          {currentStep < totalSteps && (
             <div className="mt-8 flex justify-between items-center">
               {(() => {
                 const navConfig = getNavigationConfig()
