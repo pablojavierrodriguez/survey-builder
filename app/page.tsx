@@ -451,12 +451,12 @@ export default function ProductSurvey() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
+            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
           >
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
             >
               What's your main product-related challenge?
             </motion.h2>
@@ -464,7 +464,7 @@ export default function ProductSurvey() {
               value={surveyData.main_challenge}
               onChange={(e) => handleChallengeChange(e.target.value)}
               placeholder="Describe your biggest challenge in product management, design, or development..."
-              className="min-h-32 text-lg p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="min-h-28 sm:min-h-32 text-sm sm:text-base md:text-lg p-3 sm:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
             />
           </motion.div>
         )
@@ -474,39 +474,39 @@ export default function ProductSurvey() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
+            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
           >
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
             >
               What tools do you use daily? (Select all that apply)
             </motion.h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
               {toolOptions.map((tool) => (
                 <motion.button
                   key={tool}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
                   onClick={() => handleToolToggle(tool)}
                   className={`
-                    p-4 text-left rounded-xl border-2 transition-all duration-200
-                    min-h-[56px] flex items-center justify-between
+                    p-3.5 sm:p-4 text-left rounded-xl border-2 transition-all duration-200
+                    min-h-[52px] sm:min-h-[56px] flex items-center justify-between
                     ${surveyData.daily_tools.includes(tool)
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm'
                       : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
                     }
                   `}
                 >
-                  <span className="text-base font-medium">{tool}</span>
+                  <span className="text-sm sm:text-base font-medium pr-2">{tool}</span>
                   {surveyData.daily_tools.includes(tool) && (
-                    <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                   )}
                 </motion.button>
               ))}
             </div>
-            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
               {surveyData.daily_tools.length} selected
             </div>
           </motion.div>
@@ -856,32 +856,36 @@ export default function ProductSurvey() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
       {/* Header */}
-      <header className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14 sm:h-16">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+      <header className="sticky top-0 z-50 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+              <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">
                 Product Community Survey
               </h1>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">
               <ModeToggle />
               {/* Login/Admin Panel Button */}
               {user ? (
                 <Button
                   onClick={() => window.location.href = '/admin/dashboard'}
-                  className="px-4 sm:px-6 py-2 text-sm"
+                  size="sm"
+                  className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
                 >
-                  <Shield className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                  Admin Panel
+                  <Shield className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Admin Panel</span>
+                  <span className="sm:hidden">Panel</span>
                 </Button>
               ) : (
                 <Button
                   onClick={() => window.location.href = '/auth/login'}
-                  className="px-4 sm:px-6 py-2 text-sm"
+                  size="sm"
+                  className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
                 >
-                  <Shield className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                  Login
+                  <Shield className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Login</span>
+                  <span className="sm:hidden">Login</span>
                 </Button>
               )}
 
@@ -894,9 +898,9 @@ export default function ProductSurvey() {
                   }}
                   variant="outline"
                   size="sm"
-                  className="ml-2 text-xs"
+                  className="ml-1 px-2 h-7 text-xs"
                 >
-                  Clear Session
+                  Clear
                 </Button>
               )}
             </div>
@@ -905,11 +909,11 @@ export default function ProductSurvey() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+      <main className="flex-1 py-3 sm:py-4 md:py-6 lg:py-8 px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="max-w-3xl lg:max-w-4xl mx-auto">
           {/* Progress Bar */}
           {currentStep <= totalSteps && (
-            <div className="mb-6 sm:mb-8">
+            <div className="mb-4 sm:mb-5 md:mb-6 lg:mb-8">
               <SurveyProgress
                 current={currentStep}
                 total={totalSteps}
@@ -933,7 +937,7 @@ export default function ProductSurvey() {
 
           {/* Centralized Navigation */}
           {currentStep < totalSteps && (
-            <div className="mt-8 flex justify-between items-center">
+            <div className="mt-6 sm:mt-7 md:mt-8 flex justify-between items-center gap-3">
               {(() => {
                 const navConfig = getNavigationConfig()
                 return (
@@ -942,9 +946,10 @@ export default function ProductSurvey() {
                       <Button
                         onClick={handlePrevious}
                         variant="outline"
-                        className="px-4 sm:px-6 py-2 text-sm"
+                        size="sm"
+                        className="px-3 sm:px-4 md:px-6 h-9 sm:h-10 md:h-11 text-sm"
                       >
-                        <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        <ArrowLeft className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         Back
                       </Button>
                     ) : (
@@ -955,10 +960,11 @@ export default function ProductSurvey() {
                       <Button
                         onClick={handleNext}
                         disabled={navConfig.continueDisabled}
-                        className="px-4 sm:px-6 py-2 text-sm"
+                        size="sm"
+                        className="px-3 sm:px-4 md:px-6 h-9 sm:h-10 md:h-11 text-sm"
                       >
                         Continue
-                        <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
                     )}
                   </>

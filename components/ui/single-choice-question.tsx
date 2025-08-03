@@ -63,20 +63,20 @@ export function SingleChoiceQuestion({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className={`w-full max-w-2xl mx-auto space-y-6 ${className}`}
+      className={`w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6 ${className}`}
     >
       {/* Question */}
       <motion.h2
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed"
+        className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
       >
         {question}
       </motion.h2>
 
       {/* Options */}
-      <div className="space-y-3">
+      <div className="space-y-2.5 sm:space-y-3">
         <AnimatePresence>
           {options.map((option, index) => (
             <motion.button
@@ -84,25 +84,25 @@ export function SingleChoiceQuestion({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 + index * 0.1 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               onClick={() => handleOptionSelect(option)}
               disabled={selectedValue === option || isAdvancing}
               className={`
-                w-full p-4 md:p-5 text-left rounded-xl border-2 transition-all duration-200
-                min-h-[56px] md:min-h-[64px] flex items-center justify-between
+                w-full p-3.5 sm:p-4 md:p-5 text-left rounded-xl border-2 transition-all duration-200
+                min-h-[52px] sm:min-h-[56px] md:min-h-[64px] flex items-center justify-between
                 ${selectedValue === option
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm'
                   : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
                 }
                 ${selectedValue && selectedValue !== option
                   ? 'opacity-50 cursor-not-allowed'
-                  : 'cursor-pointer hover:shadow-md'
+                  : 'cursor-pointer hover:shadow-sm active:shadow-md'
                 }
                 ${isAdvancing ? 'pointer-events-none' : ''}
               `}
             >
-              <span className="text-base md:text-lg font-medium leading-relaxed">
+              <span className="text-sm sm:text-base md:text-lg font-medium leading-relaxed pr-2">
                 {option}
               </span>
               
@@ -132,14 +132,14 @@ export function SingleChoiceQuestion({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center"
+          className="text-center pt-2"
         >
           <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 1, repeat: Infinity }}
-            className="inline-flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="inline-flex items-center space-x-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full"
           >
-            <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse" />
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse" />
             <span>Avanzando automáticamente...</span>
           </motion.div>
         </motion.div>
