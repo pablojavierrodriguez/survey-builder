@@ -107,10 +107,11 @@ export const AdminSettingsSchema = z.object({
     environment: z.string().min(1, 'Environment is required'),
   }),
   general: z.object({
-    appName: z.string().min(1, 'App name is required'),
+    surveyTitle: z.string().min(1, 'Survey title is required'),
     publicUrl: z.string().url('Invalid URL format'),
     maintenanceMode: z.boolean(),
     analyticsEnabled: z.boolean(),
+    debugMode: z.boolean(),
   }),
   security: z.object({
     sessionTimeout: z.number().min(1000, 'Session timeout must be at least 1000ms'),
