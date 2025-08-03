@@ -181,8 +181,11 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json()
     
+    // Extract settings from body (body.settings) or use body directly
+    const settingsData = body.settings || body
+    
     // Validate admin settings
-    const validation = validateAdminSettings(body)
+    const validation = validateAdminSettings(settingsData)
     if (!validation.success) {
       logger.warn('Admin settings validation failed', {
         requestId,
