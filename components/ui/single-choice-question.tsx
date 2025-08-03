@@ -31,12 +31,14 @@ export function SingleChoiceQuestion({
   className = ''
 }: SingleChoiceQuestionProps) {
   const [isAdvancing, setIsAdvancing] = useState(false)
+  const [justSelected, setJustSelected] = useState(false)
 
   const handleOptionSelect = (option: string) => {
     if (selectedValue === option || isAdvancing) return // Prevent multiple selections
     
     // Always call onSelect first to update the parent state
     onSelect(option)
+    setJustSelected(true)
 
     // Auto-advance after delay, even with manual navigation available
     if (autoAdvance) {
@@ -46,7 +48,13 @@ export function SingleChoiceQuestion({
           onNext()
         }
         setIsAdvancing(false)
+        setJustSelected(false)
       }, delay)
+    } else {
+      // Reset justSelected after a short delay if no auto-advance
+      setTimeout(() => {
+        setJustSelected(false)
+      }, 1000)
     }
   }
 
@@ -134,8 +142,8 @@ export function SingleChoiceQuestion({
         {/* Spacer when no back button */}
         {!showBackButton && <div />}
         
-        {/* Next button - always visible when option is selected */}
-        {selectedValue && (
+        {/* Next button - only visible when option is selected and just selected */}
+        {selectedValue && justSelected && (
           <Button
                           onClick={() => {
                 if (onNext) {
@@ -154,7 +162,7 @@ export function SingleChoiceQuestion({
       </div>
 
       {/* Auto-advance indicator */}
-      {selectedValue && autoAdvance && (
+      {selectedValue && autoAdvance && justSelected && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
