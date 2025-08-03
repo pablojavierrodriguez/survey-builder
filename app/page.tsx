@@ -165,7 +165,7 @@ export default function ProductSurvey() {
     daily_tools: [],
     other_tool: "",
     learning_methods: [],
-    salary_currency: "USD",
+    salary_currency: "ARS", // Default to Argentine Pesos
     salary_min: "",
     salary_max: "",
     salary_average: "",
@@ -215,39 +215,29 @@ export default function ProductSurvey() {
     }
   }
 
-  // Auto-advance handlers for single choice questions
+  // Handlers for single choice questions (no auto-advance)
   const handleRoleSelect = (role: string) => {
     setSurveyData(prev => ({ ...prev, role }))
-    if (role === "Other") {
-      setCurrentStep(1) // Go to "Other" role input
-    } else {
-      setCurrentStep(2) // Go to seniority
-    }
   }
 
   const handleSenioritySelect = (seniority: string) => {
     setSurveyData(prev => ({ ...prev, seniority }))
-    setCurrentStep(3)
   }
 
   const handleCompanySizeSelect = (company_size: string) => {
     setSurveyData(prev => ({ ...prev, company_size }))
-    setCurrentStep(4)
   }
 
   const handleIndustrySelect = (industry: string) => {
     setSurveyData(prev => ({ ...prev, industry }))
-    setCurrentStep(5)
   }
 
   const handleProductTypeSelect = (product_type: string) => {
     setSurveyData(prev => ({ ...prev, product_type }))
-    setCurrentStep(6)
   }
 
   const handleCustomerSegmentSelect = (customer_segment: string) => {
     setSurveyData(prev => ({ ...prev, customer_segment }))
-    setCurrentStep(7)
   }
 
   // Manual navigation handlers
@@ -370,100 +360,61 @@ export default function ProductSurvey() {
             question="What's your current role?"
             options={roleOptions}
             onSelect={handleRoleSelect}
-            autoAdvance={true}
-            delay={800}
+            autoAdvance={false}
           />
         )
 
       case 1:
         return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
-          >
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
-            >
-              Please specify your role
-            </motion.h2>
-            <Input
-              value={surveyData.other_role}
-              onChange={(e) => handleOtherRoleChange(e.target.value)}
-              placeholder="Describe your role..."
-              className="w-full p-4 text-lg"
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={handleNext}
-                disabled={!surveyData.other_role.trim()}
-                className="px-8 py-3"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </motion.div>
+          <SingleChoiceQuestion
+            question="What's your seniority level?"
+            options={seniorityOptions}
+            onSelect={handleSenioritySelect}
+            autoAdvance={false}
+          />
         )
 
       case 2:
         return (
           <SingleChoiceQuestion
-            question="What's your seniority level?"
-            options={seniorityOptions}
-            onSelect={handleSenioritySelect}
-            autoAdvance={true}
-            delay={800}
+            question="What type of company do you work for?"
+            options={companySizeOptions}
+            onSelect={handleCompanySizeSelect}
+            autoAdvance={false}
           />
         )
 
       case 3:
         return (
           <SingleChoiceQuestion
-            question="What type of company do you work for?"
-            options={companySizeOptions}
-            onSelect={handleCompanySizeSelect}
-            autoAdvance={true}
-            delay={800}
+            question="What industry do you work in?"
+            options={industryOptions}
+            onSelect={handleIndustrySelect}
+            autoAdvance={false}
           />
         )
 
       case 4:
         return (
           <SingleChoiceQuestion
-            question="What industry do you work in?"
-            options={industryOptions}
-            onSelect={handleIndustrySelect}
-            autoAdvance={true}
-            delay={800}
+            question="What type of product do you work on?"
+            options={productTypeOptions}
+            onSelect={handleProductTypeSelect}
+            autoAdvance={false}
           />
         )
 
       case 5:
         return (
           <SingleChoiceQuestion
-            question="What type of product do you work on?"
-            options={productTypeOptions}
-            onSelect={handleProductTypeSelect}
-            autoAdvance={true}
-            delay={800}
+            question="What's your customer segment?"
+            options={customerSegmentOptions}
+            onSelect={handleCustomerSegmentSelect}
+            autoAdvance={false}
           />
         )
 
       case 6:
-        return (
-          <SingleChoiceQuestion
-            question="What's your customer segment?"
-            options={customerSegmentOptions}
-            onSelect={handleCustomerSegmentSelect}
-            autoAdvance={true}
-            delay={800}
-          />
-        )
-
-      case 7:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -487,6 +438,59 @@ export default function ProductSurvey() {
               <Button
                 onClick={handleNext}
                 disabled={!surveyData.main_challenge.trim() || surveyData.main_challenge.trim().length < 10}
+                className="px-8 py-3"
+              >
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )
+
+      case 7:
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              What tools do you use daily? (Select all that apply)
+            </motion.h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {toolOptions.map((tool) => (
+                <motion.button
+                  key={tool}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleToolToggle(tool)}
+                  className={`
+                    p-4 text-left rounded-xl border-2 transition-all duration-200
+                    min-h-[56px] flex items-center justify-between
+                    ${surveyData.daily_tools.includes(tool)
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
+                    }
+                  `}
+                >
+                  <span className="text-base font-medium">{tool}</span>
+                  {surveyData.daily_tools.includes(tool) && (
+                    <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  )}
+                </motion.button>
+              ))}
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {surveyData.daily_tools.length} selected
+              </span>
+              <Button
+                onClick={handleNext}
+                disabled={surveyData.daily_tools.length === 0}
                 className="px-8 py-3"
               >
                 Continue
@@ -724,6 +728,15 @@ export default function ProductSurvey() {
                 </div>
               </div>
             </div>
+            <div className="flex justify-end mt-6">
+              <Button
+                onClick={handleNext}
+                className="px-8 py-3"
+              >
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </motion.div>
         )
 
@@ -806,7 +819,7 @@ export default function ProductSurvey() {
   }
 
   if (isLoading) {
-    return <ProgressIndicator message="Cargando encuesta..." />
+    return <ProgressIndicator message="Loading survey..." />
   }
 
   if (error) {
