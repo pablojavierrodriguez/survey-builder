@@ -12,6 +12,7 @@ interface AuthContextType {
   profile: Profile | null
   session: Session | null
   loading: boolean
+  userIsAdmin: boolean
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
@@ -234,11 +235,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return session?.access_token || null
   }
 
+  // Calculate if user is admin
+  const userIsAdmin = !!(user && profile?.role === 'admin')
+
   const value = {
     user,
     profile,
     session,
     loading,
+    userIsAdmin,
     signInWithPassword,
     signUp,
     signInWithGoogle,
