@@ -218,62 +218,26 @@ export default function ProductSurvey() {
   // Handlers for single choice questions (no auto-advance)
   const handleRoleSelect = (role: string) => {
     setSurveyData(prev => ({ ...prev, role }))
-    // Auto-advance after a short delay for single-choice questions
-    setTimeout(() => {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1)
-      }
-    }, 500)
   }
 
   const handleSenioritySelect = (seniority: string) => {
     setSurveyData(prev => ({ ...prev, seniority }))
-    // Auto-advance after a short delay for single-choice questions
-    setTimeout(() => {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1)
-      }
-    }, 500)
   }
 
   const handleCompanySizeSelect = (company_size: string) => {
     setSurveyData(prev => ({ ...prev, company_size }))
-    // Auto-advance after a short delay for single-choice questions
-    setTimeout(() => {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1)
-      }
-    }, 500)
   }
 
   const handleIndustrySelect = (industry: string) => {
     setSurveyData(prev => ({ ...prev, industry }))
-    // Auto-advance after a short delay for single-choice questions
-    setTimeout(() => {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1)
-      }
-    }, 500)
   }
 
   const handleProductTypeSelect = (product_type: string) => {
     setSurveyData(prev => ({ ...prev, product_type }))
-    // Auto-advance after a short delay for single-choice questions
-    setTimeout(() => {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1)
-      }
-    }, 500)
   }
 
   const handleCustomerSegmentSelect = (customer_segment: string) => {
     setSurveyData(prev => ({ ...prev, customer_segment }))
-    // Auto-advance after a short delay for single-choice questions
-    setTimeout(() => {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1)
-      }
-    }, 500)
   }
 
   // Manual navigation handlers
@@ -396,8 +360,9 @@ export default function ProductSurvey() {
             question="What's your current role?"
             options={roleOptions}
             onSelect={handleRoleSelect}
-            autoAdvance={true}
-            delay={500}
+            onNext={handleNext}
+            showBackButton={false}
+            autoAdvance={false}
           />
         )
 
@@ -407,8 +372,10 @@ export default function ProductSurvey() {
             question="What's your seniority level?"
             options={seniorityOptions}
             onSelect={handleSenioritySelect}
-            autoAdvance={true}
-            delay={500}
+            onNext={handleNext}
+            onBack={handlePrevious}
+            showBackButton={true}
+            autoAdvance={false}
           />
         )
 
@@ -418,8 +385,10 @@ export default function ProductSurvey() {
             question="What type of company do you work for?"
             options={companySizeOptions}
             onSelect={handleCompanySizeSelect}
-            autoAdvance={true}
-            delay={500}
+            onNext={handleNext}
+            onBack={handlePrevious}
+            showBackButton={true}
+            autoAdvance={false}
           />
         )
 
@@ -429,8 +398,10 @@ export default function ProductSurvey() {
             question="What industry do you work in?"
             options={industryOptions}
             onSelect={handleIndustrySelect}
-            autoAdvance={true}
-            delay={500}
+            onNext={handleNext}
+            onBack={handlePrevious}
+            showBackButton={true}
+            autoAdvance={false}
           />
         )
 
@@ -440,8 +411,10 @@ export default function ProductSurvey() {
             question="What type of product do you work on?"
             options={productTypeOptions}
             onSelect={handleProductTypeSelect}
-            autoAdvance={true}
-            delay={500}
+            onNext={handleNext}
+            onBack={handlePrevious}
+            showBackButton={true}
+            autoAdvance={false}
           />
         )
 
@@ -451,8 +424,10 @@ export default function ProductSurvey() {
             question="What's your customer segment?"
             options={customerSegmentOptions}
             onSelect={handleCustomerSegmentSelect}
-            autoAdvance={true}
-            delay={500}
+            onNext={handleNext}
+            onBack={handlePrevious}
+            showBackButton={true}
+            autoAdvance={false}
           />
         )
 
@@ -476,7 +451,15 @@ export default function ProductSurvey() {
               placeholder="Describe your biggest challenge in product management, design, or development..."
               className="min-h-32 text-lg p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <Button
+                onClick={handlePrevious}
+                variant="outline"
+                className="px-6 py-2"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
               <Button
                 onClick={handleNext}
                 disabled={!surveyData.main_challenge.trim() || surveyData.main_challenge.trim().length < 10}
@@ -580,9 +563,19 @@ export default function ProductSurvey() {
               ))}
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {surveyData.daily_tools.length} selected
-              </span>
+              <div className="flex items-center space-x-4">
+                <Button
+                  onClick={handlePrevious}
+                  variant="outline"
+                  className="px-6 py-2"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {surveyData.daily_tools.length} selected
+                </span>
+              </div>
               <Button
                 onClick={handleNext}
                 disabled={surveyData.daily_tools.length === 0}
@@ -633,9 +626,19 @@ export default function ProductSurvey() {
               ))}
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {surveyData.learning_methods.length} selected
-              </span>
+              <div className="flex items-center space-x-4">
+                <Button
+                  onClick={handlePrevious}
+                  variant="outline"
+                  className="px-6 py-2"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {surveyData.learning_methods.length} selected
+                </span>
+              </div>
               <Button
                 onClick={handleNext}
                 disabled={surveyData.learning_methods.length === 0}
@@ -770,7 +773,15 @@ export default function ProductSurvey() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-between items-center mt-6">
+              <Button
+                onClick={handlePrevious}
+                variant="outline"
+                className="px-6 py-2"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
               <Button
                 onClick={handleNext}
                 className="px-8 py-3"
@@ -810,7 +821,15 @@ export default function ProductSurvey() {
             {surveyData.email && !isValidEmail(surveyData.email) && (
               <p className="text-red-500 dark:text-red-400 text-sm">Please enter a valid email address</p>
             )}
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <Button
+                onClick={handlePrevious}
+                variant="outline"
+                className="px-6 py-2"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
               <Button
                 onClick={handleNext}
                 className="px-8 py-3"

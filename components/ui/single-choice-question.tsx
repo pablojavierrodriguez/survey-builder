@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check } from 'lucide-react'
+import { Check, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface SingleChoiceQuestionProps {
   question: string
   options: string[]
   onSelect: (option: string) => void
+  onNext?: () => void
+  onBack?: () => void
+  showBackButton?: boolean
   autoAdvance?: boolean
   delay?: number
   className?: string
@@ -17,6 +21,9 @@ export function SingleChoiceQuestion({
   question,
   options,
   onSelect,
+  onNext,
+  onBack,
+  showBackButton = false,
   autoAdvance = true,
   delay = 1000,
   className = ''
@@ -28,19 +35,15 @@ export function SingleChoiceQuestion({
     if (selectedOption || isAdvancing) return // Prevent multiple selections
     
     setSelectedOption(option)
-    setIsAdvancing(true)
 
-    // Auto-advance after delay
-    if (autoAdvance) {
+    // Auto-advance only if no manual navigation is provided
+    if (autoAdvance && !onNext) {
+      setIsAdvancing(true)
       setTimeout(() => {
         onSelect(option)
         setSelectedOption(null)
         setIsAdvancing(false)
       }, delay)
-    } else {
-      onSelect(option)
-      setSelectedOption(null)
-      setIsAdvancing(false)
     }
   }
 
@@ -109,6 +112,42 @@ export function SingleChoiceQuestion({
             </motion.button>
           ))}
         </AnimatePresence>
+      </div>
+
+      {/* Navigation buttons */}
+      <div className="flex justify-between items-center pt-4">
+        {/* Back button */}
+        {showBackButton && onBack && (
+          <Button
+            onClick={onBack}
+            variant="outline"
+            className="px-6 py-2"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        )}
+        
+        {/* Spacer when no back button */}
+        {!showBackButton && <div />}
+        
+        {/* Next button - always visible when option is selected */}
+        {selectedOption && (
+          <Button
+            onClick={() => {
+              if (onNext) {
+                onNext()
+              } else {
+                onSelect(selectedOption)
+              }
+            }}
+            disabled={isAdvancing}
+            className="px-6 py-2"
+          >
+            Continue
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Auto-advance indicator */}
