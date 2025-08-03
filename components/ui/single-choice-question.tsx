@@ -125,41 +125,7 @@ export function SingleChoiceQuestion({
         </AnimatePresence>
       </div>
 
-      {/* Navigation buttons */}
-      <div className="flex justify-between items-center pt-4 sm:pt-6">
-        {/* Back button */}
-        {showBackButton && onBack && (
-          <Button
-            onClick={onBack}
-            variant="outline"
-            className="px-4 sm:px-6 py-2 text-sm"
-          >
-            <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            Back
-          </Button>
-        )}
-        
-        {/* Spacer when no back button */}
-        {!showBackButton && <div />}
-        
-        {/* Next button - only visible when option is selected and just selected */}
-        {selectedValue && justSelected && (
-          <Button
-                          onClick={() => {
-                if (onNext) {
-                  onNext()
-                } else {
-                  onSelect(selectedValue)
-                }
-              }}
-            disabled={isAdvancing}
-            className="px-4 sm:px-6 py-2 text-sm"
-          >
-            Continue
-            <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-          </Button>
-        )}
-      </div>
+      
 
       {/* Auto-advance indicator */}
       {selectedValue && autoAdvance && justSelected && (
