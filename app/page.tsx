@@ -374,6 +374,7 @@ export default function ProductSurvey() {
             question="What's your current role?"
             options={roleOptions}
             onSelect={handleRoleSelect}
+            onNext={handleNext}
             autoAdvance={true}
             delay={500}
           />
@@ -385,6 +386,7 @@ export default function ProductSurvey() {
             question="What's your seniority level?"
             options={seniorityOptions}
             onSelect={handleSenioritySelect}
+            onNext={handleNext}
             autoAdvance={true}
             delay={500}
           />
@@ -396,6 +398,7 @@ export default function ProductSurvey() {
             question="What type of company do you work for?"
             options={companySizeOptions}
             onSelect={handleCompanySizeSelect}
+            onNext={handleNext}
             autoAdvance={true}
             delay={500}
           />
@@ -407,6 +410,7 @@ export default function ProductSurvey() {
             question="What industry do you work in?"
             options={industryOptions}
             onSelect={handleIndustrySelect}
+            onNext={handleNext}
             autoAdvance={true}
             delay={500}
           />
@@ -418,6 +422,7 @@ export default function ProductSurvey() {
             question="What type of product do you work on?"
             options={productTypeOptions}
             onSelect={handleProductTypeSelect}
+            onNext={handleNext}
             autoAdvance={true}
             delay={500}
           />
@@ -429,6 +434,7 @@ export default function ProductSurvey() {
             question="What's your customer segment?"
             options={customerSegmentOptions}
             onSelect={handleCustomerSegmentSelect}
+            onNext={handleNext}
             autoAdvance={true}
             delay={500}
           />
@@ -457,7 +463,7 @@ export default function ProductSurvey() {
           </motion.div>
         )
 
-      case 7:
+      case 8:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -500,7 +506,7 @@ export default function ProductSurvey() {
           </motion.div>
         )
 
-      case 8:
+      case 9:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
