@@ -150,7 +150,7 @@ const toolOptions = [
 const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors", "Other"]
 
 export default function ProductSurvey() {
-  const { user, userIsAdmin } = useAuth()
+  const { user, userIsAdmin, clearCorruptedSession } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
@@ -886,25 +886,37 @@ export default function ProductSurvey() {
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <ModeToggle />
+              {/* Login/Admin Panel Button */}
               {user ? (
                 <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => window.location.href = '/admin/dashboard'}
-                  className="text-xs sm:text-sm"
+                  className="px-4 sm:px-6 py-2 text-sm"
                 >
-                  Panel
-                  <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <Shield className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  Admin Panel
                 </Button>
               ) : (
                 <Button
+                  onClick={() => window.location.href = '/auth/login'}
+                  className="px-4 sm:px-6 py-2 text-sm"
+                >
+                  <Shield className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  Login
+                </Button>
+              )}
+
+              {/* Temporary debug button to clear corrupted session */}
+              {user && (
+                <Button
+                  onClick={async () => {
+                    await clearCorruptedSession()
+                    window.location.reload()
+                  }}
                   variant="outline"
                   size="sm"
-                  onClick={() => window.location.href = '/auth/login'}
-                  className="text-xs sm:text-sm"
+                  className="ml-2 text-xs"
                 >
-                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Login
+                  Clear Session
                 </Button>
               )}
             </div>

@@ -35,6 +35,9 @@ export function SingleChoiceQuestion({
     if (selectedOption || isAdvancing) return // Prevent multiple selections
     
     setSelectedOption(option)
+    
+    // Always call onSelect first to update the parent state
+    onSelect(option)
 
     // Auto-advance after delay, even with manual navigation available
     if (autoAdvance) {
@@ -42,8 +45,6 @@ export function SingleChoiceQuestion({
       setTimeout(() => {
         if (onNext) {
           onNext()
-        } else {
-          onSelect(option)
         }
         setSelectedOption(null)
         setIsAdvancing(false)

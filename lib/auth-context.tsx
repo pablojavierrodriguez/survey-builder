@@ -17,6 +17,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<{ error: Error | null }>
+  clearCorruptedSession: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>
   getAccessToken: () => string | null
 }
@@ -51,6 +52,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: session?.user?.email || null,
           sessionError: sessionError?.message || null
         })
+        
+        // Handle refresh token errors
+        if (sessionError && sessionError.message.includes('Refresh Token')) {
+          console.warn('🔐 [Auth] Refresh token error detected - clearing session')
+          if (mounted) {
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+            setLoading(false)
+          }
+          return
+        }
         
         if (mounted) {
           // FORCE CLEAR SESSION IF NO VALID USER
@@ -203,9 +216,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { error } = await supabase.auth.signOut()
-      return { error: error as Error }
+      
+      // Clear local state immediately
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      
+      return { error }
     } catch (error) {
+      console.error('Sign out error:', error)
+      // Clear local state even if there's an error
+      setUser(null)
+      setProfile(null)
+      setSession(null)
       return { error: error as Error }
+    }
+  }
+
+  // Add function to clear corrupted session
+  const clearCorruptedSession = async (): Promise<void> => {
+    try {
+      const supabase = await getSupabaseClient()
+      if (supabase) {
+        // Force sign out to clear any corrupted tokens
+        await supabase.auth.signOut()
+      }
+    } catch (error) {
+      console.warn('Error clearing corrupted session:', error)
+    } finally {
+      // Always clear local state
+      setUser(null)
+      setProfile(null)
+      setSession(null)
     }
   }
 
@@ -248,6 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signInWithGoogle,
     signOut,
+    clearCorruptedSession,
     updateProfile,
     getAccessToken,
   }
