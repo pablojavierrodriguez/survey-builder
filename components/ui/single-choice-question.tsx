@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 interface SingleChoiceQuestionProps {
   question: string
   options: string[]
+  selectedValue?: string
   onSelect: (option: string) => void
   onNext?: () => void
   onBack?: () => void
@@ -20,6 +21,7 @@ interface SingleChoiceQuestionProps {
 export function SingleChoiceQuestion({
   question,
   options,
+  selectedValue = "",
   onSelect,
   onNext,
   onBack,
@@ -28,13 +30,10 @@ export function SingleChoiceQuestion({
   delay = 1000,
   className = ''
 }: SingleChoiceQuestionProps) {
-  const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [isAdvancing, setIsAdvancing] = useState(false)
 
   const handleOptionSelect = (option: string) => {
-    if (selectedOption || isAdvancing) return // Prevent multiple selections
-    
-    setSelectedOption(option)
+    if (selectedValue === option || isAdvancing) return // Prevent multiple selections
     
     // Always call onSelect first to update the parent state
     onSelect(option)
@@ -46,7 +45,6 @@ export function SingleChoiceQuestion({
         if (onNext) {
           onNext()
         }
-        setSelectedOption(null)
         setIsAdvancing(false)
       }, delay)
     }
@@ -81,15 +79,15 @@ export function SingleChoiceQuestion({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleOptionSelect(option)}
-              disabled={selectedOption !== null || isAdvancing}
+              disabled={selectedValue === option || isAdvancing}
               className={`
                 w-full p-4 md:p-5 text-left rounded-xl border-2 transition-all duration-200
                 min-h-[56px] md:min-h-[64px] flex items-center justify-between
-                ${selectedOption === option
+                ${selectedValue === option
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
                   : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
                 }
-                ${selectedOption && selectedOption !== option
+                ${selectedValue && selectedValue !== option
                   ? 'opacity-50 cursor-not-allowed'
                   : 'cursor-pointer hover:shadow-md'
                 }
@@ -102,7 +100,7 @@ export function SingleChoiceQuestion({
               
               {/* Check Icon */}
               <AnimatePresence>
-                {selectedOption === option && (
+                {selectedValue === option && (
                   <motion.div
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -137,15 +135,15 @@ export function SingleChoiceQuestion({
         {!showBackButton && <div />}
         
         {/* Next button - always visible when option is selected */}
-        {selectedOption && (
+        {selectedValue && (
           <Button
-            onClick={() => {
-              if (onNext) {
-                onNext()
-              } else {
-                onSelect(selectedOption)
-              }
-            }}
+                          onClick={() => {
+                if (onNext) {
+                  onNext()
+                } else {
+                  onSelect(selectedValue)
+                }
+              }}
             disabled={isAdvancing}
             className="px-4 sm:px-6 py-2 text-sm"
           >
@@ -156,7 +154,7 @@ export function SingleChoiceQuestion({
       </div>
 
       {/* Auto-advance indicator */}
-      {selectedOption && autoAdvance && (
+      {selectedValue && autoAdvance && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

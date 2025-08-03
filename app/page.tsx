@@ -373,6 +373,7 @@ export default function ProductSurvey() {
           <SingleChoiceQuestion
             question="What's your current role?"
             options={roleOptions}
+            selectedValue={surveyData.role}
             onSelect={handleRoleSelect}
             onNext={handleNext}
             autoAdvance={true}
@@ -385,6 +386,7 @@ export default function ProductSurvey() {
           <SingleChoiceQuestion
             question="What's your seniority level?"
             options={seniorityOptions}
+            selectedValue={surveyData.seniority}
             onSelect={handleSenioritySelect}
             onNext={handleNext}
             autoAdvance={true}
@@ -397,6 +399,7 @@ export default function ProductSurvey() {
           <SingleChoiceQuestion
             question="What type of company do you work for?"
             options={companySizeOptions}
+            selectedValue={surveyData.company_size}
             onSelect={handleCompanySizeSelect}
             onNext={handleNext}
             autoAdvance={true}
@@ -409,6 +412,7 @@ export default function ProductSurvey() {
           <SingleChoiceQuestion
             question="What industry do you work in?"
             options={industryOptions}
+            selectedValue={surveyData.industry}
             onSelect={handleIndustrySelect}
             onNext={handleNext}
             autoAdvance={true}
@@ -421,6 +425,7 @@ export default function ProductSurvey() {
           <SingleChoiceQuestion
             question="What type of product do you work on?"
             options={productTypeOptions}
+            selectedValue={surveyData.product_type}
             onSelect={handleProductTypeSelect}
             onNext={handleNext}
             autoAdvance={true}
@@ -433,6 +438,7 @@ export default function ProductSurvey() {
           <SingleChoiceQuestion
             question="What's your customer segment?"
             options={customerSegmentOptions}
+            selectedValue={surveyData.customer_segment}
             onSelect={handleCustomerSegmentSelect}
             onNext={handleNext}
             autoAdvance={true}
