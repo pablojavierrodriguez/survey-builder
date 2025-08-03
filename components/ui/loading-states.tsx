@@ -9,7 +9,7 @@ export function Skeleton({ className = '', ...props }: React.HTMLAttributes<HTML
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`}
-      {...props}
+      {...(props as any)}
     />
   )
 }
