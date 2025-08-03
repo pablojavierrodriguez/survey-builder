@@ -353,7 +353,7 @@ export default function ProductSurvey() {
     const hasPrevious = currentStep > 1
     const hasNext = currentStep < totalSteps
     const isRequired = currentStep !== 10 // Salary is optional
-    const isAutoAdvance = currentStep >= 2 && currentStep <= 6 // Single-choice questions (excluding case 1 which can have "Other")
+    const isAutoAdvance = currentStep >= 1 && currentStep <= 6 && !(currentStep === 1 && surveyData.role === "Other" && surveyData.other_role.trim() === "")
     const canProceedResult = canProceed()
 
     return {
@@ -390,7 +390,17 @@ export default function ProductSurvey() {
                   key={role}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => handleRoleSelect(role)}
+                  onClick={() => {
+                    handleRoleSelect(role)
+                    // Auto-advance for non-Other roles after 500ms
+                    if (role !== "Other") {
+                      setTimeout(() => {
+                        if (canProceed()) {
+                          handleNext()
+                        }
+                      }, 500)
+                    }
+                  }}
                   className={`
                     w-full p-4 md:p-5 text-left rounded-xl border-2 transition-all duration-200
                     min-h-[56px] md:min-h-[64px] flex items-center justify-between
@@ -424,7 +434,17 @@ export default function ProductSurvey() {
                 <Input
                   type="text"
                   value={surveyData.other_role}
-                  onChange={(e) => handleOtherRoleChange(e.target.value)}
+                  onChange={(e) => {
+                    handleOtherRoleChange(e.target.value)
+                    // Auto-advance when Other role is completed
+                    if (e.target.value.trim() !== "") {
+                      setTimeout(() => {
+                        if (canProceed()) {
+                          handleNext()
+                        }
+                      }, 500)
+                    }
+                  }}
                   placeholder="Enter your role..."
                   className="w-full p-4 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
