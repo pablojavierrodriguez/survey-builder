@@ -119,15 +119,15 @@ export function SingleChoiceQuestion({
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex justify-between items-center pt-4 sm:pt-6">
         {/* Back button */}
         {showBackButton && onBack && (
           <Button
             onClick={onBack}
             variant="outline"
-            className="px-6 py-2"
+            className="px-4 sm:px-6 py-2 text-sm"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             Back
           </Button>
         )}
@@ -146,10 +146,10 @@ export function SingleChoiceQuestion({
               }
             }}
             disabled={isAdvancing}
-            className="px-6 py-2"
+            className="px-4 sm:px-6 py-2 text-sm"
           >
             Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
         )}
       </div>

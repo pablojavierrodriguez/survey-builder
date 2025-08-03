@@ -516,26 +516,26 @@ export default function ProductSurvey() {
               ))}
             </div>
             <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 <Button
                   onClick={handlePrevious}
                   variant="outline"
-                  className="px-6 py-2"
+                  className="px-4 sm:px-6 py-2 text-sm"
                 >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                   Back
                 </Button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   {surveyData.daily_tools.length} selected
                 </span>
               </div>
               <Button
                 onClick={handleNext}
                 disabled={surveyData.daily_tools.length === 0}
-                className="px-8 py-3"
+                className="px-4 sm:px-6 py-2 text-sm"
               >
                 Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
           </motion.div>
@@ -959,30 +959,32 @@ export default function ProductSurvey() {
       {/* Header */}
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                 Product Community Survey
               </h1>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <ModeToggle />
               {user ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => window.location.href = '/admin/dashboard'}
+                  className="text-xs sm:text-sm"
                 >
                   Panel
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               ) : (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => window.location.href = '/auth/login'}
+                  className="text-xs sm:text-sm"
                 >
-                  <Shield className="w-4 h-4 mr-2" />
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   Login
                 </Button>
               )}
@@ -992,11 +994,11 @@ export default function ProductSurvey() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Progress Bar */}
           {currentStep <= totalSteps && (
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
               <SurveyProgress
                 current={currentStep}
                 total={totalSteps}
@@ -1017,20 +1019,6 @@ export default function ProductSurvey() {
               {renderQuestion()}
             </motion.div>
           </AnimatePresence>
-
-          {/* Navigation */}
-          {currentStep > 0 && currentStep <= totalSteps && (
-            <div className="mt-8 flex justify-between">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                className="px-6 py-2"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-            </div>
-          )}
         </div>
       </main>
 
