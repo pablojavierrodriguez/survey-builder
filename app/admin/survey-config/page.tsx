@@ -454,10 +454,10 @@ export default function SurveyConfigPage() {
               .map((question) => (
                 <div
                   key={question.id}
-                  className="flex items-center justify-between p-4 border rounded-lg dark:border-gray-700 dark:bg-gray-900/50"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg dark:border-gray-700 dark:bg-gray-900/50 gap-3 sm:gap-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
                       <Badge variant={question.isVisible ? "default" : "secondary"} className="text-xs">
                         {question.isVisible ? "Visible" : "Hidden"}
                       </Badge>
@@ -470,37 +470,37 @@ export default function SurveyConfigPage() {
                         </Badge>
                       )}
                     </div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-50 truncate">{question.title}</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{question.description}</p>
+                    <h4 className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-50 break-words">{question.title}</h4>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 break-words mt-1">{question.description}</p>
                     {question.options && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{question.options.length} options</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{question.options.length} options</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       onClick={() => toggleQuestionVisibility(question.id)}
-                      className="dark:text-gray-50 dark:hover:bg-gray-700"
+                      className="dark:text-gray-50 dark:hover:bg-gray-700 h-8 w-8 p-0"
                     >
-                      {question.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      {question.isVisible ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       onClick={() => editQuestion(question)}
-                      className="dark:text-gray-50 dark:hover:bg-gray-700"
+                      className="dark:text-gray-50 dark:hover:bg-gray-700 h-8 w-8 p-0"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </Button>
                     {userRole === "admin" && (
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => deleteQuestion(question.id)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-700"
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-700 h-8 w-8 p-0"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </Button>
                     )}
                   </div>
