@@ -542,8 +542,6 @@ export default function ProductSurvey() {
             </div>
           </motion.div>
         )
-                      </motion.div>
-        )
 
       case 9:
         return (
