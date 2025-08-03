@@ -9,6 +9,10 @@ import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Database, 
 import { ModeToggle } from "@/components/mode-toggle"
 import { useAuth } from "@/lib/auth-context"
 import { isDatabaseConfigured } from "@/lib/database-validator"
+import { SurveyProgress } from "@/components/ui/survey-progress"
+import { SingleChoiceQuestion } from "@/components/ui/single-choice-question"
+import { SurveySkeleton, ProgressIndicator, ErrorDisplay, LoadingOverlay } from "@/components/ui/loading-states"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface SurveyData {
   role: string
@@ -98,71 +102,86 @@ const productTypeOptions = [
   "E-commerce Platform",
   "API/Developer Tools",
   "Hardware + Software",
-  "Services/Consulting",
-  "Internal Tools",
+  "Desktop Application",
+  "Game",
   "Other",
 ]
 
-const customerSegmentOptions = ["B2B Product", "B2C Product", "B2B2C Product", "Internal Product", "Mixed (B2B + B2C)"]
+const customerSegmentOptions = [
+  "B2B (Business to Business)",
+  "B2C (Business to Consumer)",
+  "B2B2C (Business to Business to Consumer)",
+  "D2C (Direct to Consumer)",
+  "Marketplace",
+  "API/Developer Tools",
+  "Enterprise",
+  "SMB (Small & Medium Business)",
+  "Other",
+]
+
+const challengeOptions = [
+  "User Research & Understanding",
+  "Product Strategy & Roadmapping",
+  "Technical Implementation",
+  "Design & UX",
+  "Data Analysis & Metrics",
+  "Stakeholder Management",
+  "Resource Constraints",
+  "Market Competition",
+  "User Adoption & Engagement",
+  "Performance & Scalability",
+  "Other",
+]
 
 const toolOptions = [
-  "Jira",
   "Figma",
+  "Sketch",
+  "Adobe Creative Suite",
   "Notion",
-  "Miro",
-  "Trello",
-  "Asana",
-  "Monday.com",
-  "ClickUp",
+  "Confluence",
+  "Jira",
   "Linear",
+  "Asana",
+  "Trello",
   "Slack",
+  "Discord",
   "Microsoft Teams",
   "Zoom",
-  "Google Workspace",
-  "Microsoft 365",
-  "Confluence",
+  "Google Meet",
+  "Miro",
+  "Whimsical",
+  "Loom",
+  "UserTesting",
+  "Hotjar",
+  "Mixpanel",
+  "Amplitude",
+  "Google Analytics",
+  "Tableau",
+  "Looker",
   "GitHub",
   "GitLab",
   "Bitbucket",
-  "Sketch",
-  "Adobe XD",
-  "InVision",
-  "Framer",
-  "Webflow",
-  "Airtable",
-  "Coda",
-  "Obsidian",
-  "Roam Research",
-  "Mural",
-  "FigJam",
-  "Whimsical",
-  "Lucidchart",
-  "Draw.io",
-  "Canva",
-  "Loom",
+  "Postman",
   "Other",
 ]
 
-const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors", "Other"]
+const learningOptions = [
+  "Online Courses (Coursera, Udemy, etc.)",
+  "Books & Reading",
+  "Conferences & Meetups",
+  "Mentorship",
+  "On-the-job Learning",
+  "Podcasts",
+  "Blogs & Articles",
+  "YouTube Channels",
+  "Twitter/X",
+  "LinkedIn Learning",
+  "Other",
+]
 
 export default function ProductSurvey() {
-  const { user, profile } = useAuth()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [surveyConfig, setSurveyConfig] = useState<any>(null)
-  const [appSettings, setAppSettings] = useState<AppSettings>({
-    general: {
-      maintenanceMode: false
-    }
-  })
-  const [databaseStatus, setDatabaseStatus] = useState<{
-    status: 'healthy' | 'configured' | 'unconfigured' | 'error'
-    message: string
-    details: any
-  } | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const { user, userIsAdmin } = useAuth()
+  const [currentStep, setCurrentStep] = useState(1)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -176,813 +195,541 @@ export default function ProductSurvey() {
     daily_tools: [],
     other_tool: "",
     learning_methods: [],
-    salary_currency: "ARS", // Default to Argentine Pesos
+    salary_currency: "USD",
     salary_min: "",
     salary_max: "",
     salary_average: "",
     email: "",
   })
 
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [databaseStatus, setDatabaseStatus] = useState<"checking" | "configured" | "not-configured">("checking")
+  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const [hasCheckedConfig, setHasCheckedConfig] = useState(false)
+
   const totalSteps = 12
 
-  // Check maintenance mode on component mount
   useEffect(() => {
-    let isMounted = true
-    let hasCheckedConfig = false
-    
-    const loadSettings = async () => {
-      // Prevent multiple executions
-      if (!isMounted || hasCheckedConfig) return
-      hasCheckedConfig = true
-      // Check if Supabase is configured first
-      try {
-        const configResponse = await fetch('/api/config/check')
-        
-        if (!configResponse.ok) {
-          console.error('❌ Config check failed with status:', configResponse.status)
-          // Don't redirect on error, just log it
-          return
-        }
-        
-        const configData = await configResponse.json()
-        
-        console.log('🔧 [Main] Configuration check:', configData)
-        
-        if (!configData.configured) {
-          console.log('🔧 [Main] Supabase not configured, redirecting to setup')
-          // Add a small delay to prevent rapid redirects
-          setTimeout(() => {
-            if (isMounted) {
-              window.location.href = '/setup'
-            }
-          }, 100)
-          return
-        }
-      } catch (error) {
-        console.error('❌ Error checking configuration:', error)
-        // Don't redirect on error, just log it
-      }
-      
-      // Check for corrupt session
-      if (user && !user.id) {
-        console.log('🔐 [Debug] Detected corrupt user session - will be handled by auth context')
-      }
-      
-      try {
-        // Check if user is admin (only if user is authenticated)
-        const userIsAdmin = user && profile?.role === 'admin'
-        setIsAdmin(!!userIsAdmin) // Force boolean conversion
-
-        // Check for survey configuration first
-        const surveyConfig = localStorage.getItem("survey_config")
-        if (surveyConfig) {
-          try {
-            const config = JSON.parse(surveyConfig)
-            setSurveyConfig(config)
-            console.log("Survey config loaded:", config)
-          } catch (error) {
-            console.error("Error parsing survey config:", error)
-          }
-        }
-
-        // Use environment-based defaults (simplified approach)
-        const isDev = window.location.hostname.includes('dev') || 
-                     window.location.hostname.includes('localhost') ||
-                     window.location.hostname.includes('127.0.0.1')
-        
-        setAppSettings({
-          general: {
-            maintenanceMode: false, // We'll check this separately
-            appName: 'Product Community Survey',
-            appUrl: window.location.origin
-          },
-          features: {
-            enableAnalytics: true,
-            enableEmailNotifications: false,
-            enableExport: true
-          },
-          database: {
-            tableName: process.env.NEXT_PUBLIC_DB_TABLE || (isDev ? 'pc_survey_data_dev' : 'pc_survey_data'),
-            environment: isDev ? 'dev' : 'prod'
-          }
-        })
-        
-        // Set database status as healthy (we already checked config above)
-        setDatabaseStatus({
-          status: 'healthy',
-          message: 'Database is properly configured and connected',
-          details: { configured: true, connected: true }
-        })
-        
-        console.log('✅ App loaded with configuration check')
-        console.log('Auth state:', { 
-          user: user ? 'authenticated' : 'not authenticated', 
-          profile: profile ? `role: ${profile.role}` : 'no profile',
-          userIsAdmin 
-        })
-        
-
-      } catch (error) {
-        console.error('❌ Error loading settings:', error)
-        
-        // Fallback to basic defaults
-        setAppSettings({
-          general: {
-            maintenanceMode: true, // Default to maintenance mode if error
-            appName: 'Product Community Survey',
-            appUrl: window.location.origin
-          },
-          features: {
-            enableAnalytics: true,
-            enableEmailNotifications: false,
-            enableExport: true
-          },
-          database: {
-            tableName: process.env.NEXT_PUBLIC_DB_TABLE || 'pc_survey_data_dev',
-            environment: 'dev'
-          }
-        })
-        
-        console.log('✅ App loaded with fallback settings (maintenance mode)')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
+    setIsMounted(true)
     loadSettings()
-    
-    return () => {
-      isMounted = false
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/config/check')
+      const result = await response.json()
+      
+      if (!result.configured) {
+        setDatabaseStatus("not-configured")
+        setIsLoading(false)
+        return
+      }
+
+      setDatabaseStatus("configured")
+      
+      // Load app settings
+      const settingsResponse = await fetch('/api/admin/settings')
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json()
+        setSettings(settingsData)
+      }
+      
+      setIsLoading(false)
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      setError('Error loading configuration')
+      setIsLoading(false)
     }
-  }, []) // Only run once on mount
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading survey...</p>
-        </div>
-      </div>
-    )
   }
 
-  // Show maintenance mode or database status screen
-  if (isMaintenanceMode || (databaseStatus && databaseStatus.status !== 'healthy')) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 p-4">
-        {/* Theme toggle */}
-        <div className="absolute top-4 right-4">
-          <ModeToggle />
-        </div>
-        
-        {/* Admin Login Button */}
-        <div className="absolute top-4 left-4">
-          <Button
-            onClick={() => window.open("/auth/login", "_blank")}
-            variant="outline"
-            size="sm"
-            className="bg-white/80 backdrop-blur-sm border-slate-200 hover:bg-white/90 text-slate-600 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-300"
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Admin Login
-          </Button>
-        </div>
-
-        <div className="text-center max-w-md mx-auto">
-          {isMaintenanceMode ? (
-            <>
-              <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Wrench className="w-10 h-10 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-4">
-                Under Maintenance
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">
-                We're currently performing scheduled maintenance on our survey system. 
-                Please check back later or contact the administrator if you need immediate assistance.
-              </p>
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  This maintenance mode can be disabled by administrators in the settings panel.
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Database className="w-10 h-10 text-red-600 dark:text-red-400" />
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-4">
-                Database Configuration Required
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">
-                {databaseStatus?.message || 'Database is not properly configured.'}
-              </p>
-              {databaseStatus && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
-                  <div className="text-left text-sm text-red-700 dark:text-red-300">
-                    <p><strong>Status:</strong> {databaseStatus.status}</p>
-                    <p><strong>Environment:</strong> {databaseStatus.details.environment}</p>
-                    <p><strong>Table:</strong> {databaseStatus.details.tableName}</p>
-                    {databaseStatus.details.error && (
-                      <p><strong>Error:</strong> {databaseStatus.details.error}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              {isAdmin && (
-                <Button 
-                  onClick={() => window.location.href = '/admin/settings'} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configure Database
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    )
+  // Auto-advance handlers for single choice questions
+  const handleRoleSelect = (role: string) => {
+    setSurveyData(prev => ({ ...prev, role }))
+    if (role === "Other") {
+      setCurrentStep(2) // Go to "Other" role input
+    } else {
+      setCurrentStep(3) // Go to seniority
+    }
   }
 
+  const handleSenioritySelect = (seniority: string) => {
+    setSurveyData(prev => ({ ...prev, seniority }))
+    setCurrentStep(4)
+  }
+
+  const handleCompanySizeSelect = (company_size: string) => {
+    setSurveyData(prev => ({ ...prev, company_size }))
+    setCurrentStep(5)
+  }
+
+  const handleIndustrySelect = (industry: string) => {
+    setSurveyData(prev => ({ ...prev, industry }))
+    setCurrentStep(6)
+  }
+
+  const handleProductTypeSelect = (product_type: string) => {
+    setSurveyData(prev => ({ ...prev, product_type }))
+    setCurrentStep(7)
+  }
+
+  const handleCustomerSegmentSelect = (customer_segment: string) => {
+    setSurveyData(prev => ({ ...prev, customer_segment }))
+    setCurrentStep(8)
+  }
+
+  const handleChallengeSelect = (main_challenge: string) => {
+    setSurveyData(prev => ({ ...prev, main_challenge }))
+    setCurrentStep(9)
+  }
+
+  const handleSalaryCurrencySelect = (salary_currency: string) => {
+    setSurveyData(prev => ({ ...prev, salary_currency }))
+    setCurrentStep(10)
+  }
+
+  // Manual navigation handlers
   const handleNext = () => {
-    if (currentStep < totalSteps - 1) {
+    if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1)
     }
   }
 
   const handlePrevious = () => {
-    if (currentStep > 0) {
+    if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
   }
 
-  const handleRoleSelect = (role: string) => {
-    setSurveyData({ ...surveyData, role })
-  }
-
-  const handleSenioritySelect = (seniority: string) => {
-    setSurveyData({ ...surveyData, seniority })
+  const handleOtherRoleChange = (other_role: string) => {
+    setSurveyData(prev => ({ ...prev, other_role }))
   }
 
   const handleChallengeChange = (main_challenge: string) => {
-    setSurveyData({ ...surveyData, main_challenge })
+    setSurveyData(prev => ({ ...prev, main_challenge }))
   }
 
   const handleToolToggle = (tool: string) => {
-    const updatedTools = surveyData.daily_tools.includes(tool)
-      ? surveyData.daily_tools.filter((t) => t !== tool)
-      : [...surveyData.daily_tools, tool]
-    setSurveyData({ ...surveyData, daily_tools: updatedTools })
+    setSurveyData(prev => ({
+      ...prev,
+      daily_tools: prev.daily_tools.includes(tool)
+        ? prev.daily_tools.filter(t => t !== tool)
+        : [...prev.daily_tools, tool]
+    }))
   }
 
   const handleLearningToggle = (method: string) => {
-    const updatedMethods = surveyData.learning_methods.includes(method)
-      ? surveyData.learning_methods.filter((m) => m !== method)
-      : [...surveyData.learning_methods, method]
-    setSurveyData({ ...surveyData, learning_methods: updatedMethods })
+    setSurveyData(prev => ({
+      ...prev,
+      learning_methods: prev.learning_methods.includes(method)
+        ? prev.learning_methods.filter(m => m !== method)
+        : [...prev.learning_methods, method]
+    }))
   }
 
   const handleEmailChange = (email: string) => {
-    setSurveyData({ ...surveyData, email })
-  }
-
-  const handleOtherRoleChange = (other_role: string) => {
-    setSurveyData({ ...surveyData, other_role })
-  }
-
-  const handleCompanySizeSelect = (company_size: string) => {
-    setSurveyData({ ...surveyData, company_size })
-  }
-
-  const handleIndustrySelect = (industry: string) => {
-    setSurveyData({ ...surveyData, industry })
-  }
-
-  const handleProductTypeSelect = (product_type: string) => {
-    setSurveyData({ ...surveyData, product_type })
-  }
-
-  const handleCustomerSegmentSelect = (customer_segment: string) => {
-    setSurveyData({ ...surveyData, customer_segment })
+    setSurveyData(prev => ({ ...prev, email }))
   }
 
   const handleOtherToolChange = (other_tool: string) => {
-    setSurveyData({ ...surveyData, other_tool })
+    setSurveyData(prev => ({ ...prev, other_tool }))
   }
 
   const isValidEmail = (email: string) => {
-    if (!email) return true // Email is optional
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
   const canProceed = () => {
     switch (currentStep) {
-      case 0:
-        return surveyData.role !== ""
       case 1:
-        return surveyData.seniority !== ""
+        return surveyData.role !== ""
       case 2:
-        return surveyData.company_size !== ""
+        return surveyData.other_role !== ""
       case 3:
-        return surveyData.industry !== ""
+        return surveyData.seniority !== ""
       case 4:
-        return surveyData.product_type !== ""
+        return surveyData.company_size !== ""
       case 5:
-        return surveyData.customer_segment !== ""
+        return surveyData.industry !== ""
       case 6:
-        return surveyData.main_challenge.trim().length > 10
+        return surveyData.product_type !== ""
       case 7:
-        return surveyData.daily_tools.length > 0
+        return surveyData.customer_segment !== ""
       case 8:
-        return surveyData.learning_methods.length > 0
+        return surveyData.main_challenge !== ""
       case 9:
-        return isValidEmail(surveyData.email)
+        return surveyData.daily_tools.length > 0
+      case 10:
+        return surveyData.learning_methods.length > 0
+      case 11:
+        return surveyData.email !== "" && isValidEmail(surveyData.email)
       default:
         return true
     }
   }
 
-
-
   const submitSurvey = async () => {
     setIsSubmitting(true)
-    
-    try {
-      // Check if survey submission is allowed
-      const isConfigured = await isDatabaseConfigured()
-      
-      if (!isConfigured && !isAdmin) {
-        console.error("❌ Survey submission blocked: Database not configured")
-        alert("Survey submission blocked: Database not configured")
-        setIsSubmitting(false)
-        return
-      }
+    setError(null)
 
-      // Import the database function
-      const { submitSurveyToDatabase } = await import('@/lib/database-config')
-      
-      // Submit to database
-      const result = await submitSurveyToDatabase(surveyData)
-      
-      if (result.success) {
-        // Also save to localStorage as backup
-        try {
-          const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-          const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-          localStorage.setItem("survey", JSON.stringify(updated))
-          console.log("✅ Survey also saved to localStorage as backup")
-        } catch (localError) {
-          console.warn("⚠️ Could not save to localStorage:", localError)
-        }
-        
-        console.log("✅ Survey submitted successfully to database")
-        handleNext()
+    try {
+      const response = await fetch('/api/survey', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(surveyData),
+      })
+
+      if (response.ok) {
+        // Success - show completion message
+        setCurrentStep(totalSteps + 1) // Show completion step
       } else {
-        console.error("❌ Database submission failed:", result.error)
-        
-        // Only allow fallback to localStorage for admin users
-        if (isAdmin) {
-          const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-          const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-          localStorage.setItem("survey", JSON.stringify(updated))
-          console.log("✅ Survey saved to localStorage as admin fallback")
-          alert("Survey saved locally. Database connection failed.")
-          handleNext()
-        } else {
-          alert("Database connection failed. Please contact support.")
-        }
+        const errorData = await response.json()
+        setError(errorData.error || 'Error submitting survey')
       }
     } catch (error) {
-      console.error("❌ Error submitting survey:", error)
-      
-      // Only allow fallback to localStorage for admin users
-      if (isAdmin) {
-        try {
-          const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-          const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-          localStorage.setItem("survey", JSON.stringify(updated))
-          console.log("✅ Survey saved to localStorage as admin fallback")
-          alert("Survey saved locally. Please check your connection.")
-          handleNext()
-        } catch (localError) {
-          console.error("❌ Error saving to localStorage:", localError)
-          alert("Error saving survey. Please try again.")
-        }
-      } else {
-        alert("Error submitting survey. Please contact support.")
-      }
+      console.error('Error submitting survey:', error)
+      setError('Network error. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const renderQuestion = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <div className="space-y-8">
-            <div className="text-center space-y-3 sm:space-y-4">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What's your current role?</h2>
-              <p className="text-base sm:text-lg xl:text-xl text-slate-600 dark:text-slate-400">Help us understand your background</p>
-            </div>
-            <div className="grid gap-2 sm:gap-3 max-w-3xl mx-auto">
-              {roleOptions.map((role) => (
-                <button
-                  key={role}
-                  onClick={() => handleRoleSelect(role)}
-                  className={`p-3 sm:p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.role === role
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium text-sm sm:text-base">{role}</span>
-                </button>
-              ))}
-            </div>
-            {surveyData.role === "Other" && (
-              <div className="max-w-3xl mx-auto mt-4">
-                <Input
-                  value={surveyData.other_role}
-                  onChange={(e) => handleOtherRoleChange(e.target.value)}
-                  placeholder="Please specify your role..."
-                  className="text-base sm:text-lg p-3 sm:p-4 h-12 sm:h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
-                />
-              </div>
-            )}
-          </div>
-        )
+    const percentage = Math.round((currentStep / totalSteps) * 100)
 
+    switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your seniority level?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your experience</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {seniorityOptions.map((seniority) => (
-                <button
-                  key={seniority}
-                  onClick={() => handleSenioritySelect(seniority)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.seniority === seniority
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{seniority}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="¿Cuál es tu rol principal en el equipo de producto?"
+            options={roleOptions}
+            onSelect={handleRoleSelect}
+            autoAdvance={true}
+            delay={800}
+          />
         )
 
       case 2:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What type of company do you work for?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Tell us about your company size and stage</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              ¿Cuál es tu rol específico?
+            </motion.h2>
+            <Input
+              value={surveyData.other_role}
+              onChange={(e) => handleOtherRoleChange(e.target.value)}
+              placeholder="Describe tu rol..."
+              className="w-full p-4 text-lg"
+            />
+            <div className="flex justify-end">
+              <Button
+                onClick={handleNext}
+                disabled={!surveyData.other_role.trim()}
+                className="px-8 py-3"
+              >
+                Continuar
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {companySizeOptions.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => handleCompanySizeSelect(size)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.company_size === size
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{size}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          </motion.div>
         )
 
       case 3:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What industry do you work in?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your market</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {industryOptions.map((industry) => (
-                <button
-                  key={industry}
-                  onClick={() => handleIndustrySelect(industry)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.industry === industry
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{industry}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="¿Cuál es tu nivel de experiencia?"
+            options={seniorityOptions}
+            onSelect={handleSenioritySelect}
+            autoAdvance={true}
+            delay={800}
+          />
         )
 
       case 4:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What type of product do you work on?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Tell us about your product category</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {productTypeOptions.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => handleProductTypeSelect(type)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.product_type === type
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{type}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="¿En qué tipo de empresa trabajas?"
+            options={companySizeOptions}
+            onSelect={handleCompanySizeSelect}
+            autoAdvance={true}
+            delay={800}
+          />
         )
 
       case 5:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your customer segment?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Who do you build products for?</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {customerSegmentOptions.map((segment) => (
-                <button
-                  key={segment}
-                  onClick={() => handleCustomerSegmentSelect(segment)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.customer_segment === segment
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{segment}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="¿En qué industria trabajas?"
+            options={industryOptions}
+            onSelect={handleIndustrySelect}
+            autoAdvance={true}
+            delay={800}
+          />
         )
 
       case 6:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your main product-related challenge?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Share what you're struggling with most</p>
-            </div>
-            <div className="max-w-2xl mx-auto">
-              <Textarea
-                value={surveyData.main_challenge}
-                onChange={(e) => handleChallengeChange(e.target.value)}
-                placeholder="Describe your biggest challenge in product management, design, or development..."
-                className="min-h-32 text-lg p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400"
-              />
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="¿Qué tipo de producto desarrollas?"
+            options={productTypeOptions}
+            onSelect={handleProductTypeSelect}
+            autoAdvance={true}
+            delay={800}
+          />
         )
 
       case 7:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What tools do you use daily?</h2>
-              <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400">Select all that apply</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-6xl mx-auto">
-              {toolOptions.map((tool) => (
-                <button
-                  key={tool}
-                  onClick={() => handleToolToggle(tool)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.daily_tools.includes(tool)
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{tool}</span>
-                    {surveyData.daily_tools.includes(tool) && <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-            {surveyData.daily_tools.includes("Other") && (
-              <div className="max-w-2xl mx-auto mt-4">
-                <Input
-                  value={surveyData.other_tool}
-                  onChange={(e) => handleOtherToolChange(e.target.value)}
-                  placeholder="Please specify the tool..."
-                  className="text-lg p-4 h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
-                />
-              </div>
-            )}
-          </div>
+          <SingleChoiceQuestion
+            question="¿Cuál es tu segmento de clientes principal?"
+            options={customerSegmentOptions}
+            onSelect={handleCustomerSegmentSelect}
+            autoAdvance={true}
+            delay={800}
+          />
         )
 
       case 8:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">How do you learn about product?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Select all that apply</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-              {learningOptions.map((method) => (
-                <button
-                  key={method}
-                  onClick={() => handleLearningToggle(method)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.learning_methods.includes(method)
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{method}</span>
-                    {surveyData.learning_methods.includes(method) && <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="¿Cuál es tu principal desafío en el trabajo?"
+            options={challengeOptions}
+            onSelect={handleChallengeSelect}
+            autoAdvance={true}
+            delay={800}
+          />
         )
 
       case 9:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your salary range?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand compensation in the product community (optional)</p>
-            </div>
-            <div className="max-w-lg mx-auto space-y-6">
-              {/* Currency Selection */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Currency:</label>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "ARS", salary_min: "", salary_max: "", salary_average: "" })}
-                    className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                      surveyData.salary_currency === "ARS"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🇦🇷</span>
-                      <span className="font-medium">Pesos Argentinos</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "USD", salary_min: "", salary_max: "", salary_average: "" })}
-                    className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                      surveyData.salary_currency === "USD"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🇺🇸</span>
-                      <span className="font-medium">US Dollars</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Salary Input */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Salary Range</label>
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      type="number"
-                      value={surveyData.salary_min}
-                      onChange={(e) => {
-                        const min = parseInt(e.target.value) || 0
-                        const max = parseInt(surveyData.salary_max) || 0
-                        const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
-                        setSurveyData({ 
-                          ...surveyData, 
-                          salary_min: e.target.value,
-                          salary_average: avg
-                        })
-                      }}
-                      placeholder={surveyData.salary_currency === "USD" ? "Min (e.g., 80000)" : "Min (e.g., 2000000)"}
-                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                    />
-                    <span className="text-slate-500">-</span>
-                    <Input
-                      type="number"
-                      value={surveyData.salary_max}
-                      onChange={(e) => {
-                        const min = parseInt(surveyData.salary_min) || 0
-                        const max = parseInt(e.target.value) || 0
-                        const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
-                        setSurveyData({ 
-                          ...surveyData, 
-                          salary_max: e.target.value,
-                          salary_average: avg
-                        })
-                      }}
-                      placeholder={surveyData.salary_currency === "USD" ? "Max (e.g., 120000)" : "Max (e.g., 3000000)"}
-                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                    />
-                  </div>
-                </div>
-                
-                <div className="text-center">
-                  <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
-                    OR
-                  </span>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Average Salary</label>
-                  <Input
-                    type="number"
-                    value={surveyData.salary_average}
-                    onChange={(e) => {
-                      const avg = parseInt(e.target.value) || 0
-                      setSurveyData({ 
-                        ...surveyData, 
-                        salary_average: e.target.value,
-                        salary_min: avg > 0 ? Math.round(avg * 0.85).toString() : "",
-                        salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : ""
-                      })
-                    }}
-                    placeholder={surveyData.salary_currency === "USD" ? "Average (e.g., 100000)" : "Average (e.g., 2500000)"}
-                    className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                  />
-                  {surveyData.salary_average && surveyData.salary_min && surveyData.salary_max && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Auto-calculated range: {parseInt(surveyData.salary_min).toLocaleString()} - {parseInt(surveyData.salary_max).toLocaleString()} {surveyData.salary_currency}
-                    </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              ¿Qué herramientas usas diariamente? (Selecciona todas las que apliquen)
+            </motion.h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {toolOptions.map((tool) => (
+                <motion.button
+                  key={tool}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleToolToggle(tool)}
+                  className={`
+                    p-4 text-left rounded-xl border-2 transition-all duration-200
+                    min-h-[56px] flex items-center justify-between
+                    ${surveyData.daily_tools.includes(tool)
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
+                    }
+                  `}
+                >
+                  <span className="text-base font-medium">{tool}</span>
+                  {surveyData.daily_tools.includes(tool) && (
+                    <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   )}
-                </div>
-              </div>
+                </motion.button>
+              ))}
             </div>
-          </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {surveyData.daily_tools.length} seleccionadas
+              </span>
+              <Button
+                onClick={handleNext}
+                disabled={surveyData.daily_tools.length === 0}
+                className="px-8 py-3"
+              >
+                Continuar
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
         )
 
       case 10:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Your email</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Optional - only if you'd like us to follow up</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              ¿Cómo aprendes y te mantienes actualizado? (Selecciona todas las que apliquen)
+            </motion.h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {learningOptions.map((method) => (
+                <motion.button
+                  key={method}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleLearningToggle(method)}
+                  className={`
+                    p-4 text-left rounded-xl border-2 transition-all duration-200
+                    min-h-[56px] flex items-center justify-between
+                    ${surveyData.learning_methods.includes(method)
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
+                    }
+                  `}
+                >
+                  <span className="text-base font-medium">{method}</span>
+                  {surveyData.learning_methods.includes(method) && (
+                    <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  )}
+                </motion.button>
+              ))}
             </div>
-            <div className="max-w-md mx-auto">
-              <Input
-                type="email"
-                value={surveyData.email}
-                onChange={(e) => handleEmailChange(e.target.value)}
-                placeholder="your@email.com"
-                className={`text-lg p-4 h-14 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400 ${
-                  !isValidEmail(surveyData.email)
-                    ? "border-red-300 dark:border-red-600 focus:border-red-500 dark:focus:border-red-400"
-                    : "border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
-                }`}
-              />
-              {!isValidEmail(surveyData.email) && (
-                <p className="text-red-500 dark:text-red-400 text-sm mt-2">Please enter a valid email address</p>
-              )}
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {surveyData.learning_methods.length} seleccionadas
+              </span>
+              <Button
+                onClick={handleNext}
+                disabled={surveyData.learning_methods.length === 0}
+                className="px-8 py-3"
+              >
+                Continuar
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
-          </div>
+          </motion.div>
         )
 
       case 11:
         return (
-          <div className="text-center space-y-8">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              ¿Cuál es tu email? (Opcional - para recibir resultados)
+            </motion.h2>
+            <Input
+              type="email"
+              value={surveyData.email}
+              onChange={(e) => handleEmailChange(e.target.value)}
+              placeholder="tu@email.com"
+              className="w-full p-4 text-lg"
+            />
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Opcional - para recibir resultados
+              </span>
+              <Button
+                onClick={handleNext}
+                className="px-8 py-3"
+              >
+                Continuar
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )
+
+      case 12:
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              ¡Casi terminamos! Revisa tus respuestas
+            </motion.h2>
+            <Card className="p-6">
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Rol:</span>
+                    <p className="text-gray-900 dark:text-white">{surveyData.role === "Other" ? surveyData.other_role : surveyData.role}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Experiencia:</span>
+                    <p className="text-gray-900 dark:text-white">{surveyData.seniority}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Empresa:</span>
+                    <p className="text-gray-900 dark:text-white">{surveyData.company_size}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Industria:</span>
+                    <p className="text-gray-900 dark:text-white">{surveyData.industry}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <div className="flex justify-center">
+              <Button
+                onClick={submitSurvey}
+                disabled={isSubmitting}
+                className="px-8 py-3 bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? "Enviando..." : "Enviar Encuesta"}
+                <Check className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )
+
+      case 13:
+        return (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-2xl mx-auto text-center space-y-6"
+          >
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto">
               <Check className="w-10 h-10 text-green-600 dark:text-green-400" />
             </div>
-            <div className="space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Thank you!</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                Your responses help us build better products and create more valuable content for the product community.
-              </p>
-            </div>
-          </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              ¡Gracias por completar la encuesta!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Tus respuestas nos ayudarán a entender mejor la comunidad de productos.
+              {surveyData.email && " Te enviaremos los resultados por email."}
+            </p>
+            {userIsAdmin && (
+              <Button
+                onClick={() => window.location.href = '/admin/dashboard'}
+                className="px-8 py-3"
+              >
+                Ver Dashboard
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </motion.div>
         )
 
       default:
@@ -990,112 +737,143 @@ export default function ProductSurvey() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4 xl:p-8">
-      {/* Fixed header for mobile */}
-      <div className="fixed top-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          {/* Admin Login/Admin Panel Button */}
+  if (!isMounted) {
+    return <SurveySkeleton />
+  }
+
+  if (isLoading) {
+    return <ProgressIndicator message="Cargando encuesta..." />
+  }
+
+  if (error) {
+    return (
+      <ErrorDisplay 
+        error={error} 
+        onRetry={() => {
+          setError(null)
+          loadSettings()
+        }}
+      />
+    )
+  }
+
+  if (databaseStatus === "not-configured") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+        <div className="max-w-md mx-auto text-center space-y-6 p-8">
+          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto">
+            <Settings className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Configuración Requerida
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            La aplicación necesita ser configurada antes de poder usarla.
+          </p>
           <Button
-            onClick={() => {
-              if (user && profile?.role === 'admin') {
-                window.location.href = '/admin/dashboard'
-              } else {
-                window.open("/auth/login", "_blank")
-              }
-            }}
-            variant="outline"
-            size="sm"
-            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg text-xs sm:text-sm"
+            onClick={() => window.location.href = '/setup'}
+            className="w-full"
           >
-            <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">
-              {user && profile?.role === 'admin' ? 'Admin Panel' : 'Iniciar Sesión'}
-            </span>
-            <span className="sm:hidden">
-              {user && profile?.role === 'admin' ? 'Admin' : 'Login'}
-            </span>
+            Configurar Aplicación
+            <Settings className="ml-2 h-4 w-4" />
           </Button>
-          
-
         </div>
-        
-        {/* Theme toggle */}
-        <ModeToggle />
       </div>
+    )
+  }
 
-      <div className="w-full max-w-5xl mx-auto mt-16 sm:mt-20">
-        <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
-          <CardContent className="p-4 sm:p-6 lg:p-8 xl:p-12">
-            {/* Progress bar */}
-            <div className="mb-8 lg:mb-12">
-              <div className="flex justify-between items-center mb-3">
-                                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    {currentStep < totalSteps - 1 ? `${currentStep + 1} of ${totalSteps - 1}` : "Complete"}
-                  </span>
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    {Math.round(((currentStep + 1) / totalSteps) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-                />
-              </div>
+  if (settings?.general?.maintenanceMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+        <div className="max-w-md mx-auto text-center space-y-6 p-8">
+          <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto">
+            <Wrench className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Mantenimiento en Curso
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            La aplicación está en mantenimiento. Por favor, vuelve más tarde.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+      {/* Header */}
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Product Community Survey
+              </h1>
             </div>
-
-            {/* Question content */}
-            <div className="mb-8 lg:mb-12">{renderQuestion()}</div>
-
-                          {/* Navigation buttons */}
-              {currentStep < totalSteps - 1 && (
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-center space-x-4">
+              <ModeToggle />
+              {userIsAdmin && (
                 <Button
                   variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 0}
-                  className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 w-full sm:w-auto"
+                  size="sm"
+                  onClick={() => window.location.href = '/admin/dashboard'}
+                  className="hidden sm:flex"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back
+                  Admin Panel
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
 
-                {currentStep === 10 ? (
-                  <Button
-                    onClick={submitSurvey}
-                    disabled={!canProceed() || isSubmitting}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 sm:px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span className="hidden sm:inline">Submitting...</span>
-                        <span className="sm:hidden">Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="hidden sm:inline">Submit Survey</span>
-                        <span className="sm:hidden">Submit</span>
-                        <Check className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleNext}
-                    disabled={!canProceed()}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-6 sm:px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                  >
-                    Next
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Progress Bar */}
+          {currentStep <= totalSteps && (
+            <div className="mb-8">
+              <SurveyProgress
+                current={currentStep}
+                total={totalSteps}
+                percentage={Math.round((currentStep / totalSteps) * 100)}
+              />
+            </div>
+          )}
+
+          {/* Question Content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderQuestion()}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Navigation */}
+          {currentStep > 1 && currentStep <= totalSteps && (
+            <div className="mt-8 flex justify-between">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                className="px-6 py-2"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Anterior
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay isVisible={isSubmitting} message="Enviando encuesta..." />
     </div>
   )
 }
