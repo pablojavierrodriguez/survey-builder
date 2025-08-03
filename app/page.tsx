@@ -931,8 +931,8 @@ export default function ProductSurvey() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Centralized Navigation */}
-          {currentStep < totalSteps && (
+          {/* Centralized Navigation - only for non-single-choice questions */}
+          {currentStep < totalSteps && currentStep > 6 && (
             <div className="mt-8 flex justify-between items-center">
               {(() => {
                 const navConfig = getNavigationConfig()
