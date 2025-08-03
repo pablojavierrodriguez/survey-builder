@@ -967,16 +967,11 @@ export default function ProductSurvey() {
             </div>
             <div className="flex items-center space-x-4">
               <ModeToggle />
-              {/* Debug info */}
-              <div className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-                User: {user ? 'Yes' : 'No'} | Admin: {userIsAdmin ? 'Yes' : 'No'}
-              </div>
               {user ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => window.location.href = '/admin/dashboard'}
-                  className="hidden sm:flex"
                 >
                   Panel
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -986,7 +981,6 @@ export default function ProductSurvey() {
                   variant="outline"
                   size="sm"
                   onClick={() => window.location.href = '/auth/login'}
-                  className="hidden sm:flex"
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   Login
