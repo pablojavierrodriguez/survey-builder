@@ -218,26 +218,62 @@ export default function ProductSurvey() {
   // Handlers for single choice questions (no auto-advance)
   const handleRoleSelect = (role: string) => {
     setSurveyData(prev => ({ ...prev, role }))
+    // Auto-advance after a short delay for single-choice questions
+    setTimeout(() => {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1)
+      }
+    }, 500)
   }
 
   const handleSenioritySelect = (seniority: string) => {
     setSurveyData(prev => ({ ...prev, seniority }))
+    // Auto-advance after a short delay for single-choice questions
+    setTimeout(() => {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1)
+      }
+    }, 500)
   }
 
   const handleCompanySizeSelect = (company_size: string) => {
     setSurveyData(prev => ({ ...prev, company_size }))
+    // Auto-advance after a short delay for single-choice questions
+    setTimeout(() => {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1)
+      }
+    }, 500)
   }
 
   const handleIndustrySelect = (industry: string) => {
     setSurveyData(prev => ({ ...prev, industry }))
+    // Auto-advance after a short delay for single-choice questions
+    setTimeout(() => {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1)
+      }
+    }, 500)
   }
 
   const handleProductTypeSelect = (product_type: string) => {
     setSurveyData(prev => ({ ...prev, product_type }))
+    // Auto-advance after a short delay for single-choice questions
+    setTimeout(() => {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1)
+      }
+    }, 500)
   }
 
   const handleCustomerSegmentSelect = (customer_segment: string) => {
     setSurveyData(prev => ({ ...prev, customer_segment }))
+    // Auto-advance after a short delay for single-choice questions
+    setTimeout(() => {
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1)
+      }
+    }, 500)
   }
 
   // Manual navigation handlers
@@ -360,7 +396,8 @@ export default function ProductSurvey() {
             question="What's your current role?"
             options={roleOptions}
             onSelect={handleRoleSelect}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -370,7 +407,8 @@ export default function ProductSurvey() {
             question="What's your seniority level?"
             options={seniorityOptions}
             onSelect={handleSenioritySelect}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -380,7 +418,8 @@ export default function ProductSurvey() {
             question="What type of company do you work for?"
             options={companySizeOptions}
             onSelect={handleCompanySizeSelect}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -390,7 +429,8 @@ export default function ProductSurvey() {
             question="What industry do you work in?"
             options={industryOptions}
             onSelect={handleIndustrySelect}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -400,7 +440,8 @@ export default function ProductSurvey() {
             question="What type of product do you work on?"
             options={productTypeOptions}
             onSelect={handleProductTypeSelect}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -410,7 +451,8 @@ export default function ProductSurvey() {
             question="What's your customer segment?"
             options={customerSegmentOptions}
             onSelect={handleCustomerSegmentSelect}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
