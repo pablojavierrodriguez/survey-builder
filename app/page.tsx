@@ -516,9 +516,19 @@ export default function ProductSurvey() {
               ))}
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {surveyData.daily_tools.length} selected
-              </span>
+              <div className="flex items-center space-x-4">
+                <Button
+                  onClick={handlePrevious}
+                  variant="outline"
+                  className="px-6 py-2"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {surveyData.daily_tools.length} selected
+                </span>
+              </div>
               <Button
                 onClick={handleNext}
                 disabled={surveyData.daily_tools.length === 0}
