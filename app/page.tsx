@@ -967,6 +967,10 @@ export default function ProductSurvey() {
             </div>
             <div className="flex items-center space-x-4">
               <ModeToggle />
+              {/* Debug info */}
+              <div className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
+                User: {user ? 'Yes' : 'No'} | Admin: {userIsAdmin ? 'Yes' : 'No'}
+              </div>
               {userIsAdmin ? (
                 <Button
                   variant="outline"
