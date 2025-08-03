@@ -142,7 +142,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">PC</span>
               </div>
-              <span className="font-semibold text-lg">Admin Panel</span>
+              <span className="font-semibold text-lg">Panel</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}

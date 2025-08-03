@@ -971,14 +971,14 @@ export default function ProductSurvey() {
               <div className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
                 User: {user ? 'Yes' : 'No'} | Admin: {userIsAdmin ? 'Yes' : 'No'}
               </div>
-              {userIsAdmin ? (
+              {user ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => window.location.href = '/admin/dashboard'}
                   className="hidden sm:flex"
                 >
-                  Admin Panel
+                  Panel
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
