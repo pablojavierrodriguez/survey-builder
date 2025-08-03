@@ -867,10 +867,10 @@ export default function ProductSurvey() {
             <Wrench className="w-8 h-8 text-orange-600 dark:text-orange-400" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Mantenimiento en Curso
+            Under Maintenance
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            La aplicación está en mantenimiento. Por favor, vuelve más tarde.
+            The application is under maintenance. Please check back later.
           </p>
         </div>
       </div>
@@ -890,7 +890,7 @@ export default function ProductSurvey() {
             </div>
             <div className="flex items-center space-x-4">
               <ModeToggle />
-              {userIsAdmin && (
+              {userIsAdmin ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -899,6 +899,16 @@ export default function ProductSurvey() {
                 >
                   Admin Panel
                   <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = '/auth/login'}
+                  className="hidden sm:flex"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Login
                 </Button>
               )}
             </div>
@@ -950,7 +960,7 @@ export default function ProductSurvey() {
       </main>
 
       {/* Loading Overlay */}
-      <LoadingOverlay isVisible={isSubmitting} message="Enviando encuesta..." />
+      <LoadingOverlay isVisible={isSubmitting} message="Submitting survey..." />
     </div>
   )
 }
