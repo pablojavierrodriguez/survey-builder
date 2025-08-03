@@ -435,7 +435,7 @@ export default function SurveyConfigPage() {
       {/* Questions */}
       <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
               <CardTitle className="dark:text-gray-50">Survey Questions</CardTitle>
               <CardDescription className="dark:text-gray-400">

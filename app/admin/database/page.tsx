@@ -282,24 +282,29 @@ Note: Auto-setup is not available. Please configure the database manually using 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Database Management</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Database Management</h1>
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
             {connectionStatus === "connected" ? (
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             ) : connectionStatus === "disconnected" ? (
-              <XCircle className="w-5 h-5 text-red-500" />
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
             ) : (
-              <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />
+              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 animate-spin" />
             )}
-            <span className="text-sm text-muted-foreground capitalize">{connectionStatus}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground capitalize">{connectionStatus}</span>
           </div>
-          <Button onClick={() => {
-            testConnection()
-            fetchResponses()
-          }} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button 
+            onClick={() => {
+              testConnection()
+              fetchResponses()
+            }} 
+            variant="outline"
+            size="sm"
+            className="text-xs sm:text-sm"
+          >
+            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             Refresh
           </Button>
         </div>

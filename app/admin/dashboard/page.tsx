@@ -374,11 +374,11 @@ export default function AdminDashboard() {
                 {stats.recentResponses.slice(0, 5).map((response, index) => (
                   <div key={index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
                     <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-primary rounded-full flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-xs sm:text-sm font-medium text-foreground truncate">
                         {response.role || "Anonymous"} from {response.industry || "Unknown Industry"}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {response.created_at ? new Date(response.created_at).toLocaleString() : "Recently"}
                       </p>
                     </div>

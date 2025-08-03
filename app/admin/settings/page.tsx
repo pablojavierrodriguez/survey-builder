@@ -24,6 +24,7 @@ interface AppSettings {
     publicUrl: string
     maintenanceMode: boolean
     analyticsEnabled: boolean
+    debugMode: boolean
   }
   security?: {
     sessionTimeout: number
@@ -98,6 +99,7 @@ export default function SettingsPage() {
           publicUrl: config.general?.publicUrl || '',
           maintenanceMode: config.general?.maintenanceMode || false,
           analyticsEnabled: config.general?.analyticsEnabled || true,
+          debugMode: config.general?.debugMode || false,
         },
         security: config.security,
         features: config.features,
@@ -494,6 +496,17 @@ export default function SettingsPage() {
               <Switch
                 checked={settings.general.analyticsEnabled}
                 onCheckedChange={(checked) => updateSettings("general", "analyticsEnabled", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-foreground">Debug Mode</label>
+                <p className="text-xs text-muted-foreground">Show debug buttons and detailed console logs</p>
+              </div>
+              <Switch
+                checked={settings.general.debugMode}
+                onCheckedChange={(checked) => updateSettings("general", "debugMode", checked)}
               />
             </div>
           </div>

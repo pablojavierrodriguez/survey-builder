@@ -93,16 +93,16 @@ const RankingChart = memo(({
       <CardContent>
         <div className="space-y-2">
           {sortedData.map(([key, count]) => (
-            <div key={key} className="flex items-center justify-between">
-              <span className="text-sm truncate flex-1">{key}</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-16 bg-secondary rounded-full h-2">
+            <div key={key} className="flex items-center justify-between gap-2">
+              <span className="text-xs sm:text-sm truncate flex-1 min-w-0">{key}</span>
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                <div className="w-12 sm:w-16 bg-secondary rounded-full h-2">
                   <div
                     className="bg-primary h-2 rounded-full"
                     style={{ width: `${(count / total) * 100}%` }}
                   />
                 </div>
-                <span className="text-sm font-medium min-w-[3rem] text-right">
+                <span className="text-xs sm:text-sm font-medium min-w-[2rem] sm:min-w-[3rem] text-right">
                   {count}
                 </span>
               </div>

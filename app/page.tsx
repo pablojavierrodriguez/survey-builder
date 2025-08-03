@@ -9,6 +9,7 @@ import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Database, 
 import { ModeToggle } from "@/components/mode-toggle"
 import { useAuth } from "@/lib/auth-context"
 import { isDatabaseConfigured } from "@/lib/database-validator"
+import { useDebugMode } from "@/lib/use-debug-mode"
 import { SurveyProgress } from "@/components/ui/survey-progress"
 import { SingleChoiceQuestion } from "@/components/ui/single-choice-question"
 import { SurveySkeleton, ProgressIndicator, ErrorDisplay, LoadingOverlay } from "@/components/ui/loading-states"
@@ -151,6 +152,7 @@ const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors",
 
 export default function ProductSurvey() {
   const { user, userIsAdmin, clearCorruptedSession } = useAuth()
+  const { debugMode } = useDebugMode()
   const [currentStep, setCurrentStep] = useState(1)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
@@ -889,8 +891,8 @@ export default function ProductSurvey() {
                 </Button>
               )}
 
-              {/* Temporary debug button to clear corrupted session */}
-              {user && (
+              {/* Debug button to clear corrupted session - only visible in debug mode */}
+              {user && debugMode && (
                 <Button
                   onClick={async () => {
                     await clearCorruptedSession()
@@ -898,7 +900,8 @@ export default function ProductSurvey() {
                   }}
                   variant="outline"
                   size="sm"
-                  className="ml-1 px-2 h-7 text-xs hidden sm:inline-flex"
+                  className="ml-1 px-2 h-7 text-xs"
+                  title="Clear corrupted session (debug mode)"
                 >
                   Clear
                 </Button>
