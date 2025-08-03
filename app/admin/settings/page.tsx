@@ -26,7 +26,7 @@ interface AppSettings {
     analyticsEnabled: boolean
     debugMode: boolean
   }
-  survey?: {
+  survey: {
     title: string
   }
   security?: {
@@ -497,7 +497,6 @@ export default function SettingsPage() {
               className="bg-background text-foreground border-border"
             />
             <p className="text-xs text-muted-foreground mt-1">This title will be displayed in the survey header</p>
-          </div>
           </div>
 
           <div className="space-y-3">
