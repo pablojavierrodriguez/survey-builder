@@ -26,6 +26,9 @@ interface AppSettings {
     analyticsEnabled: boolean
     debugMode: boolean
   }
+  survey?: {
+    title: string
+  }
   security?: {
     sessionTimeout: number
     maxLoginAttempts: number
@@ -95,11 +98,14 @@ export default function SettingsPage() {
           environment: config.database?.environment || 'development',
         },
         general: {
-          appName: config.general?.appName || 'Product Community Survey',
+          appName: config.general?.appName || 'Survey Builder',
           publicUrl: config.general?.publicUrl || '',
           maintenanceMode: config.general?.maintenanceMode || false,
           analyticsEnabled: config.general?.analyticsEnabled || true,
           debugMode: config.general?.debugMode || false,
+        },
+        survey: {
+          title: config.survey?.title || 'Product Community Survey',
         },
         security: config.security,
         features: config.features,
@@ -251,6 +257,9 @@ export default function SettingsPage() {
             maintenanceMode: settings.general.maintenanceMode,
             analyticsEnabled: settings.general.analyticsEnabled,
             debugMode: settings.general.debugMode
+          },
+          survey: {
+            title: settings.survey?.title || 'Product Community Survey'
           },
           security: settings.security,
           features: settings.features
@@ -461,8 +470,10 @@ export default function SettingsPage() {
               <Input
                 value={settings.general.appName}
                 onChange={(e) => updateSettings("general", "appName", e.target.value)}
-                placeholder="Product Survey Builder"
+                placeholder="Survey Builder"
                 className="bg-background text-foreground border-border"
+                disabled={true}
+                title="App name is set via environment variables"
               />
             </div>
 
@@ -475,6 +486,18 @@ export default function SettingsPage() {
                 className="bg-background text-foreground border-border"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Survey Title</label>
+            <Input
+              value={settings.survey?.title || ''}
+              onChange={(e) => updateSettings("survey", "title", e.target.value)}
+              placeholder="Product Community Survey"
+              className="bg-background text-foreground border-border"
+            />
+            <p className="text-xs text-muted-foreground mt-1">This title will be displayed in the survey header</p>
+          </div>
           </div>
 
           <div className="space-y-3">
