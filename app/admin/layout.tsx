@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { getPermissions, getUserRole } from "@/lib/permissions"
+import { useSettings } from "@/lib/use-settings"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { 
@@ -29,6 +30,7 @@ interface AdminUser {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user, profile, signOut, loading } = useAuth()
+  const { settings } = useSettings()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -217,7 +219,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           
           <div className="flex items-center space-x-3 sm:space-x-4">
             <div className="hidden sm:block">
-              <h1 className="text-base sm:text-lg font-semibold">Product Community Survey</h1>
+              <h1 className="text-base sm:text-lg font-semibold">{settings?.general?.surveyTitle || 'Product Community Survey'}</h1>
             </div>
             <ModeToggle />
           </div>

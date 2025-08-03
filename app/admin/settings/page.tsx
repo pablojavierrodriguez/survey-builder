@@ -20,14 +20,11 @@ interface AppSettings {
     environment: string
   }
   general: {
-    appName: string
+    surveyTitle: string
     publicUrl: string
     maintenanceMode: boolean
     analyticsEnabled: boolean
     debugMode: boolean
-  }
-  survey: {
-    title: string
   }
   security?: {
     sessionTimeout: number
@@ -98,14 +95,11 @@ export default function SettingsPage() {
           environment: config.database?.environment || 'development',
         },
         general: {
-          appName: config.general?.appName || 'Survey Builder',
+          surveyTitle: config.general?.surveyTitle || 'Product Community Survey',
           publicUrl: config.general?.publicUrl || '',
           maintenanceMode: config.general?.maintenanceMode || false,
           analyticsEnabled: config.general?.analyticsEnabled || true,
           debugMode: config.general?.debugMode || false,
-        },
-        survey: {
-          title: config.survey?.title || 'Product Community Survey',
         },
         security: config.security,
         features: config.features,
@@ -252,14 +246,11 @@ export default function SettingsPage() {
             environment: settings.database.environment
           },
           general: {
-            appName: settings.general.appName,
+            surveyTitle: settings.general.surveyTitle,
             publicUrl: settings.general.publicUrl,
             maintenanceMode: settings.general.maintenanceMode,
             analyticsEnabled: settings.general.analyticsEnabled,
             debugMode: settings.general.debugMode
-          },
-          survey: {
-            title: settings.survey?.title || 'Product Community Survey'
           },
           security: settings.security,
           features: settings.features
@@ -466,18 +457,6 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Application Name</label>
-              <Input
-                value={settings.general.appName}
-                onChange={(e) => updateSettings("general", "appName", e.target.value)}
-                placeholder="Survey Builder"
-                className="bg-background text-foreground border-border"
-                disabled={true}
-                title="App name is set via environment variables"
-              />
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-foreground mb-2">Public URL</label>
               <Input
                 value={settings.general.publicUrl}
@@ -491,12 +470,12 @@ export default function SettingsPage() {
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Survey Title</label>
             <Input
-              value={settings.survey?.title || ''}
-              onChange={(e) => updateSettings("survey", "title", e.target.value)}
+              value={settings.general.surveyTitle}
+              onChange={(e) => updateSettings("general", "surveyTitle", e.target.value)}
               placeholder="Product Community Survey"
               className="bg-background text-foreground border-border"
             />
-            <p className="text-xs text-muted-foreground mt-1">This title will be displayed in the survey header</p>
+            <p className="text-xs text-muted-foreground mt-1">This title will be displayed in the survey header and admin panel</p>
           </div>
 
           <div className="space-y-3">

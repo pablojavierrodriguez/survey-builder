@@ -396,22 +396,12 @@ export default function SurveyConfigPage() {
           <CardDescription className="dark:text-gray-400">Configure basic survey information</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Survey Title</label>
-              <Input
-                value={config.title}
-                onChange={(e) => setConfig({ ...config, title: e.target.value })}
-                className="dark:bg-gray-900 dark:text-gray-50 dark:border-gray-700"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={config.isActive}
-                onCheckedChange={(checked) => setConfig({ ...config, isActive: checked })}
-              />
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Survey Active</label>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={config.isActive}
+              onCheckedChange={(checked) => setConfig({ ...config, isActive: checked })}
+            />
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Survey Active</label>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Survey Description</label>
