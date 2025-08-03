@@ -249,7 +249,8 @@ export default function SettingsPage() {
             appName: settings.general.appName,
             publicUrl: settings.general.publicUrl,
             maintenanceMode: settings.general.maintenanceMode,
-            analyticsEnabled: settings.general.analyticsEnabled
+            analyticsEnabled: settings.general.analyticsEnabled,
+            debugMode: settings.general.debugMode
           },
           security: settings.security,
           features: settings.features

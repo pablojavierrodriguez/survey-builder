@@ -863,7 +863,7 @@ export default function ProductSurvey() {
           <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
             <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
               <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">
-                Product Community Survey
+                {settings?.general?.appName || 'Product Community Survey'}
               </h1>
             </div>
             <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">

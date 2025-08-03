@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const { user, profile } = useAuth()
   const userRole = profile?.role || 'viewer'
   const permissions = getCurrentUserPermissions(userRole as any)
@@ -129,6 +130,8 @@ export default function AdminDashboard() {
         // Process data inline
         processDataInline(data)
       }
+      
+      setLastUpdated(new Date())
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
       setError("Failed to load dashboard data. Please try again later.")
@@ -252,6 +255,11 @@ export default function AdminDashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Overview of your survey responses and analytics • {getRoleDisplayName(userRole as UserRole)}
+            {lastUpdated && (
+              <span className="ml-2 text-xs">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
         <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading} className="text-xs sm:text-sm">
