@@ -151,7 +151,7 @@ const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors",
 
 export default function ProductSurvey() {
   const { user, userIsAdmin } = useAuth()
-  const [currentStep, setCurrentStep] = useState(0)
+  const [currentStep, setCurrentStep] = useState(1)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -293,10 +293,8 @@ export default function ProductSurvey() {
 
   const canProceed = () => {
     switch (currentStep) {
-      case 0:
-        return surveyData.role !== ""
       case 1:
-        return surveyData.other_role !== ""
+        return surveyData.role !== ""
       case 2:
         return surveyData.seniority !== ""
       case 3:
@@ -350,32 +348,32 @@ export default function ProductSurvey() {
     }
   }
 
+  // Centralized navigation logic
+  const getNavigationConfig = () => {
+    const hasPrevious = currentStep > 1
+    const hasNext = currentStep < totalSteps
+    const isRequired = currentStep !== 10 // Salary is optional
+    const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
+    const canProceedResult = canProceed()
+
+    return {
+      showBack: hasPrevious,
+      showContinue: hasNext,
+      continueDisabled: isRequired && !canProceedResult,
+      isAutoAdvance
+    }
+  }
+
   const renderQuestion = () => {
     const percentage = Math.round((currentStep / totalSteps) * 100)
 
     switch (currentStep) {
-      case 0:
+      case 1:
         return (
           <SingleChoiceQuestion
             question="What's your current role?"
             options={roleOptions}
             onSelect={handleRoleSelect}
-            onNext={handleNext}
-            showBackButton={false}
-            autoAdvance={true}
-            delay={500}
-          />
-        )
-
-      case 1:
-        return (
-          <SingleChoiceQuestion
-            question="What's your seniority level?"
-            options={seniorityOptions}
-            onSelect={handleSenioritySelect}
-            onNext={handleNext}
-            onBack={handlePrevious}
-            showBackButton={true}
             autoAdvance={true}
             delay={500}
           />
@@ -384,12 +382,9 @@ export default function ProductSurvey() {
       case 2:
         return (
           <SingleChoiceQuestion
-            question="What type of company do you work for?"
-            options={companySizeOptions}
-            onSelect={handleCompanySizeSelect}
-            onNext={handleNext}
-            onBack={handlePrevious}
-            showBackButton={true}
+            question="What's your seniority level?"
+            options={seniorityOptions}
+            onSelect={handleSenioritySelect}
             autoAdvance={true}
             delay={500}
           />
@@ -398,12 +393,9 @@ export default function ProductSurvey() {
       case 3:
         return (
           <SingleChoiceQuestion
-            question="What industry do you work in?"
-            options={industryOptions}
-            onSelect={handleIndustrySelect}
-            onNext={handleNext}
-            onBack={handlePrevious}
-            showBackButton={true}
+            question="What type of company do you work for?"
+            options={companySizeOptions}
+            onSelect={handleCompanySizeSelect}
             autoAdvance={true}
             delay={500}
           />
@@ -412,12 +404,9 @@ export default function ProductSurvey() {
       case 4:
         return (
           <SingleChoiceQuestion
-            question="What type of product do you work on?"
-            options={productTypeOptions}
-            onSelect={handleProductTypeSelect}
-            onNext={handleNext}
-            onBack={handlePrevious}
-            showBackButton={true}
+            question="What industry do you work in?"
+            options={industryOptions}
+            onSelect={handleIndustrySelect}
             autoAdvance={true}
             delay={500}
           />
@@ -426,18 +415,26 @@ export default function ProductSurvey() {
       case 5:
         return (
           <SingleChoiceQuestion
-            question="What's your customer segment?"
-            options={customerSegmentOptions}
-            onSelect={handleCustomerSegmentSelect}
-            onNext={handleNext}
-            onBack={handlePrevious}
-            showBackButton={true}
+            question="What type of product do you work on?"
+            options={productTypeOptions}
+            onSelect={handleProductTypeSelect}
             autoAdvance={true}
             delay={500}
           />
         )
 
       case 6:
+        return (
+          <SingleChoiceQuestion
+            question="What's your customer segment?"
+            options={customerSegmentOptions}
+            onSelect={handleCustomerSegmentSelect}
+            autoAdvance={true}
+            delay={500}
+          />
+        )
+
+      case 7:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -457,24 +454,6 @@ export default function ProductSurvey() {
               placeholder="Describe your biggest challenge in product management, design, or development..."
               className="min-h-32 text-lg p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
-            <div className="flex justify-between items-center">
-              <Button
-                onClick={handlePrevious}
-                variant="outline"
-                className="px-6 py-2"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                onClick={handleNext}
-                disabled={!surveyData.main_challenge.trim() || surveyData.main_challenge.trim().length < 10}
-                className="px-8 py-3"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
           </motion.div>
         )
 
@@ -515,28 +494,8 @@ export default function ProductSurvey() {
                 </motion.button>
               ))}
             </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2 sm:space-x-4">
-                <Button
-                  onClick={handlePrevious}
-                  variant="outline"
-                  className="px-4 sm:px-6 py-2 text-sm"
-                >
-                  <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                  Back
-                </Button>
-                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                  {surveyData.daily_tools.length} selected
-                </span>
-              </div>
-              <Button
-                onClick={handleNext}
-                disabled={surveyData.daily_tools.length === 0}
-                className="px-4 sm:px-6 py-2 text-sm"
-              >
-                Continue
-                <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              {surveyData.daily_tools.length} selected
             </div>
           </motion.div>
         )
@@ -553,55 +512,37 @@ export default function ProductSurvey() {
               animate={{ opacity: 1, y: 0 }}
               className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
             >
-              What tools do you use daily? (Select all that apply)
+              How do you learn about product? (Select all that apply)
             </motion.h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {toolOptions.map((tool) => (
+              {learningOptions.map((method) => (
                 <motion.button
-                  key={tool}
+                  key={method}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => handleToolToggle(tool)}
+                  onClick={() => handleLearningToggle(method)}
                   className={`
                     p-4 text-left rounded-xl border-2 transition-all duration-200
                     min-h-[56px] flex items-center justify-between
-                    ${surveyData.daily_tools.includes(tool)
+                    ${surveyData.learning_methods.includes(method)
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
                       : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
                     }
                   `}
                 >
-                  <span className="text-base font-medium">{tool}</span>
-                  {surveyData.daily_tools.includes(tool) && (
+                  <span className="text-base font-medium">{method}</span>
+                  {surveyData.learning_methods.includes(method) && (
                     <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   )}
                 </motion.button>
               ))}
             </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <Button
-                  onClick={handlePrevious}
-                  variant="outline"
-                  className="px-6 py-2"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {surveyData.daily_tools.length} selected
-                </span>
-              </div>
-              <Button
-                onClick={handleNext}
-                disabled={surveyData.daily_tools.length === 0}
-                className="px-8 py-3"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              {surveyData.learning_methods.length} selected
             </div>
           </motion.div>
+        )
+                      </motion.div>
         )
 
       case 9:
@@ -641,28 +582,8 @@ export default function ProductSurvey() {
                 </motion.button>
               ))}
             </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <Button
-                  onClick={handlePrevious}
-                  variant="outline"
-                  className="px-6 py-2"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {surveyData.learning_methods.length} selected
-                </span>
-              </div>
-              <Button
-                onClick={handleNext}
-                disabled={surveyData.learning_methods.length === 0}
-                className="px-8 py-3"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              {surveyData.learning_methods.length} selected
             </div>
           </motion.div>
         )
@@ -1019,6 +940,42 @@ export default function ProductSurvey() {
               {renderQuestion()}
             </motion.div>
           </AnimatePresence>
+
+          {/* Centralized Navigation */}
+          {currentStep <= totalSteps && (
+            <div className="mt-8 flex justify-between items-center">
+              {(() => {
+                const navConfig = getNavigationConfig()
+                return (
+                  <>
+                    {navConfig.showBack ? (
+                      <Button
+                        onClick={handlePrevious}
+                        variant="outline"
+                        className="px-4 sm:px-6 py-2 text-sm"
+                      >
+                        <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                        Back
+                      </Button>
+                    ) : (
+                      <div />
+                    )}
+                    
+                    {navConfig.showContinue && (
+                      <Button
+                        onClick={handleNext}
+                        disabled={navConfig.continueDisabled}
+                        className="px-4 sm:px-6 py-2 text-sm"
+                      >
+                        Continue
+                        <ArrowRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )}
         </div>
       </main>
 
