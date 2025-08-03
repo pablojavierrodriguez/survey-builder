@@ -362,7 +362,8 @@ export default function ProductSurvey() {
             onSelect={handleRoleSelect}
             onNext={handleNext}
             showBackButton={false}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -375,7 +376,8 @@ export default function ProductSurvey() {
             onNext={handleNext}
             onBack={handlePrevious}
             showBackButton={true}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -388,7 +390,8 @@ export default function ProductSurvey() {
             onNext={handleNext}
             onBack={handlePrevious}
             showBackButton={true}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -401,7 +404,8 @@ export default function ProductSurvey() {
             onNext={handleNext}
             onBack={handlePrevious}
             showBackButton={true}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -414,7 +418,8 @@ export default function ProductSurvey() {
             onNext={handleNext}
             onBack={handlePrevious}
             showBackButton={true}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 
@@ -427,7 +432,8 @@ export default function ProductSurvey() {
             onNext={handleNext}
             onBack={handlePrevious}
             showBackButton={true}
-            autoAdvance={false}
+            autoAdvance={true}
+            delay={500}
           />
         )
 

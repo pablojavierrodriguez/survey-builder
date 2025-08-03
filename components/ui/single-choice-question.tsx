@@ -36,11 +36,15 @@ export function SingleChoiceQuestion({
     
     setSelectedOption(option)
 
-    // Auto-advance only if no manual navigation is provided
-    if (autoAdvance && !onNext) {
+    // Auto-advance after delay, even with manual navigation available
+    if (autoAdvance) {
       setIsAdvancing(true)
       setTimeout(() => {
-        onSelect(option)
+        if (onNext) {
+          onNext()
+        } else {
+          onSelect(option)
+        }
         setSelectedOption(null)
         setIsAdvancing(false)
       }, delay)
