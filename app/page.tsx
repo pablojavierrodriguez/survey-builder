@@ -294,7 +294,7 @@ export default function ProductSurvey() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return surveyData.role !== "" && (surveyData.role !== "Other" || surveyData.other_role.trim() !== "")
+        return surveyData.role !== ""
       case 2:
         return surveyData.seniority !== ""
       case 3:
@@ -353,7 +353,7 @@ export default function ProductSurvey() {
     const hasPrevious = currentStep > 1
     const hasNext = currentStep < totalSteps
     const isRequired = currentStep !== 10 // Salary is optional
-    const isAutoAdvance = currentStep >= 1 && currentStep <= 6 && !(currentStep === 1 && surveyData.role === "Other" && surveyData.other_role.trim() === "")
+    const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
     const canProceedResult = canProceed()
 
     return {
@@ -370,87 +370,14 @@ export default function ProductSurvey() {
     switch (currentStep) {
       case 1:
         return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
-          >
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
-            >
-              What's your current role?
-            </motion.h2>
-            
-            {/* Role Options */}
-            <div className="space-y-3">
-              {roleOptions.map((role) => (
-                <motion.button
-                  key={role}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    handleRoleSelect(role)
-                    // Auto-advance for non-Other roles after 500ms
-                    if (role !== "Other") {
-                      setTimeout(() => {
-                        if (canProceed()) {
-                          handleNext()
-                        }
-                      }, 500)
-                    }
-                  }}
-                  className={`
-                    w-full p-4 md:p-5 text-left rounded-xl border-2 transition-all duration-200
-                    min-h-[56px] md:min-h-[64px] flex items-center justify-between
-                    ${surveyData.role === role
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
-                    }
-                  `}
-                >
-                  <span className="text-base md:text-lg font-medium leading-relaxed">
-                    {role}
-                  </span>
-                  
-                  {surveyData.role === role && (
-                    <Check className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  )}
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Other Role Input */}
-            {surveyData.role === "Other" && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-3"
-              >
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Please specify your role:
-                </label>
-                <Input
-                  type="text"
-                  value={surveyData.other_role}
-                  onChange={(e) => {
-                    handleOtherRoleChange(e.target.value)
-                    // Auto-advance when Other role is completed
-                    if (e.target.value.trim() !== "") {
-                      setTimeout(() => {
-                        if (canProceed()) {
-                          handleNext()
-                        }
-                      }, 500)
-                    }
-                  }}
-                  placeholder="Enter your role..."
-                  className="w-full p-4 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                />
-              </motion.div>
-            )}
-          </motion.div>
+          <SingleChoiceQuestion
+            question="What's your current role?"
+            options={roleOptions}
+            onSelect={handleRoleSelect}
+            onNext={handleNext}
+            autoAdvance={true}
+            delay={500}
+          />
         )
 
       case 2:
