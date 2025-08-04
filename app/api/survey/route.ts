@@ -4,6 +4,10 @@ import { logger } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
 // Get table name from database settings
 async function getTableName(): Promise<string> {
+  if (!supabase) {
+    return 'pc_survey_data_dev' // fallback
+  }
+  
   try {
     const { data, error } = await supabase
       .from('app_settings')
