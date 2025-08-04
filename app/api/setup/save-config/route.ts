@@ -29,16 +29,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // First, try to delete any existing configuration to avoid conflicts
-    await supabase
-      .from('app_settings')
-      .delete()
-      .eq('environment', 'dev')
-
-    // Then insert the new configuration
+    // Use upsert with conflict resolution to avoid table lock issues
     const { error: saveError } = await supabase
       .from('app_settings')
-      .insert({
+      .upsert({
         environment: 'dev',
         settings: {
           database: {
@@ -55,6 +49,9 @@ export async function POST(request: NextRequest) {
             debugMode: false
           }
         }
+      }, {
+        onConflict: 'environment',
+        ignoreDuplicates: false
       })
 
     // Save configuration locally for bootstrap and clear cache

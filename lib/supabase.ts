@@ -19,15 +19,18 @@ export async function getSupabaseClient() {
     if (typeof window === 'undefined') {
       // Server-side: try local config first, then database
       try {
-        // Dynamic import only on server side
+        // Dynamic import only on server side with proper error handling
         const localConfigModule = await import('./local-config')
-        const localConfig = localConfigModule.readLocalConfig()
-        if (localConfig) {
-          console.log('🔧 [Supabase] Using local configuration for bootstrap')
-          return createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
+        if (localConfigModule && typeof localConfigModule.readLocalConfig === 'function') {
+          const localConfig = localConfigModule.readLocalConfig()
+          if (localConfig) {
+            console.log('🔧 [Supabase] Using local configuration for bootstrap')
+            return createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
+          }
         }
       } catch (error) {
-        console.log('🔧 [Supabase] No local config available:', error)
+        // Silently handle import errors on server side
+        console.log('🔧 [Supabase] No local config available')
       }
     }
 
