@@ -1,55 +1,33 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Simple environment variable getter (client-side only)
-function getEnvVar(key: string): string {
-  // Client-side: only use NEXT_PUBLIC_ variables
-  return process.env[key] || ''
-}
+// Supabase client will be created dynamically from database settings
+export const supabase = null
 
-// Get Supabase configuration (client-side only)
-function getSupabaseConfig() {
-  const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
-  const supabaseAnonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+// Check if Supabase is configured (will be set dynamically)
+export const isSupabaseConfigured = false
 
-  // Only log if configured to avoid noise
-  if (supabaseUrl && supabaseAnonKey) {
-    console.log('🔧 [Supabase] Config Check:', {
-      supabaseUrl: 'SET',
-      supabaseAnonKey: 'SET'
-    })
-  }
-
-  return { supabaseUrl, supabaseAnonKey }
-}
-
-const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig()
-
-// Check if Supabase is configured
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
-
-// Only log if configured
-if (isSupabaseConfigured) {
-  console.log('🔧 [Supabase] Client initialized successfully')
-}
-
-// Create Supabase client only if properly configured
-export const supabase = isSupabaseConfigured 
-  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
-  : null
-
-// Function to get Supabase client with dynamic config
+// Function to get Supabase client with dynamic config from database
 export async function getSupabaseClient() {
-  if (supabase) {
-    return supabase
+  try {
+    // Get configuration from database via API
+    const response = await fetch('/api/admin/settings')
+    const result = await response.json()
+    
+    if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+      const { url, apiKey } = result.data.database
+      return createClient<Database>(url, apiKey)
+    }
+  } catch (error) {
+    console.error('Error fetching Supabase config:', error)
   }
   
-  // If not configured, return null
   return null
 }
 
 // Helper function to check if we can use Supabase features
-export function requireSupabase() {
-  return !!(isSupabaseConfigured && supabase)
+export async function requireSupabase() {
+  const client = await getSupabaseClient()
+  return !!client
 }
 
 // Database types for better TypeScript support
