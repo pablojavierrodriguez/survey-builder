@@ -244,6 +244,24 @@ function LoginForm() {
               </>
             )}
 
+            {/* Sign Up Option */}
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <div className="text-center">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                  Don't have an account?
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => window.location.href = '/auth/signup'}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Create Account
+                </Button>
+              </div>
+            </div>
+
             {/* Demo credentials for testing */}
             <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">

@@ -331,12 +331,12 @@ export default function SetupPage() {
                               </Button>
                                                           <Button 
                               onClick={() => {
-                                // Redirect to home page, not admin
-                                window.location.href = '/'
+                                // Redirect to login page after setup
+                                window.location.href = '/auth/login'
                               }} 
                               className="flex-1"
                             >
-                              Ir a la Aplicación
+                              Ir al Login
                             </Button>
                             </div>
                             
