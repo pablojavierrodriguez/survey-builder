@@ -187,7 +187,8 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Check if Supabase is configured
+    // Get Supabase client
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       logger.error('Supabase not configured for database delete', {
         requestId,
