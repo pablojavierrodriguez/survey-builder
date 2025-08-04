@@ -56,6 +56,24 @@ export async function POST(request: NextRequest) {
         }
       })
 
+    // After successful config, enable RLS and create policies automatically
+    if (!updateError) {
+      // Enable RLS on all tables
+      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;' })
+      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.pc_survey_data ENABLE ROW LEVEL SECURITY;' })
+      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.pc_survey_data_dev ENABLE ROW LEVEL SECURITY;' })
+      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;' })
+
+      // Create simple policies that don't cause recursion
+      await supabase.rpc('exec_sql', { 
+        sql_command: `
+          DROP POLICY IF EXISTS "app_settings_setup_policy" ON public.app_settings;
+          CREATE POLICY "app_settings_setup_policy" ON public.app_settings
+            FOR ALL TO authenticated USING (true) WITH CHECK (true);
+        `
+      })
+    }
+
     if (updateError) {
       console.error('🔧 [Setup] Update error:', updateError)
       return NextResponse.json(
