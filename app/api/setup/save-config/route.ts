@@ -51,6 +51,14 @@ export async function POST(request: NextRequest) {
         onConflict: 'environment'
       })
 
+    // Also set environment variables for immediate use
+    // This ensures the app can work right after setup
+    if (!saveError) {
+      // Set environment variables in the current process
+      process.env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = supabaseKey
+    }
+
     if (saveError) {
       return NextResponse.json(
         { success: false, error: `Error al guardar: ${saveError.message}` },

@@ -174,18 +174,7 @@ export default function SetupPage() {
             {/* Step 1: Configuration */}
             {step === 1 && (
               <div className="space-y-4">
-                                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Nombre de la Aplicación
-                              </label>
-                              <Input
-                                type="text"
-                                value={appName}
-                                onChange={(e) => setAppName(e.target.value)}
-                                placeholder="Nombre de tu aplicación"
-                                className="w-full"
-                              />
-                            </div>
+                
                             
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
