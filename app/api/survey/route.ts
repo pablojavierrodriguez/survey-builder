@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
+
 // Get table name from database settings
 async function getTableName(): Promise<string> {
-  if (!supabase) {
-    return 'survey_responses' // fallback
-  }
-  
   try {
+    const supabase = await getSupabaseClient()
+    if (!supabase) {
+      return 'survey_responses' // fallback
+    }
+    
     const { data, error } = await supabase
       .from('app_settings')
       .select('settings')
@@ -48,7 +50,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if Supabase is configured
+    // Get Supabase client
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       logger.error('Supabase not configured for survey submission', {
         requestId,

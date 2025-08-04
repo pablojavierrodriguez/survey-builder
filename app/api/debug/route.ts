@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+
 // Get table name from database settings
 async function getTableName(): Promise<string> {
-  if (!supabase) {
-    return 'survey_responses' // fallback
-  }
-  
   try {
+    const supabase = await getSupabaseClient()
+    if (!supabase) {
+      return 'survey_responses' // fallback
+    }
+    
     const { data, error } = await supabase
       .from('app_settings')
       .select('settings')
@@ -31,7 +33,8 @@ export async function GET(request: NextRequest) {
   logger.logRequest(requestId, 'GET', '/api/debug', 'debug')
   
   try {
-    // Check if Supabase is configured
+    // Get Supabase client
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       return NextResponse.json({
         success: false,

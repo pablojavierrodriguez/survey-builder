@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
+
 // Get table name from database settings
 async function getTableName(): Promise<string> {
-  if (!supabase) {
-    return 'survey_responses' // fallback
-  }
-  
   try {
+    const supabase = await getSupabaseClient()
+    if (!supabase) {
+      return 'survey_responses' // fallback
+    }
+    
     const { data, error } = await supabase
       .from('app_settings')
       .select('settings')
