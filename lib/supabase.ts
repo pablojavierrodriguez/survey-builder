@@ -30,7 +30,7 @@ export async function getSupabaseClient() {
         }
       } catch (error) {
         // Silently handle import errors on server side
-        console.log('🔧 [Supabase] No local config available')
+        // Don't log anything to avoid client-side warnings
       }
     }
 

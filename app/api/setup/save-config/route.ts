@@ -85,7 +85,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (saveError) {
-      const errorMessage = saveError instanceof Error ? saveError.message : String(saveError)
+      let errorMessage = 'Error desconocido'
+      
+      if (saveError instanceof Error) {
+        errorMessage = saveError.message
+      } else if (typeof saveError === 'object' && saveError !== null) {
+        errorMessage = JSON.stringify(saveError)
+      } else {
+        errorMessage = String(saveError)
+      }
+      
+      console.error('🔧 [Setup] Save error details:', saveError)
+      
       return NextResponse.json(
         { success: false, error: `Error al guardar: ${errorMessage}` },
         { status: 500 }
