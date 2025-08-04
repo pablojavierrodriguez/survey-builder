@@ -29,30 +29,54 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use upsert with conflict resolution to avoid table lock issues
-    const { error: saveError } = await supabase
-      .from('app_settings')
-      .upsert({
-        environment: 'dev',
-        settings: {
-          database: {
-            url: supabaseUrl,
-            apiKey: supabaseKey,
-            tableName: 'survey_responses',
-            environment: 'development'
-          },
-          general: {
-            surveyTitle: appName || 'My Survey',
-            publicUrl: publicUrl || '',
-            maintenanceMode: false,
-            analyticsEnabled: true,
-            debugMode: false
-          }
-        }
-      }, {
-        onConflict: 'environment',
-        ignoreDuplicates: false
-      })
+    // Wait a moment for any active queries to complete
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Try to save configuration with retry logic
+    let saveError = null
+    let retryCount = 0
+    const maxRetries = 3
+
+    while (retryCount < maxRetries) {
+      try {
+        const { error } = await supabase
+          .from('app_settings')
+          .upsert({
+            environment: 'dev',
+            settings: {
+              database: {
+                url: supabaseUrl,
+                apiKey: supabaseKey,
+                tableName: 'survey_responses',
+                environment: 'development'
+              },
+              general: {
+                surveyTitle: appName || 'My Survey',
+                publicUrl: publicUrl || '',
+                maintenanceMode: false,
+                analyticsEnabled: true,
+                debugMode: false
+              }
+            }
+          }, {
+            onConflict: 'environment',
+            ignoreDuplicates: false
+          })
+
+        saveError = error
+        if (!error) break // Success, exit retry loop
+        
+      } catch (err) {
+        saveError = err
+        console.log(`🔧 [Setup] Retry ${retryCount + 1}/${maxRetries} failed:`, err)
+      }
+
+      retryCount++
+      if (retryCount < maxRetries) {
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+    }
 
     // Save configuration locally for bootstrap and clear cache
     if (!saveError) {
@@ -61,8 +85,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (saveError) {
+      const errorMessage = saveError instanceof Error ? saveError.message : String(saveError)
       return NextResponse.json(
-        { success: false, error: `Error al guardar: ${saveError.message}` },
+        { success: false, error: `Error al guardar: ${errorMessage}` },
         { status: 500 }
       )
     }
