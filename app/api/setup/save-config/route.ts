@@ -5,11 +5,11 @@ import { clearSupabaseCache } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabaseUrl, supabaseKey, publicUrl, appName } = await request.json()
+    const { supabaseUrl, supabaseKey, serviceRoleKey, publicUrl, appName } = await request.json()
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseKey || !serviceRoleKey) {
       return NextResponse.json(
-        { success: false, error: 'URL y Anon Key son requeridos' },
+        { success: false, error: 'URL, Anon Key y Service Role Key son requeridos' },
         { status: 400 }
       )
     }
@@ -28,12 +28,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    // Use anon key since RLS is disabled
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // Use service role key for setup (bypasses RLS)
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
     
     // Simple insert/update without complex logic
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('app_settings')
       .upsert({
         environment: 'dev',
@@ -56,23 +56,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    // After successful config, enable RLS and create policies automatically
-    if (!updateError) {
-      // Enable RLS on all tables
-      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;' })
-      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.pc_survey_data ENABLE ROW LEVEL SECURITY;' })
-      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.pc_survey_data_dev ENABLE ROW LEVEL SECURITY;' })
-      await supabase.rpc('exec_sql', { sql_command: 'ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;' })
 
-      // Create simple policies that don't cause recursion
-      await supabase.rpc('exec_sql', { 
-        sql_command: `
-          DROP POLICY IF EXISTS "app_settings_setup_policy" ON public.app_settings;
-          CREATE POLICY "app_settings_setup_policy" ON public.app_settings
-            FOR ALL TO authenticated USING (true) WITH CHECK (true);
-        `
-      })
-    }
 
     if (updateError) {
       console.error('🔧 [Setup] Update error:', updateError)
