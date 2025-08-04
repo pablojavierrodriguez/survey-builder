@@ -27,6 +27,7 @@ async function getTableName(): Promise<string> {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       return NextResponse.json({
         success: false,
