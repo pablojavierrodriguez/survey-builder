@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
             environment: 'development'
           },
           general: {
-            appName: appName || 'Product Community Survey (DEV)',
+            surveyTitle: appName || 'Product Community Survey',
             publicUrl: publicUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://productcommunitysurvey-dev.vercel.app',
             maintenanceMode: false,
-            analyticsEnabled: true
+            analyticsEnabled: true,
+            debugMode: false
           }
         }
       }, {

@@ -213,6 +213,20 @@ export default function SetupPage() {
                             
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Survey Name
+                              </label>
+                              <Input
+                                type="text"
+                                value={appName}
+                                onChange={(e) => setAppName(e.target.value)}
+                                placeholder="Product Community Survey"
+                                className="w-full"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">This will be the title displayed in your survey</p>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Public URL (Opcional)
                               </label>
                               <Input
