@@ -5,16 +5,16 @@ import { clearSupabaseCache } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabaseUrl, supabaseKey, publicUrl, appName } = await request.json()
+    const { supabaseUrl, supabaseKey, serviceRoleKey, publicUrl, appName } = await request.json()
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseKey || !serviceRoleKey) {
       return NextResponse.json(
-        { success: false, error: 'URL y API Key son requeridos' },
+        { success: false, error: 'URL, Anon Key y Service Role Key son requeridos' },
         { status: 400 }
       )
     }
 
-    // Test connection first
+    // Test connection with anon key first
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     const { error: testError } = await supabase
@@ -24,16 +24,22 @@ export async function POST(request: NextRequest) {
 
     if (testError) {
       return NextResponse.json(
-        { success: false, error: `Error de conexión: ${testError.message}` },
+        { success: false, error: `Error de conexión con Anon Key: ${testError.message}` },
         { status: 400 }
       )
     }
 
-    // Update configuration using the new function (no ALTER TABLE needed)
-    const { data: updateResult, error: updateError } = await supabase
-      .rpc('update_app_settings', {
-        target_environment: 'dev',
-        new_settings: {
+    // Use service role key to bypass RLS during setup
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+    
+    // Update configuration using service role (bypasses RLS)
+    const { data: updateResult, error: updateError } = await supabaseAdmin
+      .from('app_settings')
+      .upsert({
+        environment: 'dev',
+        survey_table_name: 'pc_survey_data_dev',
+        app_name: appName || 'Product Community Survey (DEV)',
+        settings: {
           database: {
             url: supabaseUrl,
             apiKey: supabaseKey,
@@ -48,27 +54,14 @@ export async function POST(request: NextRequest) {
             debugMode: true
           }
         }
+      }, {
+        onConflict: 'environment'
       })
 
     if (updateError) {
       console.error('🔧 [Setup] Update error:', updateError)
       return NextResponse.json(
         { success: false, error: `Error al actualizar configuración: ${updateError.message}` },
-        { status: 500 }
-      )
-    }
-
-    // Parse the result
-    let result
-    try {
-      result = typeof updateResult === 'string' ? JSON.parse(updateResult) : updateResult
-    } catch (parseError) {
-      result = updateResult
-    }
-
-    if (!result?.success) {
-      return NextResponse.json(
-        { success: false, error: result?.error || 'Error desconocido al actualizar configuración' },
         { status: 500 }
       )
     }

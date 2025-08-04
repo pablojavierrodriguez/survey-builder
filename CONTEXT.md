@@ -7,11 +7,16 @@
 
 ## ✅ **Cambios Realizados**
 
-### 1. **Endpoint Simplificado**
+### 1. **Wizard Actualizado**
+- **Archivo:** `app/setup/page.tsx`
+- **Cambio:** Agregado campo para `service_role` key
+- **Propósito:** Permitir configuración inicial con credenciales de admin
+
+### 2. **Endpoint Simplificado**
 - **Archivo:** `app/api/setup/save-config/route.ts`
-- **Cambio:** Reemplazado lógica problemática con ALTER TABLE por función `update_app_settings`
+- **Cambio:** Usa `service_role` key para bypass RLS durante setup
 - **Antes:** Usaba `upsert` con retry logic y conflictos de concurrencia
-- **Después:** Usa `supabase.rpc('update_app_settings')` sin ALTER TABLE
+- **Después:** Usa `supabaseAdmin` con service role key para bypass RLS
 
 ### 2. **Archivos Eliminados (Problemáticos)**
 - `create-setup-function.sql` - Función que causaba ALTER TABLE conflictivo
@@ -20,15 +25,13 @@
 - `enable-rls-after-wizard.sql` - Ya no necesario
 - `fix-wizard-rls-policy-*.sql` - Ya no necesario
 
-### 3. **Script SQL de Migración**
-- **Archivo:** `FIX_ALTER_TABLE_ISSUE.sql`
-- **Propósito:** Arreglar la base de datos sin usar ALTER TABLE dinámico
+### 3. **Script SQL Simple**
+- **Archivo:** `REMOVE_PROBLEMATIC_TRIGGER.sql`
+- **Propósito:** Solo eliminar el trigger problemático
 - **Contenido:**
-  - Elimina triggers y funciones problemáticas
-  - Crea función `update_app_settings` para actualizar configuración
-  - Crea función `get_app_settings` para leer configuración
-  - Establece políticas de seguridad correctas
-  - Inserta configuración inicial
+  - Elimina trigger `auto_enable_rls_trigger`
+  - Elimina función `auto_enable_rls_function`
+  - No modifica RLS ni políticas existentes
 
 ## 🔄 **Estado Actual**
 - ✅ Código actualizado en branch local
@@ -64,7 +67,7 @@ Setup → ALTER TABLE → Triggers → Conflictos → Error
 
 ### **Después (Limpio):**
 ```
-Setup → update_app_settings() → Configuración actualizada → Éxito
+Setup → Service Role Key → Bypass RLS → Configuración guardada → Éxito
 ```
 
 ## 📁 **Archivos Clave**
@@ -75,8 +78,8 @@ Setup → update_app_settings() → Configuración actualizada → Éxito
 - `lib/supabase.ts` - Cliente Supabase dinámico
 
 ### **Base de Datos:**
-- `FIX_ALTER_TABLE_ISSUE.sql` - Script de migración
-- `database-schema-fixed.sql` - Esquema mejorado (referencia)
+- `REMOVE_PROBLEMATIC_TRIGGER.sql` - Script simple para eliminar trigger
+- `FIX_ALTER_TABLE_ISSUE.sql` - Script completo (referencia, no usar)
 
 ### **Frontend:**
 - `app/setup/page.tsx` - Página de configuración
@@ -107,9 +110,9 @@ npm run dev
 Si necesitas continuar este trabajo con otro agente:
 
 1. **Menciona:** "Continuando trabajo en Product Community Survey - problema ALTER TABLE"
-2. **Estado:** "Cambios de código completados, pendiente ejecutar SQL en Supabase"
-3. **Archivos clave:** `FIX_ALTER_TABLE_ISSUE.sql`, `app/api/setup/save-config/route.ts`
-4. **Próximo paso:** Ejecutar SQL y probar setup
+2. **Estado:** "Wizard actualizado para usar service_role key, pendiente ejecutar SQL simple"
+3. **Archivos clave:** `REMOVE_PROBLEMATIC_TRIGGER.sql`, `app/setup/page.tsx`, `app/api/setup/save-config/route.ts`
+4. **Próximo paso:** Ejecutar SQL simple y probar setup con service_role key
 
 ## 🎯 **Objetivo Final**
 Eliminar completamente el error de ALTER TABLE y tener un setup robusto y confiable.
