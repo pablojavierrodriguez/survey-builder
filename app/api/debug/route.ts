@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger'
 // Get table name from database settings
 async function getTableName(): Promise<string> {
   if (!supabase) {
-    return 'pc_survey_data_dev' // fallback
+    return 'survey_responses' // fallback
   }
   
   try {
@@ -15,12 +15,12 @@ async function getTableName(): Promise<string> {
       .single()
     
     if (error || !data?.settings?.database?.tableName) {
-      return 'pc_survey_data_dev' // fallback
+      return 'survey_responses' // fallback
     }
     
     return data.settings.database.tableName
   } catch (error) {
-    return 'pc_survey_data_dev' // fallback
+    return 'survey_responses' // fallback
   }
 }
 

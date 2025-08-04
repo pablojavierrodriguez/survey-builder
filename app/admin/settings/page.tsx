@@ -90,7 +90,7 @@ export default function SettingsPage() {
         database: {
           url: config.database?.url || '',
           apiKey: config.database?.apiKey || '',
-          tableName: config.database?.tableName || 'pc_survey_data_dev',
+          tableName: config.database?.tableName || 'survey_responses',
           connectionTimeout: 30,
           environment: config.database?.environment || 'development',
         },

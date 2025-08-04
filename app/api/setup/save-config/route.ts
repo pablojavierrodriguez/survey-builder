@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
           database: {
             url: supabaseUrl,
             apiKey: supabaseKey,
-            tableName: 'pc_survey_data_dev',
+            tableName: 'survey_responses',
             environment: 'development'
           },
           general: {

@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     // PRIORITY 2: Return default settings (no database credentials)
     const defaultSettings = {
       database: {
-        tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
+        tableName: isProd ? 'survey_responses' : 'survey_responses',
         environment: environment
       },
       general: {
