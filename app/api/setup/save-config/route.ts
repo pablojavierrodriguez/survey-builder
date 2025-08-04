@@ -28,10 +28,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Save configuration to database (RLS policy handles first-time access)
+    // First, try to delete any existing configuration to avoid conflicts
+    await supabase
+      .from('app_settings')
+      .delete()
+      .eq('environment', 'dev')
+
+    // Then insert the new configuration
     const { error: saveError } = await supabase
       .from('app_settings')
-      .upsert({
+      .insert({
         environment: 'dev',
         settings: {
           database: {
@@ -48,8 +54,6 @@ export async function POST(request: NextRequest) {
             debugMode: false
           }
         }
-      }, {
-        onConflict: 'environment'
       })
 
     // Save configuration locally for bootstrap

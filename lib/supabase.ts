@@ -24,14 +24,23 @@ export async function getSupabaseClient() {
       }
     }
 
-    // Client-side or no local config: try to get from database via API
-    const response = await fetch('/api/admin/settings')
-    const result = await response.json()
-    
-    if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
-      const { url, apiKey } = result.data.database
-      console.log('🔧 [Supabase] Using database configuration')
-      return createClient<Database>(url, apiKey)
+    // Client-side: only try to get from database via API if we're not in a setup context
+    if (typeof window !== 'undefined') {
+      // Avoid calling API during setup process
+      const isSetupPage = window.location.pathname === '/setup'
+      if (isSetupPage) {
+        console.log('🔧 [Supabase] Skipping API call during setup')
+        return null
+      }
+
+      const response = await fetch('/api/admin/settings')
+      const result = await response.json()
+      
+      if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+        const { url, apiKey } = result.data.database
+        console.log('🔧 [Supabase] Using database configuration')
+        return createClient<Database>(url, apiKey)
+      }
     }
   } catch (error) {
     console.error('Error fetching Supabase config:', error)
