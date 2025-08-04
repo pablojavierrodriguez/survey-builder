@@ -3,20 +3,17 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabaseUrl, supabaseKey, serviceRoleKey } = await request.json()
+    const { supabaseUrl, supabaseKey } = await request.json()
 
-    if (!supabaseUrl || !supabaseKey || !serviceRoleKey) {
+    if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
-        { success: false, error: 'URL, Anon Key y Service Role Key son requeridos' },
+        { success: false, error: 'URL y Anon Key son requeridos' },
         { status: 400 }
       )
     }
 
     // Test connection with anon key
     const supabase = createClient(supabaseUrl, supabaseKey)
-    
-    // Test connection with service role key
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
     
     // Simple connection test
     const { data, error } = await supabase.auth.getSession()
@@ -28,15 +25,15 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Test service role key access
-    const { data: adminData, error: adminError } = await supabaseAdmin
+    // Test access to app_settings (RLS should be disabled)
+    const { data: settingsData, error: settingsError } = await supabase
       .from('app_settings')
       .select('count')
       .limit(1)
     
-    if (adminError) {
+    if (settingsError) {
       return NextResponse.json(
-        { success: false, error: `Error de conexión con Service Role Key: ${adminError.message}` },
+        { success: false, error: `Error de acceso a app_settings: ${settingsError.message}` },
         { status: 400 }
       )
     }
@@ -44,7 +41,7 @@ export async function POST(request: NextRequest) {
     // If both work, connection is successful
     return NextResponse.json({
       success: true,
-      message: 'Conexión exitosa (ambas claves funcionan)'
+      message: 'Conexión exitosa'
     })
 
     return NextResponse.json({

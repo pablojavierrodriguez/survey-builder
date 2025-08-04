@@ -5,11 +5,11 @@ import { clearSupabaseCache } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabaseUrl, supabaseKey, serviceRoleKey, publicUrl, appName } = await request.json()
+    const { supabaseUrl, supabaseKey, publicUrl, appName } = await request.json()
 
-    if (!supabaseUrl || !supabaseKey || !serviceRoleKey) {
+    if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
-        { success: false, error: 'URL, Anon Key y Service Role Key son requeridos' },
+        { success: false, error: 'URL y Anon Key son requeridos' },
         { status: 400 }
       )
     }
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use service role key to bypass RLS during setup
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+    // Use anon key since RLS is disabled
+    const supabase = createClient(supabaseUrl, supabaseKey)
     
     // Simple insert/update without complex logic
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await supabase
       .from('app_settings')
       .upsert({
         environment: 'dev',
