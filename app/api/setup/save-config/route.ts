@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { saveLocalConfig } from '@/lib/local-config'
+import { clearSupabaseCache } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,9 +57,10 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    // Save configuration locally for bootstrap
+    // Save configuration locally for bootstrap and clear cache
     if (!saveError) {
       saveLocalConfig(supabaseUrl, supabaseKey)
+      clearSupabaseCache()
     }
 
     if (saveError) {
