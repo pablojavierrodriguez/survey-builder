@@ -11,6 +11,7 @@ export default function SetupPage() {
   const [step, setStep] = useState(1)
   const [supabaseUrl, setSupabaseUrl] = useState("")
   const [supabaseKey, setSupabaseKey] = useState("")
+  const [serviceRoleKey, setServiceRoleKey] = useState("")
   const [publicUrl, setPublicUrl] = useState("")
   const [appName, setAppName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -58,7 +59,8 @@ export default function SetupPage() {
         },
         body: JSON.stringify({
           supabaseUrl,
-          supabaseKey
+          supabaseKey,
+          serviceRoleKey
         })
       })
 
@@ -90,6 +92,7 @@ export default function SetupPage() {
                     body: JSON.stringify({
                       supabaseUrl,
                       supabaseKey,
+                      serviceRoleKey,
                       publicUrl,
                       appName
                     })
@@ -205,6 +208,20 @@ export default function SetupPage() {
                             
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Supabase Service Role Key
+                              </label>
+                              <Input
+                                type="password"
+                                value={serviceRoleKey}
+                                onChange={(e) => setServiceRoleKey(e.target.value)}
+                                placeholder="Ingresa tu Supabase Service Role Key"
+                                className="w-full"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">Clave de administrador para configuración inicial</p>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Survey Name
                               </label>
                               <Input
@@ -232,7 +249,7 @@ export default function SetupPage() {
 
                 <Button 
                   onClick={testConnection} 
-                  disabled={isLoading || !supabaseUrl || !supabaseKey}
+                  disabled={isLoading || !supabaseUrl || !supabaseKey || !serviceRoleKey}
                   className="w-full"
                 >
                   {isLoading ? (
@@ -266,6 +283,9 @@ export default function SetupPage() {
                               </div>
                               <div className="text-sm text-gray-600 dark:text-gray-400">
                                 <strong>Anon Key:</strong> {supabaseKey.substring(0, 20)}...
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>Service Role Key:</strong> {serviceRoleKey.substring(0, 20)}...
                               </div>
 
                             </div>

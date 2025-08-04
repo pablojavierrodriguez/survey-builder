@@ -3,17 +3,20 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabaseUrl, supabaseKey } = await request.json()
+    const { supabaseUrl, supabaseKey, serviceRoleKey } = await request.json()
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseKey || !serviceRoleKey) {
       return NextResponse.json(
-        { success: false, error: 'URL y Anon Key son requeridos' },
+        { success: false, error: 'URL, Anon Key y Service Role Key son requeridos' },
         { status: 400 }
       )
     }
 
     // Test connection with anon key
     const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // Test connection with service role key
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
     
     // Simple connection test
     const { data, error } = await supabase.auth.getSession()
