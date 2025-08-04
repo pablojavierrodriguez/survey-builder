@@ -95,7 +95,7 @@ export default function SettingsPage() {
           environment: config.database?.environment || 'development',
         },
         general: {
-          surveyTitle: config.general?.surveyTitle || 'Product Community Survey',
+          surveyTitle: config.general?.surveyTitle || 'My Survey',
           publicUrl: config.general?.publicUrl || '',
           maintenanceMode: config.general?.maintenanceMode || false,
           analyticsEnabled: config.general?.analyticsEnabled || true,
@@ -472,7 +472,7 @@ export default function SettingsPage() {
             <Input
               value={settings.general.surveyTitle}
               onChange={(e) => updateSettings("general", "surveyTitle", e.target.value)}
-              placeholder="Product Community Survey"
+              placeholder="My Survey"
               className="bg-background text-foreground border-border"
             />
             <p className="text-xs text-muted-foreground mt-1">This title will be displayed in the survey header and admin panel</p>

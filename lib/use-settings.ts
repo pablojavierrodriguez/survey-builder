@@ -30,7 +30,7 @@ export function useSettings() {
             const config = result.data
             const apiSettings: AppSettings = {
               general: {
-                surveyTitle: config.general?.surveyTitle || 'Product Community Survey',
+                surveyTitle: config.general?.surveyTitle || 'My Survey',
                 publicUrl: config.general?.publicUrl || '',
                 maintenanceMode: config.general?.maintenanceMode || false,
                 analyticsEnabled: config.general?.analyticsEnabled || true,

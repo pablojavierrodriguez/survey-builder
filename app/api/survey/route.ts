@@ -2,7 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
 import { supabase } from '@/lib/supabase'
-import { getTableName } from '@/lib/config-manager'
+// Get table name from database settings
+async function getTableName(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('settings')
+      .eq('environment', 'dev')
+      .single()
+    
+    if (error || !data?.settings?.database?.tableName) {
+      return 'pc_survey_data_dev' // fallback
+    }
+    
+    return data.settings.database.tableName
+  } catch (error) {
+    return 'pc_survey_data_dev' // fallback
+  }
+}
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()

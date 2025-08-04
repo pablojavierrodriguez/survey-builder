@@ -219,7 +219,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           
           <div className="flex items-center space-x-3 sm:space-x-4">
             <div className="hidden sm:block">
-              <h1 className="text-base sm:text-lg font-semibold">{settings?.general?.surveyTitle || 'Product Community Survey'}</h1>
+              <h1 className="text-base sm:text-lg font-semibold">{settings?.general?.surveyTitle || 'My Survey'}</h1>
             </div>
             <ModeToggle />
           </div>

@@ -111,9 +111,9 @@ export async function GET(request: NextRequest) {
         enableTwoFactor: false
       },
       features: {
-        enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
+        enableExport: true,
         enableEmailNotifications: isProd,
-        enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
+        enableAnalytics: true
       }
     }
 
