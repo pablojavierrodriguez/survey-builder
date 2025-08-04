@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+// Server-side only configuration system
+// This file should only be imported in server-side code
 
 interface LocalConfig {
   supabaseUrl: string
@@ -7,11 +7,19 @@ interface LocalConfig {
   timestamp: number
 }
 
-const CONFIG_FILE = path.join(process.cwd(), '.supabase-config.json')
-
-// Save configuration locally for bootstrap
+// Server-side functions (only available in Node.js environment)
 export function saveLocalConfig(supabaseUrl: string, supabaseKey: string): boolean {
+  // Only run on server side
+  if (typeof window !== 'undefined') {
+    console.warn('🔧 [LocalConfig] saveLocalConfig called on client side')
+    return false
+  }
+
   try {
+    const fs = require('fs')
+    const path = require('path')
+    const CONFIG_FILE = path.join(process.cwd(), '.supabase-config.json')
+    
     const config: LocalConfig = {
       supabaseUrl,
       supabaseKey,
@@ -27,9 +35,19 @@ export function saveLocalConfig(supabaseUrl: string, supabaseKey: string): boole
   }
 }
 
-// Read configuration from local file
+// Read configuration from local file (server-side only)
 export function readLocalConfig(): LocalConfig | null {
+  // Only run on server side
+  if (typeof window !== 'undefined') {
+    console.warn('🔧 [LocalConfig] readLocalConfig called on client side')
+    return null
+  }
+
   try {
+    const fs = require('fs')
+    const path = require('path')
+    const CONFIG_FILE = path.join(process.cwd(), '.supabase-config.json')
+    
     if (!fs.existsSync(CONFIG_FILE)) {
       return null
     }
@@ -53,9 +71,19 @@ export function readLocalConfig(): LocalConfig | null {
   }
 }
 
-// Remove local configuration file
+// Remove local configuration file (server-side only)
 export function removeLocalConfig(): boolean {
+  // Only run on server side
+  if (typeof window !== 'undefined') {
+    console.warn('🔧 [LocalConfig] removeLocalConfig called on client side')
+    return false
+  }
+
   try {
+    const fs = require('fs')
+    const path = require('path')
+    const CONFIG_FILE = path.join(process.cwd(), '.supabase-config.json')
+    
     if (fs.existsSync(CONFIG_FILE)) {
       fs.unlinkSync(CONFIG_FILE)
       console.log('🔧 [LocalConfig] Configuration file removed')
@@ -67,7 +95,19 @@ export function removeLocalConfig(): boolean {
   }
 }
 
-// Check if local configuration exists
+// Check if local configuration exists (server-side only)
 export function hasLocalConfig(): boolean {
-  return fs.existsSync(CONFIG_FILE)
+  // Only run on server side
+  if (typeof window !== 'undefined') {
+    return false
+  }
+
+  try {
+    const fs = require('fs')
+    const path = require('path')
+    const CONFIG_FILE = path.join(process.cwd(), '.supabase-config.json')
+    return fs.existsSync(CONFIG_FILE)
+  } catch (error) {
+    return false
+  }
 }
