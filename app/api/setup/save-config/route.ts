@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     // Use service role key to bypass RLS during setup
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
     
-    // Update configuration using service role (bypasses RLS)
-    const { data: updateResult, error: updateError } = await supabaseAdmin
+    // Simple insert/update without complex logic
+    const { error: updateError } = await supabaseAdmin
       .from('app_settings')
       .upsert({
         environment: 'dev',
@@ -54,8 +54,6 @@ export async function POST(request: NextRequest) {
             debugMode: true
           }
         }
-      }, {
-        onConflict: 'environment'
       })
 
     if (updateError) {

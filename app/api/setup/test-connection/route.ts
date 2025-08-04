@@ -18,41 +18,34 @@ export async function POST(request: NextRequest) {
     // Test connection with service role key
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
     
-    // Try to fetch a simple query to test connection
-    // Use a more basic test that doesn't depend on specific tables
-    const { data, error } = await supabase
-      .rpc('version')
+    // Simple connection test
+    const { data, error } = await supabase.auth.getSession()
 
     if (error) {
-      // If RPC fails, try a simple auth test
-      const { data: authData, error: authError } = await supabase.auth.getSession()
-      
-      if (authError) {
-        return NextResponse.json(
-          { success: false, error: `Error de conexión con Anon Key: ${authError.message}` },
-          { status: 400 }
-        )
-      }
-      
-      // Test service role key access
-      const { data: adminData, error: adminError } = await supabaseAdmin
-        .from('app_settings')
-        .select('count')
-        .limit(1)
-      
-      if (adminError) {
-        return NextResponse.json(
-          { success: false, error: `Error de conexión con Service Role Key: ${adminError.message}` },
-          { status: 400 }
-        )
-      }
-      
-      // If both work, connection is successful
-      return NextResponse.json({
-        success: true,
-        message: 'Conexión exitosa (ambas claves funcionan)'
-      })
+      return NextResponse.json(
+        { success: false, error: `Error de conexión con Anon Key: ${error.message}` },
+        { status: 400 }
+      )
     }
+    
+    // Test service role key access
+    const { data: adminData, error: adminError } = await supabaseAdmin
+      .from('app_settings')
+      .select('count')
+      .limit(1)
+    
+    if (adminError) {
+      return NextResponse.json(
+        { success: false, error: `Error de conexión con Service Role Key: ${adminError.message}` },
+        { status: 400 }
+      )
+    }
+    
+    // If both work, connection is successful
+    return NextResponse.json({
+      success: true,
+      message: 'Conexión exitosa (ambas claves funcionan)'
+    })
 
     return NextResponse.json({
       success: true,
