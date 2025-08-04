@@ -60,31 +60,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // No environment variables - check if we can connect using any available method
-    // This allows the app to work even without env vars if config is in database
-    try {
-      // Try to get settings from admin API (which uses database config)
-      const settingsResponse = await fetch(`${request.nextUrl.origin}/api/admin/settings`)
-      if (settingsResponse.ok) {
-        const settingsData = await settingsResponse.json()
-        if (settingsData.success && settingsData.data?.database?.url && settingsData.data?.database?.apiKey) {
-          return NextResponse.json({
-            success: true,
-            configured: true,
-            hasEnvUrl: false,
-            hasEnvKey: false,
-            canConnect: true,
-            error: null,
-            source: 'database_only',
-            hasDatabaseConfig: true
-          })
-        }
-      }
-    } catch (error) {
-      // Ignore errors here - just means we need initial setup
-    }
-
-    // No environment variables and no database config - app needs initial setup
+    // No environment variables - app needs initial setup
     return NextResponse.json({
       success: true,
       configured: false,
