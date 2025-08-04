@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { readLocalConfig } from './local-config'
 
 // Supabase client will be created dynamically from database settings
 export const supabase = null
@@ -9,12 +10,20 @@ export const isSupabaseConfigured = false
 // Function to get Supabase client with dynamic config from database
 export async function getSupabaseClient() {
   try {
-    // Get configuration from database via API
+    // First, try to get configuration from local file (for bootstrap)
+    const localConfig = readLocalConfig()
+    if (localConfig) {
+      console.log('🔧 [Supabase] Using local configuration for bootstrap')
+      return createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
+    }
+
+    // If no local config, try to get from database via API
     const response = await fetch('/api/admin/settings')
     const result = await response.json()
     
     if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
       const { url, apiKey } = result.data.database
+      console.log('🔧 [Supabase] Using database configuration')
       return createClient<Database>(url, apiKey)
     }
   } catch (error) {

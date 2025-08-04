@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { saveLocalConfig } from '@/lib/local-config'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,12 +52,9 @@ export async function POST(request: NextRequest) {
         onConflict: 'environment'
       })
 
-    // Also set environment variables for immediate use
-    // This ensures the app can work right after setup
+    // Save configuration locally for bootstrap
     if (!saveError) {
-      // Set environment variables in the current process
-      process.env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = supabaseKey
+      saveLocalConfig(supabaseUrl, supabaseKey)
     }
 
     if (saveError) {

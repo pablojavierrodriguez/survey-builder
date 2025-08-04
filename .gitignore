@@ -94,3 +94,6 @@ CHANGELOG_TEMP.md
 # local development
 .local/
 local/
+
+# Supabase local configuration (temporary bootstrap file)
+.supabase-config.json

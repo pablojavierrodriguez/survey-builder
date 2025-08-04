@@ -1,13 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { readLocalConfig } from '@/lib/local-config'
 
 export async function GET(request: NextRequest) {
   try {
-    // Check environment variables (for bootstrap)
+    // First, check for local configuration (for bootstrap)
+    const localConfig = readLocalConfig()
+    if (localConfig) {
+      try {
+        const supabase = createClient(localConfig.supabaseUrl, localConfig.supabaseKey)
+        
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('settings')
+          .eq('environment', 'dev')
+          .single()
+
+        if (error || !data) {
+          return NextResponse.json({
+            success: true,
+            configured: false,
+            hasLocalConfig: true,
+            canConnect: true,
+            error: 'No configuration found in database',
+            source: 'local_config'
+          })
+        }
+
+        // Check if database config exists in settings
+        const hasDatabaseConfig = data.settings?.database?.url && data.settings?.database?.apiKey
+
+        return NextResponse.json({
+          success: true,
+          configured: hasDatabaseConfig,
+          hasLocalConfig: true,
+          canConnect: true,
+          error: null,
+          source: 'database',
+          hasDatabaseConfig
+        })
+
+      } catch (dbError) {
+        return NextResponse.json({
+          success: true,
+          configured: false,
+          hasLocalConfig: true,
+          canConnect: false,
+          error: 'Database connection failed',
+          source: 'local_config'
+        })
+      }
+    }
+
+    // Check environment variables (fallback)
     const hasEnvUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL
     const hasEnvKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    // If we have environment variables, try to check database
     if (hasEnvUrl && hasEnvKey) {
       try {
         const supabase = createClient(
@@ -33,7 +81,6 @@ export async function GET(request: NextRequest) {
           })
         }
 
-        // Check if database config exists in settings
         const hasDatabaseConfig = data.settings?.database?.url && data.settings?.database?.apiKey
 
         return NextResponse.json({
@@ -60,10 +107,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // No environment variables - app needs initial setup
+    // No configuration available - app needs initial setup
     return NextResponse.json({
       success: true,
       configured: false,
+      hasLocalConfig: false,
       hasEnvUrl: false,
       hasEnvKey: false,
       canConnect: false,
