@@ -5,13 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Settings, Database, CheckCircle, AlertCircle, Loader2, Shield } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
+import { Settings, Database, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 
 export default function SetupPage() {
-  const { user, profile, loading: authLoading } = useAuth()
-  const router = useRouter()
   const [step, setStep] = useState(1)
   const [supabaseUrl, setSupabaseUrl] = useState("")
   const [supabaseKey, setSupabaseKey] = useState("")
@@ -22,24 +18,9 @@ export default function SetupPage() {
   const [success, setSuccess] = useState("")
 
   useEffect(() => {
-    // Check authentication first
-    if (!authLoading) {
-      if (!user) {
-        // Redirect to login if not authenticated
-        router.push('/auth/login?redirect=/setup')
-        return
-      }
-      
-      if (profile?.role !== 'admin') {
-        // Redirect to home if not admin
-        router.push('/')
-        return
-      }
-      
-      // Check if already configured
-      checkConfiguration()
-    }
-  }, [user, profile, authLoading, router])
+    // Check if already configured first
+    checkConfiguration()
+  }, [])
 
   const checkConfiguration = async () => {
     try {
@@ -154,55 +135,7 @@ export default function SetupPage() {
                 }
               }
 
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="shadow-lg">
-            <CardContent className="flex items-center justify-center p-8">
-              <div className="flex items-center space-x-2">
-                <Loader2 className="w-6 h-6 animate-spin" />
-                <span>Verificando autenticación...</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
 
-  // Show access denied if not admin
-  if (!user || profile?.role !== 'admin') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="shadow-lg">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-red-600 dark:text-red-400">Acceso Denegado</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Solo los administradores pueden configurar la aplicación.
-                </AlertDescription>
-              </Alert>
-              <Button 
-                onClick={() => router.push('/')} 
-                className="mt-4 w-full"
-              >
-                Volver al Inicio
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
@@ -212,9 +145,9 @@ export default function SetupPage() {
             <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
               <Settings className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <CardTitle className="text-2xl font-bold">Configuración de Administrador</CardTitle>
+            <CardTitle className="text-2xl font-bold">Configuración Inicial</CardTitle>
             <p className="text-gray-600 dark:text-gray-400">
-              Configura tu base de datos Supabase (Solo administradores)
+              Configura tu base de datos Supabase para comenzar
             </p>
           </CardHeader>
           
