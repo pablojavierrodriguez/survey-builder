@@ -27,29 +27,11 @@ function getSupabaseConfig() {
     getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ||
     ''
 
-  // Only log on server side to avoid POSTGRES_ warnings
-  if (typeof window === 'undefined') {
+  // Only log if configured to avoid noise
+  if (supabaseUrl && supabaseAnonKey) {
     console.log('🔧 [Supabase] Config Check:', {
-      supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-      supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
-      envKeys: {
-        NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        POSTGRES_NEXT_PUBLIC_SUPABASE_URL: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        POSTGRES_SUPABASE_URL: getEnvVar('POSTGRES_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-        POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-        POSTGRES_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-      }
-    })
-  } else {
-    // Client-side logging without POSTGRES_ variables
-    console.log('🔧 [Supabase] Config Check:', {
-      supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-      supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
-      envKeys: {
-        NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-      }
+      supabaseUrl: 'SET',
+      supabaseAnonKey: 'SET'
     })
   }
 
@@ -61,11 +43,10 @@ const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig()
 // Check if Supabase is configured
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
 
-console.log('🔧 [Supabase] Client initialization:', {
-  isConfigured: isSupabaseConfigured,
-  urlLength: supabaseUrl?.length || 0,
-  keyLength: supabaseAnonKey?.length || 0
-})
+// Only log if configured
+if (isSupabaseConfigured) {
+  console.log('🔧 [Supabase] Client initialized successfully')
+}
 
 // Create Supabase client only if properly configured
 export const supabase = isSupabaseConfigured 
@@ -79,17 +60,12 @@ export async function getSupabaseClient() {
   }
   
   // If not configured, return null
-  console.log('🔧 [Supabase] Not configured - auth features disabled')
   return null
 }
 
 // Helper function to check if we can use Supabase features
 export function requireSupabase() {
-  if (!isSupabaseConfigured || !supabase) {
-    console.warn('⚠️ [Supabase] Not configured - falling back to demo mode')
-    return false
-  }
-  return true
+  return !!(isSupabaseConfigured && supabase)
 }
 
 // Database types for better TypeScript support
