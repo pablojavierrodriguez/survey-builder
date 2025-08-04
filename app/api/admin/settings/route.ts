@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminSettings } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if Supabase is configured
+    // Get Supabase client
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       logger.error('Supabase not configured for admin settings', {
         requestId,
@@ -205,7 +206,8 @@ export async function POST(request: NextRequest) {
 
     const settings = validation.data
 
-    // Check if Supabase is configured
+    // Get Supabase client
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       logger.error('Supabase not configured for admin settings update', {
         requestId,

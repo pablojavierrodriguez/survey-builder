@@ -16,7 +16,8 @@ export async function isUserAdmin(userId?: string): Promise<boolean> {
   if (!userId) return false
   
   try {
-    const { supabase } = await import('./supabase')
+    const { getSupabaseClient } = await import('./supabase')
+    const supabase = await getSupabaseClient()
     if (!supabase) return false
 
     const { data, error } = await supabase

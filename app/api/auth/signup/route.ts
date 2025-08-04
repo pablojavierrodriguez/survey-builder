@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateSignUp } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if Supabase is configured
+    // Get Supabase client
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       console.error(`Supabase not configured for IP ${clientIP}`)
       return NextResponse.json({
