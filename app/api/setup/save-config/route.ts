@@ -29,79 +29,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Wait a moment for any active queries to complete
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Update configuration using the new function (no ALTER TABLE needed)
+    const { data: updateResult, error: updateError } = await supabase
+      .rpc('update_app_settings', {
+        target_environment: 'dev',
+        new_settings: {
+          database: {
+            url: supabaseUrl,
+            apiKey: supabaseKey,
+            tableName: 'pc_survey_data_dev',
+            environment: 'development'
+          },
+          general: {
+            appName: appName || 'Product Community Survey (DEV)',
+            publicUrl: publicUrl || '',
+            maintenanceMode: false,
+            analyticsEnabled: true,
+            debugMode: true
+          }
+        }
+      })
 
-    // Try to save configuration with retry logic
-    let saveError = null
-    let retryCount = 0
-    const maxRetries = 3
-
-    while (retryCount < maxRetries) {
-      try {
-        const { error } = await supabase
-          .from('app_settings')
-          .upsert({
-            environment: 'dev',
-            settings: {
-              database: {
-                url: supabaseUrl,
-                apiKey: supabaseKey,
-                tableName: 'survey_responses',
-                environment: 'development'
-              },
-              general: {
-                surveyTitle: appName || 'My Survey',
-                publicUrl: publicUrl || '',
-                maintenanceMode: false,
-                analyticsEnabled: true,
-                debugMode: false
-              }
-            }
-          }, {
-            onConflict: 'environment',
-            ignoreDuplicates: false
-          })
-
-        saveError = error
-        if (!error) break // Success, exit retry loop
-        
-      } catch (err) {
-        saveError = err
-        console.log(`🔧 [Setup] Retry ${retryCount + 1}/${maxRetries} failed:`, err)
-      }
-
-      retryCount++
-      if (retryCount < maxRetries) {
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      }
-    }
-
-    // Save configuration locally for bootstrap and clear cache
-    if (!saveError) {
-      saveLocalConfig(supabaseUrl, supabaseKey)
-      clearSupabaseCache()
-    }
-
-    if (saveError) {
-      let errorMessage = 'Error desconocido'
-      
-      if (saveError instanceof Error) {
-        errorMessage = saveError.message
-      } else if (typeof saveError === 'object' && saveError !== null) {
-        errorMessage = JSON.stringify(saveError)
-      } else {
-        errorMessage = String(saveError)
-      }
-      
-      console.error('🔧 [Setup] Save error details:', saveError)
-      
+    if (updateError) {
+      console.error('🔧 [Setup] Update error:', updateError)
       return NextResponse.json(
-        { success: false, error: `Error al guardar: ${errorMessage}` },
+        { success: false, error: `Error al actualizar configuración: ${updateError.message}` },
         { status: 500 }
       )
     }
+
+    // Parse the result
+    let result
+    try {
+      result = typeof updateResult === 'string' ? JSON.parse(updateResult) : updateResult
+    } catch (parseError) {
+      result = updateResult
+    }
+
+    if (!result?.success) {
+      return NextResponse.json(
+        { success: false, error: result?.error || 'Error desconocido al actualizar configuración' },
+        { status: 500 }
+      )
+    }
+
+    // Save configuration locally for bootstrap and clear cache
+    saveLocalConfig(supabaseUrl, supabaseKey)
+    clearSupabaseCache()
 
     return NextResponse.json({
       success: true,
