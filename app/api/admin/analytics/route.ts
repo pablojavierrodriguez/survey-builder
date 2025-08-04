@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
       const toolsUsage: any = {}
       const learningMethods: any = {}
 
-      distributionData?.forEach(item => {
+      distributionData?.forEach((item: any) => {
         // Role distribution
         if (item.role) {
           roleDistribution[item.role] = (roleDistribution[item.role] || 0) + 1
