@@ -1,31 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Simple environment variable getter (server-side only)
+// Simple environment variable getter (client-side only)
 function getEnvVar(key: string): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: only use NEXT_PUBLIC_ variables
-    return process.env[key] || ''
-  } else {
-    // Server-side: try POSTGRES_ variables first, then NEXT_PUBLIC_
-    const postgresKey = key.replace('NEXT_PUBLIC_', 'POSTGRES_')
-    return process.env[postgresKey] || process.env[key] || ''
-  }
+  // Client-side: only use NEXT_PUBLIC_ variables
+  return process.env[key] || ''
 }
 
-// Get Supabase configuration with multiple fallbacks
+// Get Supabase configuration (client-side only)
 function getSupabaseConfig() {
-  // Try multiple possible variable names
-  const supabaseUrl = 
-    getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ||
-    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ||
-    getEnvVar('POSTGRES_SUPABASE_URL') ||
-    ''
-
-  const supabaseAnonKey = 
-    getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-    getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ||
-    ''
+  const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
+  const supabaseAnonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 
   // Only log if configured to avoid noise
   if (supabaseUrl && supabaseAnonKey) {
