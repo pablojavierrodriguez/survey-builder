@@ -43,9 +43,6 @@ export function StatusChecker() {
       const envData = await envResponse.json()
 
       // Check API endpoints
-      const configResponse = await fetch('/api/config/supabase')
-      const configData = await configResponse.json()
-
       const settingsResponse = await fetch('/api/admin/settings')
       const settingsData = await settingsResponse.json()
 
@@ -60,11 +57,11 @@ export function StatusChecker() {
         availableEnvVars: envData.availableCount,
         totalEnvVars: envData.totalCount,
         supabaseConfig: {
-          url: configData.supabaseUrl ? 'SET' : 'EMPTY',
-          key: configData.supabaseAnonKey ? 'SET' : 'EMPTY'
+          url: settingsData.data?.database?.url ? 'SET' : 'EMPTY',
+          key: settingsData.data?.database?.apiKey ? 'SET' : 'EMPTY'
         },
         apiStatus: {
-          config: !configData.error,
+          config: true, // Config now comes from settings
           settings: !settingsData.error,
           survey: true // Assume survey API exists
         },

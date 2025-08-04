@@ -78,25 +78,8 @@ export async function getSupabaseClient() {
     return supabase
   }
   
-  // Try to fetch config from API if not available
-  try {
-    console.log('🔧 [Supabase] Attempting to fetch config from API...')
-    const response = await fetch('/api/config/supabase')
-    const config = await response.json()
-    
-    console.log('🔧 [Supabase] API config response:', {
-      success: !config.error,
-      hasUrl: !!config.supabaseUrl,
-      hasKey: !!config.supabaseAnonKey
-    })
-    
-    if (config.supabaseUrl && config.supabaseAnonKey) {
-      return createClient<Database>(config.supabaseUrl, config.supabaseAnonKey)
-    }
-  } catch (error) {
-    console.error('❌ [Supabase] Error fetching config from API:', error)
-  }
-  
+  // If not configured, return null
+  console.log('🔧 [Supabase] Not configured - auth features disabled')
   return null
 }
 
