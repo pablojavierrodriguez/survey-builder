@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .select('*')
                 .eq('id', session.user.id)
                 .limit(1)
-                .then(({ data: profileData, error }) => {
+                .then(({ data: profileData, error }: { data: Profile[] | null, error: any }) => {
                   if (error) {
                     console.warn('Could not fetch profile:', error)
                     if (mounted) setProfile(null)
