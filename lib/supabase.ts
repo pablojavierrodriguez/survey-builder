@@ -83,12 +83,6 @@ export function clearSupabaseCache() {
   lastFetchTime = 0
 }
 
-// Function to clear the client cache (useful after configuration changes)
-export function clearSupabaseCache() {
-  // No cache to clear anymore - function kept for compatibility
-  console.log('🔧 [Supabase] Cache clear requested (no cache to clear)')
-}
-
 // Helper function to check if we can use Supabase features
 export async function requireSupabase() {
   const client = await getSupabaseClient()
