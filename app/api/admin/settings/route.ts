@@ -27,8 +27,28 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client
-    const supabase = await getSupabaseClient()
+    // Get Supabase client with timeout
+    let supabase
+    try {
+      const clientPromise = getSupabaseClient()
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Client timeout')), 5000)
+      })
+      
+      supabase = await Promise.race([clientPromise, timeoutPromise])
+    } catch (error) {
+      logger.error('Supabase client timeout or error', {
+        requestId,
+        ip,
+        error: error.message
+      })
+      
+      return NextResponse.json(
+        { success: false, error: 'Admin system temporarily unavailable' },
+        { status: 503 }
+      )
+    }
+    
     if (!supabase) {
       logger.error('Supabase not configured for admin settings', {
         requestId,

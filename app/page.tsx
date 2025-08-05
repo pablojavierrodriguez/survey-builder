@@ -222,6 +222,9 @@ export default function ProductSurvey() {
 
       setDatabaseStatus("configured")
       
+      // Add a small delay to allow setup to complete
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
       // Load app settings in background (non-blocking) with timeout
       const settingsTimeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Settings timeout')), 3000)
