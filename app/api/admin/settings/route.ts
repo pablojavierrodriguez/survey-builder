@@ -210,29 +210,10 @@ export async function POST(request: NextRequest) {
 
     const settings = validation.data
 
-    // Get Supabase client with timeout
-    let supabase
-    try {
-      const clientPromise = getSupabaseClient()
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Client timeout')), 5000)
-      })
-      
-      supabase = await Promise.race([clientPromise, timeoutPromise])
-    } catch (error) {
-      logger.error('Supabase client timeout or error', {
-        requestId,
-        ip,
-        error: error instanceof Error ? error.message : String(error)
-      })
-      
-      return NextResponse.json(
-        { success: false, error: 'Admin system temporarily unavailable' },
-        { status: 503 }
-      )
-    }
+    // Get Supabase client using local config
+    const localConfig = readLocalConfig()
     
-    if (!supabase || typeof supabase !== 'object' || !('from' in supabase)) {
+    if (!localConfig) {
       logger.error('Supabase not configured for admin settings update', {
         requestId,
         ip
@@ -244,8 +225,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Type assertion to ensure TypeScript knows this is a Supabase client
-    const supabaseClient = supabase as any
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseClient = createClient(localConfig.supabaseUrl, localConfig.supabaseKey)
 
     // Check if settings data is valid
     if (!settings) {

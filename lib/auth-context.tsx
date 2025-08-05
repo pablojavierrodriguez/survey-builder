@@ -167,7 +167,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithPassword = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
-      const supabase = await getSupabaseClient()
       if (!supabase) {
         return { error: new Error('Supabase not configured') }
       }
@@ -181,7 +180,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
-      const supabase = await getSupabaseClient()
       if (!supabase) {
         return { error: new Error('Supabase not configured') }
       }
@@ -195,7 +193,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
-      const supabase = await getSupabaseClient()
       if (!supabase) {
         return { error: new Error('Supabase not configured') }
       }
@@ -214,7 +211,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async (): Promise<{ error: Error | null }> => {
     try {
-      const supabase = await getSupabaseClient()
       if (!supabase) {
         return { error: new Error('Supabase not configured') }
       }
@@ -240,7 +236,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Add function to clear corrupted session
   const clearCorruptedSession = async (): Promise<void> => {
     try {
-      const supabase = await getSupabaseClient()
       if (supabase) {
         // Force sign out to clear any corrupted tokens
         await supabase.auth.signOut()
@@ -257,7 +252,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (updates: Partial<Profile>): Promise<{ error: Error | null }> => {
     try {
-      const supabase = await getSupabaseClient()
       if (!supabase || !user) {
         return { error: new Error('Supabase not configured or user not authenticated') }
       }

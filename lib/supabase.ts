@@ -4,10 +4,30 @@ import { createClient } from '@supabase/supabase-js'
 export const supabase = null
 export const isSupabaseConfigured = false
 
-// Use the context-based approach instead
+// Server-side Supabase client using local config
 export async function getSupabaseClient() {
-  console.warn('getSupabaseClient is deprecated. Use useSupabase() hook instead.')
-  return null
+  try {
+    // Server-side: use local config for bootstrap
+    if (typeof window === 'undefined') {
+      try {
+        const localConfigModule = await import('./local-config')
+        if (localConfigModule && typeof localConfigModule.readLocalConfig === 'function') {
+          const localConfig = localConfigModule.readLocalConfig()
+          if (localConfig) {
+            return createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
+          }
+        }
+      } catch (error) {
+        // Silently handle import errors
+      }
+    }
+
+    // Client-side: return null (use context instead)
+    return null
+  } catch (error) {
+    console.error('Error in getSupabaseClient:', error)
+    return null
+  }
 }
 
 export function clearSupabaseCache() {
