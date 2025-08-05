@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { getSupabaseClient } from './supabase'
+import { useSupabase } from './supabase-context'
 import { Database } from './supabase'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -25,6 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { client: supabase, isLoading: supabaseLoading, error: supabaseError } = useSupabase()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -36,7 +37,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
-        const supabase = await getSupabaseClient()
+        if (supabaseLoading) {
+          return // Wait for Supabase to load
+        }
+
         if (!supabase) {
           console.warn('Supabase not configured - auth features disabled')
           if (mounted) setLoading(false)
