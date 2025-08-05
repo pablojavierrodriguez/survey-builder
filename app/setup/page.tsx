@@ -27,6 +27,11 @@ export default function SetupPage() {
     checkConfiguration()
   }, [])
 
+  // Reset loading state when step changes
+  useEffect(() => {
+    setIsLoading(false)
+  }, [step])
+
   const checkConfiguration = async () => {
     try {
       const response = await fetch('/api/config/check')
@@ -80,8 +85,10 @@ export default function SetupPage() {
       if (data.success) {
         setSuccess(setupMethod === "login" ? "✅ Conexión exitosa con credenciales de admin" : "✅ Conexión exitosa con Supabase")
         setStep(2)
+        setIsLoading(false)
       } else {
         setError(data.error || "Error al conectar con Supabase")
+        setIsLoading(false)
       }
     } catch (error) {
       setError("Error de red al probar la conexión")
@@ -134,12 +141,14 @@ export default function SetupPage() {
         
         setSuccess("✅ Configuración guardada exitosamente")
         setStep(3)
+        // Ensure loading is stopped
+        setIsLoading(false)
       } else {
         setError(data.error || "Error al guardar la configuración")
+        setIsLoading(false)
       }
     } catch (error) {
       setError("Error de red al guardar la configuración")
-    } finally {
       setIsLoading(false)
     }
   }
@@ -429,11 +438,22 @@ export default function SetupPage() {
                   <Button 
                     onClick={() => {
                       // Redirect to login page after setup
-                      window.location.href = '/auth/login'
+                      setIsLoading(true)
+                      setTimeout(() => {
+                        window.location.href = '/auth/login'
+                      }, 100)
                     }} 
                     className="flex-1"
+                    disabled={isLoading}
                   >
-                    Ir al Login
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Redirigiendo...
+                      </>
+                    ) : (
+                      "Ir al Login"
+                    )}
                   </Button>
                 </div>
                 
