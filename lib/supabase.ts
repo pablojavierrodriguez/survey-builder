@@ -6,6 +6,12 @@ export const supabase = null
 // Check if Supabase is configured (will be set dynamically)
 export const isSupabaseConfigured = false
 
+// Cache for client-side Supabase client
+let clientCache: any = null
+let clientPromise: Promise<any> | null = null
+let lastFetchTime = 0
+const CACHE_DURATION = 30000 // 30 seconds
+
 // Function to get Supabase client with dynamic config from database
 export async function getSupabaseClient() {
   try {
@@ -24,25 +30,57 @@ export async function getSupabaseClient() {
       }
     }
 
-    // Client-side: fetch config from database
+    // Client-side: use cached config or fetch from database
     if (typeof window !== 'undefined') {
-      try {
-        const response = await fetch('/api/admin/settings')
-        const result = await response.json()
-        
-        if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
-          const { url, apiKey } = result.data.database
-          return createClient<Database>(url, apiKey)
-        }
-      } catch (error) {
-        console.error('Error fetching Supabase config:', error)
+      // Check cache first
+      const now = Date.now()
+      if (clientCache && (now - lastFetchTime) < CACHE_DURATION) {
+        return clientCache
       }
+
+      // If there's already a request in progress, wait for it
+      if (clientPromise) {
+        return await clientPromise
+      }
+
+      // Make new request
+      clientPromise = (async () => {
+        try {
+          const response = await fetch('/api/admin/settings')
+          const result = await response.json()
+          
+          if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+            const { url, apiKey } = result.data.database
+            const client = createClient<Database>(url, apiKey)
+            
+            // Update cache
+            clientCache = client
+            lastFetchTime = now
+            
+            return client
+          }
+          return null
+        } catch (error) {
+          console.error('Error fetching Supabase config:', error)
+          return null
+        } finally {
+          clientPromise = null
+        }
+      })()
+
+      return await clientPromise
     }
   } catch (error) {
     console.error('Error in getSupabaseClient:', error)
   }
   
   return null
+}
+
+export function clearSupabaseCache() {
+  clientCache = null
+  clientPromise = null
+  lastFetchTime = 0
 }
 
 // Function to clear the client cache (useful after configuration changes)
