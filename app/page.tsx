@@ -191,7 +191,27 @@ export default function ProductSurvey() {
 
   const loadSettings = async () => {
     try {
-      const response = await fetch('/api/config/check')
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      })
+      
+      // Quick check for configuration first
+      const responsePromise = fetch('/api/config/check', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      const response = await Promise.race([responsePromise, timeoutPromise]) as Response
+      
+      if (!response.ok) {
+        setDatabaseStatus("not-configured")
+        setIsLoading(false)
+        return
+      }
+      
       const result = await response.json()
       
       if (!result.configured) {
@@ -202,17 +222,29 @@ export default function ProductSurvey() {
 
       setDatabaseStatus("configured")
       
-      // Load app settings
-      const settingsResponse = await fetch('/api/admin/settings')
-      if (settingsResponse.ok) {
-        const settingsData = await settingsResponse.json()
-        setSettings(settingsData)
-      }
+      // Load app settings in background (non-blocking)
+      fetch('/api/admin/settings')
+        .then(settingsResponse => {
+          if (settingsResponse.ok) {
+            return settingsResponse.json()
+          }
+          return null
+        })
+        .then(settingsData => {
+          if (settingsData) {
+            setSettings(settingsData)
+          }
+        })
+        .catch(error => {
+          console.warn('Error loading settings (non-critical):', error)
+        })
+        .finally(() => {
+          setIsLoading(false)
+        })
       
-      setIsLoading(false)
     } catch (error) {
       console.error('Error loading settings:', error)
-      setError('Error loading configuration')
+      setDatabaseStatus("not-configured")
       setIsLoading(false)
     }
   }
