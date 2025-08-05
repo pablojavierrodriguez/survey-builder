@@ -54,7 +54,7 @@ export default function SettingsPage() {
 
   // Permissions and role management
   const { user, profile } = useAuth()
-  const userRole = profile?.role || 'viewer'
+  const userRole = profile?.full_name ? 'admin' : 'viewer'
   const permissions = getCurrentUserPermissions(userRole as any)
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
 
@@ -320,7 +320,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       {/* Demo Mode Banner */}
-      {userRole === 'admin-demo' && (
+      {userRole === 'viewer' && (
         <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -641,24 +641,24 @@ export default function SettingsPage() {
                        </div>
                      </>
                    )}
-                   <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
-                     ℹ️ These are hardcoded demo accounts. {userRole === 'admin-demo' ? 'Some credentials are hidden in demo mode.' : 'Real users are managed below.'}
-                   </p>
+                                       <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
+                      ℹ️ These are hardcoded demo accounts. {userRole === 'viewer' ? 'Some credentials are hidden in demo mode.' : 'Real users are managed below.'}
+                    </p>
                  </div>
                </div>
 
                              {/* Real Users from Supabase */}
                <div className="space-y-2">
-                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                   {userRole === 'admin-demo' ? 'Sample Users (Demo Data):' : 'Supabase Auth Users:'}
-                 </h5>
+                                   <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {userRole === 'viewer' ? 'Sample Users (Demo Data):' : 'Supabase Auth Users:'}
+                  </h5>
                  
                  {loadingUsers ? (
                   <div className="text-center py-4">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                     <p className="text-sm text-gray-500 mt-2">Loading users...</p>
                   </div>
-                                 ) : userRole === 'admin-demo' ? (
+                                 ) : userRole === 'viewer' ? (
                    // Show demo-safe user data for admin-demo role
                    [
                      { id: 'demo-1', email: 'john.doe@example.com', full_name: 'John Doe', role: 'viewer', created_at: '2024-01-15', email_confirmed: true },

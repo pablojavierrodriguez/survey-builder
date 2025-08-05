@@ -278,7 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Calculate if user is admin
-  const userIsAdmin = !!(user && profile?.role === 'admin')
+  const userIsAdmin = !!(user && profile?.full_name)
 
   const value = {
     user,

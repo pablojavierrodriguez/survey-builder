@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Test connection with service role key
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
     
-    // Simple connection test
+    // Simple connection test with anon key
     const { data, error } = await supabase.auth.getSession()
 
     if (error) {
@@ -28,15 +28,16 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Test access to app_settings (RLS should be disabled)
-    const { data: settingsData, error: settingsError } = await supabase
-      .from('app_settings')
-      .select('count')
+    // Test service role key access (should work even with empty DB)
+    const { data: adminData, error: adminError } = await supabaseAdmin
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
       .limit(1)
     
-    if (settingsError) {
+    if (adminError) {
       return NextResponse.json(
-        { success: false, error: `Error de acceso a app_settings: ${settingsError.message}` },
+        { success: false, error: `Error de conexión con Service Role Key: ${adminError.message}` },
         { status: 400 }
       )
     }
@@ -44,12 +45,7 @@ export async function POST(request: NextRequest) {
     // If both work, connection is successful
     return NextResponse.json({
       success: true,
-      message: 'Conexión exitosa'
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: 'Conexión exitosa'
+      message: 'Conexión exitosa (ambas claves funcionan)'
     })
 
   } catch (error) {

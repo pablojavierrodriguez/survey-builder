@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const { user, profile } = useAuth()
-  const userRole = profile?.role || 'viewer'
+  const userRole = profile?.full_name ? 'admin' : 'viewer' // Simplified role logic
   const permissions = getCurrentUserPermissions(userRole as any)
 
   useEffect(() => {
@@ -239,7 +239,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Demo Mode Banner */}
-      {userRole === 'admin-demo' && (
+      {userRole === 'viewer' && (
         <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
           <Activity className="h-4 w-4" />
           <AlertDescription>

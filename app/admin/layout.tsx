@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Role-based redirection logic
   useEffect(() => {
     if (!loading && user && profile) {
-      const currentUserRole = profile.role || 'viewer'
+      const currentUserRole = profile.full_name ? 'admin' : 'viewer'
       
       // If user is viewer and trying to access dashboard, redirect to analytics
       if (currentUserRole === 'viewer' && pathname === '/admin/dashboard') {
@@ -53,8 +53,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return
       }
       
-      // If user is admin/admin-demo and accessing root admin path, redirect to dashboard
-      if ((currentUserRole === 'admin' || currentUserRole === 'admin-demo') && (pathname === '/admin' || pathname === '/admin/')) {
+      // If user is admin and accessing root admin path, redirect to dashboard
+      if (currentUserRole === 'admin' && (pathname === '/admin' || pathname === '/admin/')) {
         console.log('[AdminLayout] Admin accessing root admin, redirecting to dashboard')
         router.push('/admin/dashboard')
         return
@@ -82,7 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // Get current user role and permissions
-  const currentUserRole = profile?.role || 'viewer'
+  const currentUserRole = profile?.full_name ? 'admin' : 'viewer'
   const permissions = getPermissions(currentUserRole as any)
 
   const navigation = [

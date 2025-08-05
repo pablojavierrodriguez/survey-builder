@@ -114,21 +114,21 @@ export interface Database {
         Row: {
           id: string
           email: string
-          role: string
+          full_name?: string
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
           email: string
-          role?: string
+          full_name?: string
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           email?: string
-          role?: string
+          full_name?: string
           created_at?: string
           updated_at?: string
         }
@@ -140,20 +140,8 @@ export interface Database {
           updated_at: string
           environment: string
           survey_table_name: string
-          analytics_table_name?: string
           app_name: string
-          app_url?: string
-          maintenance_mode: boolean
-          enable_analytics: boolean
-          enable_email_notifications: boolean
-          enable_export: boolean
-          session_timeout: number
-          max_login_attempts: number
-          theme_default: string
-          language_default: string
           settings: any
-          description?: string
-          version: string
         }
         Insert: {
           id?: number
@@ -161,20 +149,8 @@ export interface Database {
           updated_at?: string
           environment: string
           survey_table_name: string
-          analytics_table_name?: string
           app_name: string
-          app_url?: string
-          maintenance_mode?: boolean
-          enable_analytics?: boolean
-          enable_email_notifications?: boolean
-          enable_export?: boolean
-          session_timeout?: number
-          max_login_attempts?: number
-          theme_default?: string
-          language_default?: string
           settings?: any
-          description?: string
-          version?: string
         }
         Update: {
           id?: number
@@ -182,46 +158,17 @@ export interface Database {
           updated_at?: string
           environment?: string
           survey_table_name?: string
-          analytics_table_name?: string
           app_name?: string
-          app_url?: string
-          maintenance_mode?: boolean
-          enable_analytics?: boolean
-          enable_email_notifications?: boolean
-          enable_export?: boolean
-          session_timeout?: number
-          max_login_attempts?: number
-          theme_default?: string
-          language_default?: string
           settings?: any
-          description?: string
-          version?: string
         }
       }
-      pc_survey_data: {
+      survey_data: {
         Row: {
           id: number
           created_at: string
           updated_at: string
-          role?: string
-          other_role?: string
-          seniority?: string
-          company_type?: string
-          company_size?: string
-          industry?: string
-          product_type?: string
-          customer_segment?: string
-          main_challenge?: string
-          daily_tools?: string[]
-          other_tool?: string
-          learning_methods?: string[]
-          salary_currency?: string
-          salary_min?: string
-          salary_max?: string
-          salary_average?: string
-          email?: string
+          response_data: any
           session_id?: string
-          source?: string
           user_agent?: string
           ip_address?: string
         }
@@ -229,25 +176,8 @@ export interface Database {
           id?: number
           created_at?: string
           updated_at?: string
-          role?: string
-          other_role?: string
-          seniority?: string
-          company_type?: string
-          company_size?: string
-          industry?: string
-          product_type?: string
-          customer_segment?: string
-          main_challenge?: string
-          daily_tools?: string[]
-          other_tool?: string
-          learning_methods?: string[]
-          salary_currency?: string
-          salary_min?: string
-          salary_max?: string
-          salary_average?: string
-          email?: string
+          response_data: any
           session_id?: string
-          source?: string
           user_agent?: string
           ip_address?: string
         }
@@ -255,105 +185,8 @@ export interface Database {
           id?: number
           created_at?: string
           updated_at?: string
-          role?: string
-          other_role?: string
-          seniority?: string
-          company_type?: string
-          company_size?: string
-          industry?: string
-          product_type?: string
-          customer_segment?: string
-          main_challenge?: string
-          daily_tools?: string[]
-          other_tool?: string
-          learning_methods?: string[]
-          salary_currency?: string
-          salary_min?: string
-          salary_max?: string
-          salary_average?: string
-          email?: string
+          response_data?: any
           session_id?: string
-          source?: string
-          user_agent?: string
-          ip_address?: string
-        }
-      }
-      pc_survey_data_dev: {
-        Row: {
-          id: number
-          created_at: string
-          updated_at: string
-          role?: string
-          other_role?: string
-          seniority?: string
-          company_type?: string
-          company_size?: string
-          industry?: string
-          product_type?: string
-          customer_segment?: string
-          main_challenge?: string
-          daily_tools?: string[]
-          other_tool?: string
-          learning_methods?: string[]
-          salary_currency?: string
-          salary_min?: string
-          salary_max?: string
-          salary_average?: string
-          email?: string
-          session_id?: string
-          source?: string
-          user_agent?: string
-          ip_address?: string
-        }
-        Insert: {
-          id?: number
-          created_at?: string
-          updated_at?: string
-          role?: string
-          other_role?: string
-          seniority?: string
-          company_type?: string
-          company_size?: string
-          industry?: string
-          product_type?: string
-          customer_segment?: string
-          main_challenge?: string
-          daily_tools?: string[]
-          other_tool?: string
-          learning_methods?: string[]
-          salary_currency?: string
-          salary_min?: string
-          salary_max?: string
-          salary_average?: string
-          email?: string
-          session_id?: string
-          source?: string
-          user_agent?: string
-          ip_address?: string
-        }
-        Update: {
-          id?: number
-          created_at?: string
-          updated_at?: string
-          role?: string
-          other_role?: string
-          seniority?: string
-          company_type?: string
-          company_size?: string
-          industry?: string
-          product_type?: string
-          customer_segment?: string
-          main_challenge?: string
-          daily_tools?: string[]
-          other_tool?: string
-          learning_methods?: string[]
-          salary_currency?: string
-          salary_min?: string
-          salary_max?: string
-          salary_average?: string
-          email?: string
-          session_id?: string
-          source?: string
           user_agent?: string
           ip_address?: string
         }

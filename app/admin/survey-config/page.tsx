@@ -245,7 +245,7 @@ export default function SurveyConfigPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const { user, profile } = useAuth()
-  const userRole = profile?.role || "viewer"
+  const userRole = profile?.full_name ? "admin" : "viewer"
 
   // Get user role from auth context
   useEffect(() => {
