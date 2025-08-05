@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client using environment variables
+    // Get Supabase client using environment variables for bootstrap
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
@@ -89,9 +89,19 @@ export async function GET(request: NextRequest) {
         hasEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       })
 
+      // Return dynamic configuration from database (scalable for multi-admin/multi-survey)
       return NextResponse.json({
         success: true,
-        data: data.settings,
+        data: {
+          ...data.settings,
+          // Override with database config for scalability
+          database: {
+            url: data.settings.database?.url || supabaseUrl,
+            apiKey: data.settings.database?.apiKey || supabaseKey,
+            tableName: data.settings.database?.tableName || 'survey_data',
+            environment: data.settings.database?.environment || environment
+          }
+        },
         environment: environment,
         source: 'database'
       })

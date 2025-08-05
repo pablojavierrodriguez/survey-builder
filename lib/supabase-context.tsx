@@ -40,7 +40,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Client-side: fetch config from database
+      // Client-side: fetch config from database (scalable for multi-admin/multi-survey)
       if (typeof window !== 'undefined') {
         const response = await fetch('/api/admin/settings')
         const result = await response.json()
@@ -50,7 +50,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           const newClient = createClient<Database>(url, apiKey)
           setClient(newClient)
         } else {
-          setError('Configuration not available')
+          // Fallback to environment variables if no database config
+          const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          
+          if (envUrl && envKey) {
+            const fallbackClient = createClient<Database>(envUrl, envKey)
+            setClient(fallbackClient)
+          } else {
+            setError('Configuration not available')
+          }
         }
       }
     } catch (error) {
