@@ -95,6 +95,15 @@ export async function POST(request: NextRequest) {
         `
       })
       console.log('🔧 [Setup] Tables created successfully')
+      
+      // Verify table exists
+      const { data: tableCheck, error: tableCheckError } = await supabaseAdmin
+        .from('app_settings')
+        .select('count')
+        .limit(1)
+      
+      console.log('🔧 [Setup] Table check:', { data: tableCheck, error: tableCheckError })
+      
     } catch (tableError) {
       console.error('🔧 [Setup] Error creating tables:', tableError)
       const errorMessage = tableError instanceof Error ? tableError.message : 'Unknown error'
@@ -105,7 +114,9 @@ export async function POST(request: NextRequest) {
     }
 
     // STEP 3: Save configuration
-    const { error: updateError } = await supabaseAdmin
+    console.log('🔧 [Setup] Attempting to save configuration...')
+    
+    const { data: upsertData, error: updateError } = await supabaseAdmin
       .from('app_settings')
       .upsert({
         environment: 'dev',
@@ -126,6 +137,9 @@ export async function POST(request: NextRequest) {
           }
         }
       })
+      .select()
+
+    console.log('🔧 [Setup] Upsert result:', { data: upsertData, error: updateError })
 
     if (updateError) {
       console.error('🔧 [Setup] Update error:', updateError)
