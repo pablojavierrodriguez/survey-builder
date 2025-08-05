@@ -10,7 +10,7 @@ export const isSupabaseConfigured = false
 let clientCache: any = null
 let clientPromise: Promise<any> | null = null
 let lastFetchTime = 0
-const CACHE_DURATION = 30000 // 30 seconds
+const CACHE_DURATION = 10000 // 10 seconds
 
 // Function to get Supabase client with dynamic config from database
 export async function getSupabaseClient() {
@@ -54,9 +54,16 @@ export async function getSupabaseClient() {
       if (clientPromise) {
         console.log('🔧 [Supabase] Waiting for existing request')
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Client request timeout')), 5000)
+          setTimeout(() => reject(new Error('Client request timeout')), 3000)
         })
-        return await Promise.race([clientPromise, timeoutPromise])
+        try {
+          return await Promise.race([clientPromise, timeoutPromise])
+        } catch (error) {
+          // If timeout occurs, clear the promise and return null
+          console.warn('🔧 [Supabase] Client request timeout, clearing cache')
+          clientPromise = null
+          return null
+        }
       }
 
       // Make new request
