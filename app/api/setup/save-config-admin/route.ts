@@ -164,9 +164,8 @@ CREATE POLICY "profiles_self_read" ON public.profiles
       )
     }
 
-    // Save configuration locally for bootstrap and clear cache
-    saveLocalConfig(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
-    clearSupabaseCache()
+               // Save configuration locally for bootstrap
+           saveLocalConfig(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
 
     return NextResponse.json({
       success: true,

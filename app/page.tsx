@@ -186,76 +186,13 @@ export default function ProductSurvey() {
 
   useEffect(() => {
     setIsMounted(true)
-    // DISABLED: Don't load settings automatically to prevent infinite loops
-    // Settings will be loaded only when explicitly needed
-    setDatabaseStatus("not-configured")
+    // Simple check: if we have environment variables, we're configured
+    const hasConfig = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    setDatabaseStatus(hasConfig ? "configured" : "not-configured")
     setIsLoading(false)
   }, [])
 
-  const loadSettings = async () => {
-    try {
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      })
-      
-      // Quick check for configuration first
-      const responsePromise = fetch('/api/config/check', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      })
-      
-      const response = await Promise.race([responsePromise, timeoutPromise]) as Response
-      
-      if (!response.ok) {
-        setDatabaseStatus("not-configured")
-        setIsLoading(false)
-        return
-      }
-      
-      const result = await response.json()
-      
-      if (!result.configured) {
-        setDatabaseStatus("not-configured")
-        setIsLoading(false)
-        return
-      }
-
-      setDatabaseStatus("configured")
-      
-      // Load app settings in background (non-blocking) with timeout
-      // If this fails, we'll just continue without settings - not critical
-      try {
-        const settingsTimeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Settings timeout')), 5000)
-        })
-        
-        const settingsResponse = await Promise.race([
-          fetch('/api/admin/settings'),
-          settingsTimeoutPromise
-        ]) as Response
-        
-        if (settingsResponse.ok) {
-          const settingsData = await settingsResponse.json()
-          if (settingsData) {
-            setSettings(settingsData)
-          }
-        }
-      } catch (error) {
-        console.warn('Settings loading failed (non-critical):', error)
-        // Continue without settings - they're not essential for basic functionality
-      } finally {
-        setIsLoading(false)
-      }
-      
-    } catch (error) {
-      console.error('Error loading settings:', error)
-      setDatabaseStatus("not-configured")
-      setIsLoading(false)
-    }
-  }
+  // Settings loading removed - not needed for basic functionality
 
   // Handlers for single choice questions (no auto-advance)
   const handleRoleSelect = (role: string) => {
