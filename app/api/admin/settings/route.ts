@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       logger.error('Supabase client timeout or error', {
         requestId,
         ip,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       })
       
       return NextResponse.json(
