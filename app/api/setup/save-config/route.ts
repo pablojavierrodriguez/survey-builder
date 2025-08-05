@@ -143,17 +143,10 @@ CREATE POLICY "profiles_self_read" ON public.profiles
     // Save configuration locally for bootstrap
     saveLocalConfig(supabaseUrl, supabaseKey)
 
-    // Clear any cached configuration to force fresh fetch
-    try {
-      const { clearSupabaseCache } = await import('@/lib/supabase')
-      clearSupabaseCache()
-    } catch (error) {
-      console.log('🔧 [Setup] Cache clear not available')
-    }
-
     return NextResponse.json({
       success: true,
-      message: 'Configuración guardada exitosamente'
+      message: 'Configuración guardada exitosamente',
+      clearCache: true // Signal to client to clear cache
     })
 
   } catch (error) {

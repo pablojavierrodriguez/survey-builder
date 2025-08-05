@@ -121,6 +121,17 @@ export default function SetupPage() {
       const data = await response.json()
       
       if (data.success) {
+        // Clear cache if requested by server
+        if (data.clearCache) {
+          try {
+            const { clearSupabaseCache } = await import('@/lib/supabase')
+            clearSupabaseCache()
+            console.log('🔧 [Setup] Cache cleared after configuration save')
+          } catch (error) {
+            console.log('🔧 [Setup] Cache clear not available')
+          }
+        }
+        
         setSuccess("✅ Configuración guardada exitosamente")
         setStep(3)
       } else {
