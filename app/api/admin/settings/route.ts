@@ -27,24 +27,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client using environment variables for bootstrap
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Get Supabase client using database config (simple and scalable)
+    const { createClient } = await import('@supabase/supabase-js')
     
-    if (!supabaseUrl || !supabaseKey) {
-      logger.error('Supabase not configured for admin settings', {
+    // For initial setup, use environment variables as bootstrap
+    const bootstrapUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const bootstrapKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!bootstrapUrl || !bootstrapKey) {
+      logger.error('Bootstrap configuration not available', {
         requestId,
         ip
       })
       
       return NextResponse.json(
-        { success: false, error: 'Admin system not available' },
+        { success: false, error: 'System not configured' },
         { status: 503 }
       )
     }
 
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabaseClient = createClient(supabaseUrl, supabaseKey)
+    const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
 
     // Get environment from NODE_ENV
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
@@ -89,19 +91,10 @@ export async function GET(request: NextRequest) {
         hasEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       })
 
-      // Return dynamic configuration from database (scalable for multi-admin/multi-survey)
+      // Return configuration from database (simple and scalable)
       return NextResponse.json({
         success: true,
-        data: {
-          ...data.settings,
-          // Override with database config for scalability
-          database: {
-            url: data.settings.database?.url || supabaseUrl,
-            apiKey: data.settings.database?.apiKey || supabaseKey,
-            tableName: data.settings.database?.tableName || 'survey_data',
-            environment: data.settings.database?.environment || environment
-          }
-        },
+        data: data.settings,
         environment: environment,
         source: 'database'
       })
@@ -221,24 +214,25 @@ export async function POST(request: NextRequest) {
 
     const settings = validation.data
 
-    // Get Supabase client using environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Get Supabase client using bootstrap config
+    const { createClient } = await import('@supabase/supabase-js')
     
-    if (!supabaseUrl || !supabaseKey) {
-      logger.error('Supabase not configured for admin settings update', {
+    const bootstrapUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const bootstrapKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!bootstrapUrl || !bootstrapKey) {
+      logger.error('Bootstrap configuration not available for settings update', {
         requestId,
         ip
       })
       
       return NextResponse.json(
-        { success: false, error: 'Admin system not available' },
+        { success: false, error: 'System not configured' },
         { status: 503 }
       )
     }
 
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabaseClient = createClient(supabaseUrl, supabaseKey)
+    const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
 
     // Check if settings data is valid
     if (!settings) {

@@ -4,16 +4,17 @@ import { createClient } from '@supabase/supabase-js'
 export const supabase = null
 export const isSupabaseConfigured = false
 
-// Server-side Supabase client using environment variables
+// Server-side Supabase client using database config
 export async function getSupabaseClient() {
   try {
-    // Server-side: use environment variables
+    // Server-side: fetch config from database
     if (typeof window === 'undefined') {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/admin/settings`)
+      const result = await response.json()
       
-      if (supabaseUrl && supabaseKey) {
-        return createClient<Database>(supabaseUrl, supabaseKey)
+      if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+        const { url, apiKey } = result.data.database
+        return createClient<Database>(url, apiKey)
       }
     }
 

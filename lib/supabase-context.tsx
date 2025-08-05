@@ -23,44 +23,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true)
       setError(null)
 
-      // Server-side: use local config for bootstrap
-      if (typeof window === 'undefined') {
-        try {
-          const localConfigModule = await import('./local-config')
-          if (localConfigModule && typeof localConfigModule.readLocalConfig === 'function') {
-            const localConfig = localConfigModule.readLocalConfig()
-            if (localConfig) {
-              const serverClient = createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
-              setClient(serverClient)
-              return
-            }
-          }
-        } catch (error) {
-          // Silently handle import errors
-        }
-      }
-
-      // Client-side: fetch config from database (scalable for multi-admin/multi-survey)
-      if (typeof window !== 'undefined') {
-        const response = await fetch('/api/admin/settings')
-        const result = await response.json()
-        
-        if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
-          const { url, apiKey } = result.data.database
-          const newClient = createClient<Database>(url, apiKey)
-          setClient(newClient)
-        } else {
-          // Fallback to environment variables if no database config
-          const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-          const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-          
-          if (envUrl && envKey) {
-            const fallbackClient = createClient<Database>(envUrl, envKey)
-            setClient(fallbackClient)
-          } else {
-            setError('Configuration not available')
-          }
-        }
+      // Always fetch config from database (simple and scalable)
+      const response = await fetch('/api/admin/settings')
+      const result = await response.json()
+      
+      if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+        const { url, apiKey } = result.data.database
+        const newClient = createClient<Database>(url, apiKey)
+        setClient(newClient)
+      } else {
+        setError('Configuration not available')
       }
     } catch (error) {
       console.error('Error fetching Supabase config:', error)
