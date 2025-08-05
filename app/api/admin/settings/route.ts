@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminSettings } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { getSupabaseClient } from '@/lib/supabase'
+import { readLocalConfig } from '@/lib/local-config'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get Supabase client using local config for server-side
-    const supabase = await getSupabaseClient()
+    const localConfig = readLocalConfig()
     
-    if (!supabase || typeof supabase !== 'object' || !('from' in supabase)) {
+    if (!localConfig) {
       logger.error('Supabase not configured for admin settings', {
         requestId,
         ip
@@ -42,7 +42,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const supabaseClient = supabase as any
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseClient = createClient(localConfig.supabaseUrl, localConfig.supabaseKey)
 
     // Get environment from NODE_ENV
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'

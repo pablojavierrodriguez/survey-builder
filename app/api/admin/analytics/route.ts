@@ -1,29 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { getSupabaseClient } from '@/lib/supabase'
+import { readLocalConfig } from '@/lib/local-config'
 
 // Get table name from database settings
 async function getTableName(): Promise<string> {
   try {
-    const supabase = await getSupabaseClient()
-    if (!supabase) {
-      return 'survey_responses' // fallback
+    const localConfig = readLocalConfig()
+    if (!localConfig) {
+      return 'survey_data' // fallback
     }
     
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('settings')
-      .eq('environment', 'dev')
-      .single()
-    
-    if (error || !data?.settings?.database?.tableName) {
-      return 'survey_responses' // fallback
-    }
-    
-    return data.settings.database.tableName
+    // For now, return the default table name
+    // In the future, this could fetch from app_settings table
+    return 'survey_data'
   } catch (error) {
-    return 'survey_responses' // fallback
+    return 'survey_data' // fallback
   }
 }
 import { cacheManager, CACHE_KEYS, CACHE_TTL, getCachedOrFetch } from '@/lib/cache-manager'
@@ -51,9 +43,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client
-    const supabase = await getSupabaseClient()
-    if (!supabase) {
+    // Get Supabase client from local config
+    const localConfig = readLocalConfig()
+    if (!localConfig) {
       logger.error('Supabase not configured for analytics', {
         requestId,
         ip
@@ -64,6 +56,9 @@ export async function GET(request: NextRequest) {
         { status: 503 }
       )
     }
+
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(localConfig.supabaseUrl, localConfig.supabaseKey)
 
     // Get dynamic table name from settings
     const tableName = await getTableName()
