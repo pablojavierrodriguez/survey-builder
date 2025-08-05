@@ -140,9 +140,8 @@ CREATE POLICY "profiles_self_read" ON public.profiles
       )
     }
 
-    // Save configuration locally for bootstrap
-    const localConfigSaved = saveLocalConfig(supabaseUrl, supabaseKey)
-    console.log('🔧 [Setup] Local config save result:', localConfigSaved)
+    // Configuration is now saved in database and will be read from environment variables
+    console.log('🔧 [Setup] Configuration saved to database successfully')
 
     return NextResponse.json({
       success: true,

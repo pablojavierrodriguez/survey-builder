@@ -27,10 +27,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client using local config for server-side
-    const localConfig = readLocalConfig()
+    // Get Supabase client using environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    if (!localConfig) {
+    if (!supabaseUrl || !supabaseKey) {
       logger.error('Supabase not configured for admin settings', {
         requestId,
         ip
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { createClient } = await import('@supabase/supabase-js')
-    const supabaseClient = createClient(localConfig.supabaseUrl, localConfig.supabaseKey)
+    const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
     // Get environment from NODE_ENV
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
@@ -210,10 +211,11 @@ export async function POST(request: NextRequest) {
 
     const settings = validation.data
 
-    // Get Supabase client using local config
-    const localConfig = readLocalConfig()
+    // Get Supabase client using environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    if (!localConfig) {
+    if (!supabaseUrl || !supabaseKey) {
       logger.error('Supabase not configured for admin settings update', {
         requestId,
         ip
@@ -226,7 +228,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { createClient } = await import('@supabase/supabase-js')
-    const supabaseClient = createClient(localConfig.supabaseUrl, localConfig.supabaseKey)
+    const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
     // Check if settings data is valid
     if (!settings) {

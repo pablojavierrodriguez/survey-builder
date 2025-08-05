@@ -4,21 +4,16 @@ import { createClient } from '@supabase/supabase-js'
 export const supabase = null
 export const isSupabaseConfigured = false
 
-// Server-side Supabase client using local config
+// Server-side Supabase client using environment variables
 export async function getSupabaseClient() {
   try {
-    // Server-side: use local config for bootstrap
+    // Server-side: use environment variables
     if (typeof window === 'undefined') {
-      try {
-        const localConfigModule = await import('./local-config')
-        if (localConfigModule && typeof localConfigModule.readLocalConfig === 'function') {
-          const localConfig = localConfigModule.readLocalConfig()
-          if (localConfig) {
-            return createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
-          }
-        }
-      } catch (error) {
-        // Silently handle import errors
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      if (supabaseUrl && supabaseKey) {
+        return createClient<Database>(supabaseUrl, supabaseKey)
       }
     }
 
