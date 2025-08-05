@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    if (!supabase) {
+    if (!supabase || typeof supabase !== 'object' || !('from' in supabase)) {
       logger.error('Supabase not configured for admin settings', {
         requestId,
         ip
