@@ -61,6 +61,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Type assertion to ensure TypeScript knows this is a Supabase client
+    const supabaseClient = supabase as any
+
     // Get environment from NODE_ENV
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
     const isProd = environment === 'prod'
