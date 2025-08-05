@@ -186,19 +186,10 @@ export default function ProductSurvey() {
 
   useEffect(() => {
     setIsMounted(true)
-    // Only load settings if we're not on the setup page
-    if (typeof window !== 'undefined' && window.location.pathname !== '/setup') {
-      // Add a delay to allow any setup process to complete
-      const timer = setTimeout(() => {
-        loadSettings()
-      }, 2000) // 2 second delay
-      
-      return () => clearTimeout(timer)
-    } else {
-      // If we're on setup page, just mark as not configured
-      setDatabaseStatus("not-configured")
-      setIsLoading(false)
-    }
+    // DISABLED: Don't load settings automatically to prevent infinite loops
+    // Settings will be loaded only when explicitly needed
+    setDatabaseStatus("not-configured")
+    setIsLoading(false)
   }, [])
 
   const loadSettings = async () => {

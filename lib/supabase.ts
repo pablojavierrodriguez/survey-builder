@@ -28,42 +28,10 @@ export async function getSupabaseClient() {
       }
     }
 
-    // Client-side: simple fetch without caching to avoid deadlocks
+    // Client-side: DISABLED to prevent infinite loops
     if (typeof window !== 'undefined') {
-      // Avoid calling API during setup process
-      const isSetupPage = window.location.pathname === '/setup'
-      if (isSetupPage) {
-        console.log('🔧 [Supabase] Skipping API call during setup')
-        return null
-      }
-
-      try {
-        console.log('🔧 [Supabase] Fetching configuration from API')
-        
-        // Simple fetch with timeout - no caching, no deadlocks
-        const fetchTimeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Fetch timeout')), 5000)
-        })
-        
-        const response = await Promise.race([
-          fetch('/api/admin/settings'),
-          fetchTimeoutPromise
-        ]) as Response
-        
-        const result = await response.json()
-        
-        if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
-          const { url, apiKey } = result.data.database
-          const client = createClient<Database>(url, apiKey)
-          
-          console.log('🔧 [Supabase] Configuration fetched successfully')
-          return client
-        }
-        return null
-      } catch (error) {
-        console.error('Error fetching Supabase config:', error)
-        return null
-      }
+      console.log('🔧 [Supabase] Client-side requests DISABLED to prevent infinite loops')
+      return null
     }
   } catch (error) {
     console.error('Error in getSupabaseClient:', error)
