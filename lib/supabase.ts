@@ -24,13 +24,26 @@ export async function getSupabaseClient() {
       }
     }
 
-    // Client-side: use environment variables directly
+    // Client-side: use environment variables or local config
     if (typeof window !== 'undefined') {
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL
       const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       
       if (url && key) {
         return createClient<Database>(url, key)
+      }
+      
+      // Fallback to local config if environment variables not available
+      try {
+        const localConfigModule = await import('./local-config')
+        if (localConfigModule && typeof localConfigModule.readLocalConfig === 'function') {
+          const localConfig = localConfigModule.readLocalConfig()
+          if (localConfig) {
+            return createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
+          }
+        }
+      } catch (error) {
+        // Silently handle import errors
       }
     }
   } catch (error) {
