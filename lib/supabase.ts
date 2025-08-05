@@ -50,17 +50,30 @@ export async function getSupabaseClient() {
         return clientCache
       }
 
-      // If there's already a request in progress, wait for it
+      // If there's already a request in progress, wait for it with timeout
       if (clientPromise) {
         console.log('🔧 [Supabase] Waiting for existing request')
-        return await clientPromise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Client request timeout')), 5000)
+        })
+        return await Promise.race([clientPromise, timeoutPromise])
       }
 
       // Make new request
       clientPromise = (async () => {
         try {
           console.log('🔧 [Supabase] Fetching configuration from API')
-          const response = await fetch('/api/admin/settings')
+          
+          // Add timeout to fetch
+          const fetchTimeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Fetch timeout')), 10000)
+          })
+          
+          const response = await Promise.race([
+            fetch('/api/admin/settings'),
+            fetchTimeoutPromise
+          ]) as Response
+          
           const result = await response.json()
           
           if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {

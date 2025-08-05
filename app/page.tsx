@@ -222,14 +222,20 @@ export default function ProductSurvey() {
 
       setDatabaseStatus("configured")
       
-      // Load app settings in background (non-blocking)
-      fetch('/api/admin/settings')
-        .then(settingsResponse => {
+      // Load app settings in background (non-blocking) with timeout
+      const settingsTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Settings timeout')), 3000)
+      })
+      
+      Promise.race([
+        fetch('/api/admin/settings').then(settingsResponse => {
           if (settingsResponse.ok) {
             return settingsResponse.json()
           }
           return null
-        })
+        }),
+        settingsTimeoutPromise
+      ])
         .then(settingsData => {
           if (settingsData) {
             setSettings(settingsData)
