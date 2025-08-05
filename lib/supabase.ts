@@ -24,26 +24,18 @@ export async function getSupabaseClient() {
       }
     }
 
-    // Client-side: use environment variables or local config
+    // Client-side: fetch config from database
     if (typeof window !== 'undefined') {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
-      if (url && key) {
-        return createClient<Database>(url, key)
-      }
-      
-      // Fallback to local config if environment variables not available
       try {
-        const localConfigModule = await import('./local-config')
-        if (localConfigModule && typeof localConfigModule.readLocalConfig === 'function') {
-          const localConfig = localConfigModule.readLocalConfig()
-          if (localConfig) {
-            return createClient<Database>(localConfig.supabaseUrl, localConfig.supabaseKey)
-          }
+        const response = await fetch('/api/admin/settings')
+        const result = await response.json()
+        
+        if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+          const { url, apiKey } = result.data.database
+          return createClient<Database>(url, apiKey)
         }
       } catch (error) {
-        // Silently handle import errors
+        console.error('Error fetching Supabase config:', error)
       }
     }
   } catch (error) {

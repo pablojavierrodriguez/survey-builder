@@ -27,27 +27,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client with timeout
-    let supabase
-    try {
-      const clientPromise = getSupabaseClient()
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Client timeout')), 5000)
-      })
-      
-      supabase = await Promise.race([clientPromise, timeoutPromise])
-    } catch (error) {
-      logger.error('Supabase client timeout or error', {
-        requestId,
-        ip,
-        error: error instanceof Error ? error.message : String(error)
-      })
-      
-      return NextResponse.json(
-        { success: false, error: 'Admin system temporarily unavailable' },
-        { status: 503 }
-      )
-    }
+    // Get Supabase client using local config for server-side
+    const supabase = await getSupabaseClient()
     
     if (!supabase || typeof supabase !== 'object' || !('from' in supabase)) {
       logger.error('Supabase not configured for admin settings', {
@@ -61,7 +42,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Type assertion to ensure TypeScript knows this is a Supabase client
     const supabaseClient = supabase as any
 
     // Get environment from NODE_ENV
