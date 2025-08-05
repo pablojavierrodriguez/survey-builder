@@ -1,8 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { useSupabase } from './supabase-context'
+import { User, Session, createClient } from '@supabase/supabase-js'
 import { Database } from './supabase'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -24,8 +23,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Global Supabase client instance
+let supabaseClient: any = null
+
+const getSupabaseClient = async () => {
+  if (supabaseClient) return supabaseClient
+  
+  try {
+    const response = await fetch('/api/admin/settings')
+    const result = await response.json()
+    
+    if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+      const { url, apiKey } = result.data.database
+      supabaseClient = createClient<Database>(url, apiKey)
+      return supabaseClient
+    }
+  } catch (error) {
+    console.error('Failed to get Supabase client:', error)
+  }
+  
+  return null
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { client: supabase, isLoading: supabaseLoading, error: supabaseError } = useSupabase()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -33,14 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    let subscription: any = null
 
     const initializeAuth = async () => {
       try {
-        if (supabaseLoading) {
-          return // Wait for Supabase to load
-        }
-
+        const supabase = await getSupabaseClient()
+        
         if (!supabase) {
           console.warn('Supabase not configured - auth features disabled')
           if (mounted) setLoading(false)
@@ -50,14 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Get initial session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
-        console.log('🔐 [Auth] Initial session check:', {
-          hasSession: !!session,
-          userId: session?.user?.id || null,
-          email: session?.user?.email || null,
-          sessionError: sessionError?.message || null
-        })
-        
-        // Handle refresh token errors
         if (sessionError && sessionError.message.includes('Refresh Token')) {
           console.warn('🔐 [Auth] Refresh token error detected - clearing session')
           if (mounted) {
@@ -70,7 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         if (mounted) {
-          // FORCE CLEAR SESSION IF NO VALID USER
           if (!session?.user?.id) {
             console.log('🔐 [Auth] No valid user found - clearing session')
             setSession(null)
@@ -80,19 +88,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session)
             setUser(session.user)
 
-            // Fetch user profile only once
+            // Fetch user profile
             try {
               const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .limit(1)
-              
-              console.log('🔐 [Auth] Profile fetch result:', {
-                hasProfile: !!profileData && profileData.length > 0,
-                role: profileData?.[0]?.role || null,
-                profileError: profileError?.message || null
-              })
               
               if (mounted) setProfile(profileData?.[0] || null)
             } catch (profileError) {
@@ -102,100 +104,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Listen for auth changes with debouncing
-        let authTimeout: NodeJS.Timeout
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-          async (event: any, session: any) => {
-            if (!mounted) return
+        // Set up auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('🔐 [Auth] Auth state change:', event, session?.user?.email)
             
-            // Clear previous timeout
-            clearTimeout(authTimeout)
-            
-            // Debounce auth state changes
-            authTimeout = setTimeout(() => {
-              if (!mounted) return
-              
-              console.log('Auth state changed:', event, session?.user?.id)
-              
-              // FORCE CLEAR SESSION IF NO VALID USER
-              if (!session?.user?.id) {
-                console.log('🔐 [Auth] Clearing invalid session')
-                setSession(null)
-                setUser(null)
-                setProfile(null)
-                return
-              }
-              
+            if (mounted) {
               setSession(session)
-              setUser(session.user)
-
-              // Fetch user profile
-              supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .limit(1)
-                .then(({ data: profileData, error }: { data: Profile[] | null, error: any }) => {
-                  if (error) {
-                    console.warn('Could not fetch profile:', error)
-                    if (mounted) setProfile(null)
-                  } else {
-                    if (mounted) setProfile(profileData?.[0] || null)
-                  }
-                })
-            }, 100) // 100ms debounce
+              setUser(session?.user || null)
+              
+              if (session?.user?.id) {
+                try {
+                  const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .limit(1)
+                  
+                  setProfile(profileData?.[0] || null)
+                } catch (error) {
+                  console.warn('Could not fetch profile on auth change:', error)
+                  setProfile(null)
+                }
+              } else {
+                setProfile(null)
+              }
+            }
           }
         )
 
-        subscription = authSubscription
-        if (mounted) setLoading(false)
+        return () => {
+          subscription?.unsubscribe()
+        }
       } catch (error) {
-        console.error('Error initializing auth:', error)
+        console.error('Auth initialization error:', error)
+      } finally {
         if (mounted) setLoading(false)
       }
     }
 
     initializeAuth()
-
-    return () => {
-      mounted = false
-      if (subscription) {
-        subscription.unsubscribe()
-      }
-    }
   }, [])
+
+  const userIsAdmin = profile?.email === 'admin@demo.com' || profile?.email === 'admin@example.com'
 
   const signInWithPassword = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
-      if (!supabase) {
-        return { error: new Error('Supabase not configured') }
-      }
+      const supabase = await getSupabaseClient()
+      if (!supabase) return { error: new Error('Supabase not configured') }
 
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      return { error: error as Error }
+      return { error }
     } catch (error) {
-      return { error: error as Error }
+      return { error: error instanceof Error ? error : new Error('Sign in failed') }
     }
   }
 
   const signUp = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
-      if (!supabase) {
-        return { error: new Error('Supabase not configured') }
-      }
+      const supabase = await getSupabaseClient()
+      if (!supabase) return { error: new Error('Supabase not configured') }
 
       const { error } = await supabase.auth.signUp({ email, password })
-      return { error: error as Error }
+      return { error }
     } catch (error) {
-      return { error: error as Error }
+      return { error: error instanceof Error ? error : new Error('Sign up failed') }
     }
   }
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
-      if (!supabase) {
-        return { error: new Error('Supabase not configured') }
-      }
+      const supabase = await getSupabaseClient()
+      if (!supabase) return { error: new Error('Supabase not configured') }
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -203,71 +183,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           redirectTo: `${window.location.origin}/auth/callback`
         }
       })
-      return { error: error as Error }
+      return { error }
     } catch (error) {
-      return { error: error as Error }
+      return { error: error instanceof Error ? error : new Error('Google sign in failed') }
     }
   }
 
   const signOut = async (): Promise<{ error: Error | null }> => {
     try {
-      if (!supabase) {
-        return { error: new Error('Supabase not configured') }
-      }
+      const supabase = await getSupabaseClient()
+      if (!supabase) return { error: new Error('Supabase not configured') }
 
       const { error } = await supabase.auth.signOut()
-      
-      // Clear local state immediately
-      setUser(null)
-      setProfile(null)
-      setSession(null)
-      
       return { error }
     } catch (error) {
-      console.error('Sign out error:', error)
-      // Clear local state even if there's an error
-      setUser(null)
-      setProfile(null)
-      setSession(null)
-      return { error: error as Error }
+      return { error: error instanceof Error ? error : new Error('Sign out failed') }
     }
   }
 
-  // Add function to clear corrupted session
   const clearCorruptedSession = async (): Promise<void> => {
     try {
+      const supabase = await getSupabaseClient()
       if (supabase) {
-        // Force sign out to clear any corrupted tokens
         await supabase.auth.signOut()
       }
     } catch (error) {
-      console.warn('Error clearing corrupted session:', error)
-    } finally {
-      // Always clear local state
-      setUser(null)
-      setProfile(null)
-      setSession(null)
+      console.error('Error clearing session:', error)
     }
+    
+    setSession(null)
+    setUser(null)
+    setProfile(null)
   }
 
   const updateProfile = async (updates: Partial<Profile>): Promise<{ error: Error | null }> => {
     try {
-      if (!supabase || !user) {
-        return { error: new Error('Supabase not configured or user not authenticated') }
-      }
+      const supabase = await getSupabaseClient()
+      if (!supabase) return { error: new Error('Supabase not configured') }
 
       const { error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', user.id)
-      
+        .eq('id', user?.id)
+
       if (!error) {
         setProfile(prev => prev ? { ...prev, ...updates } : null)
       }
-      
-      return { error: error as Error }
+
+      return { error }
     } catch (error) {
-      return { error: error as Error }
+      return { error: error instanceof Error ? error : new Error('Profile update failed') }
     }
   }
 
@@ -275,10 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return session?.access_token || null
   }
 
-  // Calculate if user is admin
-  const userIsAdmin = !!(user && profile?.full_name)
-
-  const value = {
+  const value: AuthContextType = {
     user,
     profile,
     session,
@@ -290,10 +252,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     clearCorruptedSession,
     updateProfile,
-    getAccessToken,
+    getAccessToken
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
