@@ -186,7 +186,12 @@ export default function ProductSurvey() {
 
   useEffect(() => {
     setIsMounted(true)
-    loadSettings()
+    // Add a delay to allow any setup process to complete
+    const timer = setTimeout(() => {
+      loadSettings()
+    }, 2000) // 2 second delay
+    
+    return () => clearTimeout(timer)
   }, [])
 
   const loadSettings = async () => {
@@ -222,34 +227,30 @@ export default function ProductSurvey() {
 
       setDatabaseStatus("configured")
       
-      // Add a small delay to allow setup to complete
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
       // Load app settings in background (non-blocking) with timeout
-      const settingsTimeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Settings timeout')), 3000)
-      })
-      
-      Promise.race([
-        fetch('/api/admin/settings').then(settingsResponse => {
-          if (settingsResponse.ok) {
-            return settingsResponse.json()
-          }
-          return null
-        }),
-        settingsTimeoutPromise
-      ])
-        .then(settingsData => {
+      // If this fails, we'll just continue without settings - not critical
+      try {
+        const settingsTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Settings timeout')), 5000)
+        })
+        
+        const settingsResponse = await Promise.race([
+          fetch('/api/admin/settings'),
+          settingsTimeoutPromise
+        ]) as Response
+        
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json()
           if (settingsData) {
             setSettings(settingsData)
           }
-        })
-        .catch(error => {
-          console.warn('Error loading settings (non-critical):', error)
-        })
-        .finally(() => {
-          setIsLoading(false)
-        })
+        }
+      } catch (error) {
+        console.warn('Settings loading failed (non-critical):', error)
+        // Continue without settings - they're not essential for basic functionality
+      } finally {
+        setIsLoading(false)
+      }
       
     } catch (error) {
       console.error('Error loading settings:', error)
