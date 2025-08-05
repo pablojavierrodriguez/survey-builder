@@ -783,7 +783,8 @@ export default function ProductSurvey() {
         error={error} 
         onRetry={() => {
           setError(null)
-          loadSettings()
+          // Reload page instead of calling loadSettings
+          window.location.reload()
         }}
       />
     )
