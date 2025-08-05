@@ -31,11 +31,11 @@ export async function getSupabaseClient() {
 }
 
 export function clearSupabaseCache() {
-  console.warn('clearSupabaseCache is deprecated. Use useSupabase().refreshClient() instead.')
+  // Function kept for backward compatibility
 }
 
 export async function requireSupabase() {
-  console.warn('requireSupabase is deprecated. Use useSupabase() hook instead.')
+  // Function kept for backward compatibility
   return false
 }
 
