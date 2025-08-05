@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminSettings } from '@/lib/validation'
 import { rateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger } from '@/lib/logger'
-import { readLocalConfig } from '@/lib/local-config'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -27,15 +26,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client using database config (simple and scalable)
+    // Get Supabase client using environment variables
     const { createClient } = await import('@supabase/supabase-js')
     
-    // For initial setup, use environment variables as bootstrap
     const bootstrapUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const bootstrapKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     if (!bootstrapUrl || !bootstrapKey) {
-      logger.error('Bootstrap configuration not available', {
+      logger.error('Supabase not configured for admin settings', {
         requestId,
         ip
       })
@@ -50,24 +48,19 @@ export async function GET(request: NextRequest) {
 
     // Get environment from NODE_ENV
     const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
-    const isProd = environment === 'prod'
 
-    // Fetch settings from database for specific environment
-    const dbStartTime = Date.now()
+    // Fetch settings from database
     const { data, error } = await supabaseClient
       .from('app_settings')
       .select('*')
       .eq('environment', environment)
       .single()
 
-    const dbDuration = Date.now() - dbStartTime
-
     if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
       logger.error('Database error fetching admin settings', {
         requestId,
         ip,
         error: error.message,
-        duration: dbDuration,
         environment
       })
       
@@ -77,21 +70,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    logger.logDatabaseOperation('SELECT', 'app_settings', true, dbDuration)
-
-    // PRIORITY 1: Return user-saved settings from DB if they exist
+    // Return user-saved settings from DB if they exist
     if (data?.settings) {
-      logger.info('Returning user-saved settings from database', {
-        requestId,
-        ip,
-        environment,
-        hasDatabaseUrl: !!data.settings.database?.url,
-        hasDatabaseKey: !!data.settings.database?.apiKey,
-        hasEnvUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      })
-
-      // Return configuration from database (simple and scalable)
       return NextResponse.json({
         success: true,
         data: data.settings,
@@ -100,63 +80,32 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // PRIORITY 2: Return default settings (no database credentials)
-    const defaultSettings = {
-      database: {
-        tableName: isProd ? 'survey_responses' : 'survey_responses',
-        environment: environment
-      },
-      general: {
-        appName: isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)',
-        publicUrl: isProd ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
-        maintenanceMode: false,
-        analyticsEnabled: true
-      },
-      security: {
-        sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
-        maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
-        enableRateLimit: true,
-        enforceStrongPasswords: isProd,
-        enableTwoFactor: false
-      },
-      features: {
-        enableExport: true,
-        enableEmailNotifications: isProd,
-        enableAnalytics: true
-      }
-    }
-
-    logger.info('Returning default settings', {
-      requestId,
-      ip,
-      environment,
-      hasEnvUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    })
-
-    const totalDuration = Date.now() - startTime
-    logger.logResponse(requestId, 200, totalDuration)
-
+    // Fallback: return bootstrap configuration
     return NextResponse.json({
       success: true,
-      data: defaultSettings,
+      data: {
+        database: {
+          url: bootstrapUrl,
+          apiKey: bootstrapKey
+        },
+        general: {
+          appName: 'Survey Builder',
+          publicUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          maintenanceMode: false,
+          analyticsEnabled: true
+        }
+      },
       environment: environment,
-      source: 'default'
+      source: 'bootstrap'
     })
 
   } catch (error) {
-    const totalDuration = Date.now() - startTime
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    
-    logger.error('Unexpected error in admin settings GET', {
+    logger.error('Unexpected error in admin settings', {
       requestId,
       ip,
-      error: errorMessage,
-      duration: totalDuration
-    }, error instanceof Error ? error : undefined)
-
-    logger.logResponse(requestId, 500, totalDuration)
-
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+    
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

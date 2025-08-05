@@ -13,41 +13,95 @@ interface SupabaseContextType {
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined)
 
+// Global state to prevent multiple simultaneous requests
+let isInitializing = false
+let initializationPromise: Promise<any> | null = null
+
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchClient = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      // Always fetch config from database (simple and scalable)
-      const response = await fetch('/api/admin/settings')
-      const result = await response.json()
-      
-      if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
-        const { url, apiKey } = result.data.database
-        const newClient = createClient<Database>(url, apiKey)
-        setClient(newClient)
-      } else {
-        setError('Configuration not available')
+    // Prevent multiple simultaneous requests
+    if (isInitializing && initializationPromise) {
+      try {
+        const result = await initializationPromise
+        return result
+      } catch (error) {
+        // If the existing request failed, try again
+        console.log('🔧 [Supabase] Previous request failed, retrying...')
       }
+    }
+
+    isInitializing = true
+    initializationPromise = (async () => {
+      try {
+        console.log('🔧 [Supabase] Fetching configuration...')
+        
+        const response = await fetch('/api/admin/settings', {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
+        const result = await response.json()
+        
+        if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+          const { url, apiKey } = result.data.database
+          const newClient = createClient<Database>(url, apiKey)
+          console.log('🔧 [Supabase] Client created successfully')
+          return newClient
+        } else {
+          throw new Error('Configuration not available')
+        }
+      } catch (error) {
+        console.error('🔧 [Supabase] Error fetching config:', error)
+        throw error
+      } finally {
+        isInitializing = false
+        initializationPromise = null
+      }
+    })()
+
+    try {
+      const newClient = await initializationPromise
+      setClient(newClient)
+      setError(null)
+      return newClient
     } catch (error) {
-      console.error('Error fetching Supabase config:', error)
-      setError('Failed to load configuration')
+      setError(error instanceof Error ? error.message : 'Failed to load configuration')
+      throw error
+    }
+  }
+
+  const refreshClient = async () => {
+    setIsLoading(true)
+    try {
+      await fetchClient()
     } finally {
       setIsLoading(false)
     }
   }
 
-  const refreshClient = async () => {
-    await fetchClient()
-  }
-
   useEffect(() => {
-    fetchClient()
+    const initClient = async () => {
+      try {
+        await fetchClient()
+      } catch (error) {
+        // Error already set in fetchClient
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    initClient()
   }, [])
 
   return (
