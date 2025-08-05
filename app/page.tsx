@@ -186,10 +186,27 @@ export default function ProductSurvey() {
 
   useEffect(() => {
     setIsMounted(true)
-    // Simple check: if we have environment variables, we're configured
-    const hasConfig = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-    setDatabaseStatus(hasConfig ? "configured" : "not-configured")
-    setIsLoading(false)
+    
+    // Check configuration status
+    const checkConfig = async () => {
+      try {
+        const response = await fetch('/api/config/check')
+        const data = await response.json()
+        
+        if (data.success) {
+          setDatabaseStatus(data.configured ? "configured" : "not-configured")
+        } else {
+          setDatabaseStatus("not-configured")
+        }
+      } catch (error) {
+        console.error('Error checking config:', error)
+        setDatabaseStatus("not-configured")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    checkConfig()
   }, [])
 
   // Settings loading removed - not needed for basic functionality

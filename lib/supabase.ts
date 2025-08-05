@@ -6,10 +6,11 @@ export const supabase = null
 // Check if Supabase is configured (will be set dynamically)
 export const isSupabaseConfigured = false
 
-// Cache for client-side Supabase client
+// Global state for Supabase client
 let clientCache: any = null
 let clientPromise: Promise<any> | null = null
 let lastFetchTime = 0
+let isInitialized = false
 const CACHE_DURATION = 30000 // 30 seconds
 
 // Function to get Supabase client with dynamic config from database
@@ -43,6 +44,13 @@ export async function getSupabaseClient() {
         return await clientPromise
       }
 
+      // Prevent multiple simultaneous requests
+      if (isInitialized) {
+        return null
+      }
+
+      isInitialized = true
+
       // Make new request
       clientPromise = (async () => {
         try {
@@ -65,6 +73,7 @@ export async function getSupabaseClient() {
           return null
         } finally {
           clientPromise = null
+          isInitialized = false
         }
       })()
 
@@ -81,6 +90,8 @@ export function clearSupabaseCache() {
   clientCache = null
   clientPromise = null
   lastFetchTime = 0
+  isInitialized = false
+  console.log('🔧 [Supabase] Cache cleared')
 }
 
 // Helper function to check if we can use Supabase features
