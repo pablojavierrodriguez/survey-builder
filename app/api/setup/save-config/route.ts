@@ -60,40 +60,103 @@ export async function POST(request: NextRequest) {
 
     // STEP 2: Create tables
     try {
-      await supabaseAdmin.rpc('exec_sql', { 
-        sql_command: `
-          -- Create app_settings table
-          CREATE TABLE IF NOT EXISTS public.app_settings (
-            id SERIAL PRIMARY KEY,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            environment TEXT NOT NULL DEFAULT 'dev',
-            survey_table_name TEXT NOT NULL DEFAULT 'survey_data',
-            app_name TEXT NOT NULL,
-            settings JSONB DEFAULT '{}'
-          );
+      // Create tables using direct SQL execution
+      const createTablesSQL = `
+        -- Create app_settings table
+        CREATE TABLE IF NOT EXISTS public.app_settings (
+          id SERIAL PRIMARY KEY,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          environment TEXT NOT NULL DEFAULT 'dev',
+          survey_table_name TEXT NOT NULL DEFAULT 'survey_data',
+          app_name TEXT NOT NULL,
+          settings JSONB DEFAULT '{}'
+        );
 
-          -- Create survey_data table (simple and generic)
-          CREATE TABLE IF NOT EXISTS public.survey_data (
-            id SERIAL PRIMARY KEY,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            response_data JSONB NOT NULL,
-            session_id TEXT,
-            user_agent TEXT,
-            ip_address INET
-          );
+        -- Create survey_data table (simple and generic)
+        CREATE TABLE IF NOT EXISTS public.survey_data (
+          id SERIAL PRIMARY KEY,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          response_data JSONB NOT NULL,
+          session_id TEXT,
+          user_agent TEXT,
+          ip_address INET
+        );
 
-          -- Create profiles table
-          CREATE TABLE IF NOT EXISTS public.profiles (
-            id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            full_name TEXT,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-          );
-        `
+        -- Create profiles table
+        CREATE TABLE IF NOT EXISTS public.profiles (
+          id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          full_name TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+      `
+      
+      // Execute SQL directly using service role
+      const { error: createError } = await supabaseAdmin.rpc('exec_sql', { 
+        sql_command: createTablesSQL
       })
+      
+      if (createError) {
+        console.error('🔧 [Setup] Error creating tables with exec_sql:', createError)
+        // Fallback: try to create tables one by one
+        console.log('🔧 [Setup] Trying fallback table creation...')
+        
+        const tables = [
+          {
+            name: 'app_settings',
+            sql: `CREATE TABLE IF NOT EXISTS public.app_settings (
+              id SERIAL PRIMARY KEY,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              environment TEXT NOT NULL DEFAULT 'dev',
+              survey_table_name TEXT NOT NULL DEFAULT 'survey_data',
+              app_name TEXT NOT NULL,
+              settings JSONB DEFAULT '{}'
+            )`
+          },
+          {
+            name: 'survey_data',
+            sql: `CREATE TABLE IF NOT EXISTS public.survey_data (
+              id SERIAL PRIMARY KEY,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              response_data JSONB NOT NULL,
+              session_id TEXT,
+              user_agent TEXT,
+              ip_address INET
+            )`
+          },
+          {
+            name: 'profiles',
+            sql: `CREATE TABLE IF NOT EXISTS public.profiles (
+              id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+              email TEXT UNIQUE NOT NULL,
+              full_name TEXT,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )`
+          }
+        ]
+        
+        for (const table of tables) {
+          try {
+            const { error: tableError } = await supabaseAdmin.rpc('exec_sql', { 
+              sql_command: table.sql
+            })
+            if (tableError) {
+              console.error(`🔧 [Setup] Error creating ${table.name}:`, tableError)
+            } else {
+              console.log(`🔧 [Setup] Created table ${table.name}`)
+            }
+          } catch (err) {
+            console.error(`🔧 [Setup] Exception creating ${table.name}:`, err)
+          }
+        }
+      }
+      
       console.log('🔧 [Setup] Tables created successfully')
       
       // Verify table exists
