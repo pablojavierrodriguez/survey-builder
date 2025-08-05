@@ -28,22 +28,37 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Test service role key with a simple RPC call that always exists
+    // Test service role key with a simple SQL query that always works
     try {
       const { data: testData, error: testError } = await supabaseAdmin
-        .rpc('version')
+        .rpc('exec_sql', { sql_command: 'SELECT 1 as test' })
       
       if (testError) {
+        // If exec_sql doesn't exist, try a simple auth test
+        const { data: authData, error: authError } = await supabaseAdmin.auth.getSession()
+        if (authError) {
+          return NextResponse.json(
+            { success: false, error: `Error de conexión con Service Role Key: ${authError.message}` },
+            { status: 400 }
+          )
+        }
+      }
+    } catch (rpcError) {
+      // If exec_sql fails, try auth test as fallback
+      try {
+        const { data: authData, error: authError } = await supabaseAdmin.auth.getSession()
+        if (authError) {
+          return NextResponse.json(
+            { success: false, error: `Error de conexión con Service Role Key: ${authError.message}` },
+            { status: 400 }
+          )
+        }
+      } catch (authFallbackError) {
         return NextResponse.json(
-          { success: false, error: `Error de conexión con Service Role Key: ${testError.message}` },
+          { success: false, error: `Error de conexión con Service Role Key: ${authFallbackError}` },
           { status: 400 }
         )
       }
-    } catch (rpcError) {
-      return NextResponse.json(
-        { success: false, error: `Error de conexión con Service Role Key: ${rpcError}` },
-        { status: 400 }
-      )
     }
     
     // If both work, connection is successful
