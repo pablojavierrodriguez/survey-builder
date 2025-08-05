@@ -6,12 +6,6 @@ export const supabase = null
 // Check if Supabase is configured (will be set dynamically)
 export const isSupabaseConfigured = false
 
-// Cache for client-side Supabase client
-let clientCache: any = null
-let clientPromise: Promise<any> | null = null
-let lastFetchTime = 0
-const CACHE_DURATION = 10000 // 10 seconds
-
 // Function to get Supabase client with dynamic config from database
 export async function getSupabaseClient() {
   try {
@@ -34,7 +28,7 @@ export async function getSupabaseClient() {
       }
     }
 
-    // Client-side: use cache to prevent multiple simultaneous requests
+    // Client-side: simple fetch without caching to avoid deadlocks
     if (typeof window !== 'undefined') {
       // Avoid calling API during setup process
       const isSetupPage = window.location.pathname === '/setup'
@@ -43,67 +37,33 @@ export async function getSupabaseClient() {
         return null
       }
 
-      // Check cache first
-      const now = Date.now()
-      if (clientCache && (now - lastFetchTime) < CACHE_DURATION) {
-        console.log('🔧 [Supabase] Using cached client')
-        return clientCache
-      }
-
-      // If there's already a request in progress, wait for it with timeout
-      if (clientPromise) {
-        console.log('🔧 [Supabase] Waiting for existing request')
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Client request timeout')), 3000)
+      try {
+        console.log('🔧 [Supabase] Fetching configuration from API')
+        
+        // Simple fetch with timeout - no caching, no deadlocks
+        const fetchTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Fetch timeout')), 5000)
         })
-        try {
-          return await Promise.race([clientPromise, timeoutPromise])
-        } catch (error) {
-          // If timeout occurs, clear the promise and return null
-          console.warn('🔧 [Supabase] Client request timeout, clearing cache')
-          clientPromise = null
-          return null
+        
+        const response = await Promise.race([
+          fetch('/api/admin/settings'),
+          fetchTimeoutPromise
+        ]) as Response
+        
+        const result = await response.json()
+        
+        if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
+          const { url, apiKey } = result.data.database
+          const client = createClient<Database>(url, apiKey)
+          
+          console.log('🔧 [Supabase] Configuration fetched successfully')
+          return client
         }
+        return null
+      } catch (error) {
+        console.error('Error fetching Supabase config:', error)
+        return null
       }
-
-      // Make new request
-      clientPromise = (async () => {
-        try {
-          console.log('🔧 [Supabase] Fetching configuration from API')
-          
-          // Add timeout to fetch
-          const fetchTimeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Fetch timeout')), 10000)
-          })
-          
-          const response = await Promise.race([
-            fetch('/api/admin/settings'),
-            fetchTimeoutPromise
-          ]) as Response
-          
-          const result = await response.json()
-          
-          if (result.success && result.data?.database?.url && result.data?.database?.apiKey) {
-            const { url, apiKey } = result.data.database
-            const client = createClient<Database>(url, apiKey)
-            
-            // Update cache
-            clientCache = client
-            lastFetchTime = now
-            
-            console.log('🔧 [Supabase] Configuration fetched and cached')
-            return client
-          }
-          return null
-        } catch (error) {
-          console.error('Error fetching Supabase config:', error)
-          return null
-        } finally {
-          clientPromise = null
-        }
-      })()
-
-      return await clientPromise
     }
   } catch (error) {
     console.error('Error in getSupabaseClient:', error)
@@ -114,10 +74,8 @@ export async function getSupabaseClient() {
 
 // Function to clear the client cache (useful after configuration changes)
 export function clearSupabaseCache() {
-  clientCache = null
-  clientPromise = null
-  lastFetchTime = 0
-  console.log('🔧 [Supabase] Cache cleared')
+  // No cache to clear anymore - function kept for compatibility
+  console.log('🔧 [Supabase] Cache clear requested (no cache to clear)')
 }
 
 // Helper function to check if we can use Supabase features
