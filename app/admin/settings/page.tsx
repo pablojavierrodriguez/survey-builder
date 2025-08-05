@@ -119,32 +119,17 @@ export default function SettingsPage() {
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
-      const { getSupabaseClient } = await import('@/lib/supabase')
-      const client = await getSupabaseClient()
-      if (!client) {
-        setUsers([])
-        return
-      }
+      // Use the context-based approach
+      const response = await fetch('/api/admin/settings')
+      const result = await response.json()
       
-      // Use the secure function instead of the problematic view
-      const { data: userData, error: userError } = await client
-        .rpc('get_user_management_data')
-      
-      if (!userError && userData) {
-        setUsers(userData || [])
+      if (result.success && result.data?.users) {
+        setUsers(result.data.users)
       } else {
-        // Fallback to profiles table if function fails
-        const { data: profileData, error: profileError } = await client
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false })
-        if (!profileError && profileData) {
-          setUsers(profileData || [])
-        } else {
-          setUsers([])
-        }
+        setUsers([])
       }
     } catch (error) {
+      console.error('Error fetching users:', error)
       setUsers([])
     } finally {
       setLoadingUsers(false)
@@ -159,28 +144,19 @@ export default function SettingsPage() {
     if (!newUser.email || !newUser.password) return
     setCreatingUser(true)
     try {
-      const { getSupabaseClient } = await import('@/lib/supabase')
-      const client = await getSupabaseClient()
-      if (!client) {
-        alert('❌ Supabase client not initialized')
-        return
-      }
-      const { data, error } = await client.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: {
-            role: newUser.role,
-            full_name: newUser.email.split('@')[0]
-          }
-        }
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
       })
-      if (error) {
-        alert(`❌ Failed to create user: ${error.message}`)
-      } else {
+      const result = await response.json()
+      
+      if (result.success) {
         setNewUser({ email: '', password: '', role: 'viewer' })
         await fetchUsers()
         alert('✅ User created successfully! They will receive a confirmation email.')
+      } else {
+        alert(`❌ Failed to create user: ${result.error}`)
       }
     } catch (error) {
       alert(`❌ Failed to create user: ${error instanceof Error ? error.message : 'Network error'}`)
@@ -195,32 +171,18 @@ export default function SettingsPage() {
       return
     }
     try {
-      const { getSupabaseClient } = await import('@/lib/supabase')
-      const client = await getSupabaseClient()
-      if (!client) {
-        alert('❌ Supabase client not initialized')
-        return
-      }
-      // Try using the RPC function first
-      const { error: rpcError } = await client.rpc('update_user_role', {
-        user_id: userId,
-        new_role: role
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role })
       })
-      if (!rpcError) {
+      const result = await response.json()
+      
+      if (result.success) {
         await fetchUsers()
         alert('✅ User role updated successfully!')
-        return
-      }
-      // Fallback to direct profiles update
-      const { error: updateError } = await client
-        .from('profiles')
-        .update({ role, updated_at: new Date().toISOString() })
-        .eq('id', userId)
-      if (updateError) {
-        alert(`❌ Failed to update role: ${updateError.message}`)
       } else {
-        await fetchUsers()
-        alert('✅ User role updated successfully!')
+        alert(`❌ Failed to update role: ${result.error}`)
       }
     } catch (error) {
       alert('❌ Failed to update role: Network error')
