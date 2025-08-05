@@ -20,7 +20,7 @@ export default function SetupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [setupMethod, setSetupMethod] = useState<"manual" | "admin">("manual")
+  const [setupMethod, setSetupMethod] = useState<"claves" | "login">("claves")
 
   useEffect(() => {
     // Check if already configured first
@@ -56,8 +56,8 @@ export default function SetupPage() {
     setError("")
     
     try {
-      const endpoint = setupMethod === "admin" ? '/api/setup/test-admin-connection' : '/api/setup/test-connection'
-      const body = setupMethod === "admin" ? {
+      const endpoint = setupMethod === "login" ? '/api/setup/test-admin-connection' : '/api/setup/test-connection'
+      const body = setupMethod === "login" ? {
         supabaseUrl,
         adminEmail,
         adminPassword
@@ -78,7 +78,7 @@ export default function SetupPage() {
       const data = await response.json()
       
       if (data.success) {
-        setSuccess(setupMethod === "admin" ? "✅ Conexión exitosa con credenciales de admin" : "✅ Conexión exitosa con Supabase")
+        setSuccess(setupMethod === "login" ? "✅ Conexión exitosa con credenciales de admin" : "✅ Conexión exitosa con Supabase")
         setStep(2)
       } else {
         setError(data.error || "Error al conectar con Supabase")
@@ -95,8 +95,8 @@ export default function SetupPage() {
     setError("")
     
     try {
-      const endpoint = setupMethod === "admin" ? '/api/setup/save-config-admin' : '/api/setup/save-config'
-      const body = setupMethod === "admin" ? {
+      const endpoint = setupMethod === "login" ? '/api/setup/save-config-admin' : '/api/setup/save-config'
+      const body = setupMethod === "login" ? {
         supabaseUrl,
         adminEmail,
         adminPassword,
@@ -195,13 +195,13 @@ export default function SetupPage() {
             {/* Step 1: Configuration */}
             {step === 1 && (
               <div className="space-y-4">
-                <Tabs value={setupMethod} onValueChange={(value) => setSetupMethod(value as "manual" | "admin")}>
+                <Tabs value={setupMethod} onValueChange={(value) => setSetupMethod(value as "claves" | "login")}>
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="manual">Manual</TabsTrigger>
-                    <TabsTrigger value="admin">Admin</TabsTrigger>
+                    <TabsTrigger value="claves" title="Copia las claves desde Settings → API en Supabase">Con claves</TabsTrigger>
+                    <TabsTrigger value="login" title="Usa tu cuenta personal de Supabase (no usuarios del proyecto)">Con login</TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="manual" className="space-y-4">
+                  <TabsContent value="claves" className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Supabase URL
@@ -226,7 +226,7 @@ export default function SetupPage() {
                         placeholder="Ingresa tu Supabase Anon Key"
                         className="w-full"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Clave pública para operaciones de la app</p>
+                      <p className="text-xs text-gray-500 mt-1">Clave pública para operaciones de la app. Encuéntrala en Settings → API</p>
                     </div>
                     
                     <div>
@@ -240,11 +240,11 @@ export default function SetupPage() {
                         placeholder="Ingresa tu Supabase Service Role Key"
                         className="w-full"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Clave de administrador para configuración inicial</p>
+                      <p className="text-xs text-gray-500 mt-1">Clave de administrador para configuración inicial. Encuéntrala en Settings → API</p>
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="admin" className="space-y-4">
+                  <TabsContent value="login" className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Supabase URL
@@ -269,7 +269,7 @@ export default function SetupPage() {
                         placeholder="admin@example.com"
                         className="w-full"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Email de tu cuenta de admin de Supabase</p>
+                      <p className="text-xs text-gray-500 mt-1">Email de tu cuenta personal de Supabase (no usuarios del proyecto)</p>
                     </div>
                     
                     <div>
@@ -283,7 +283,7 @@ export default function SetupPage() {
                         placeholder="Tu contraseña de admin"
                         className="w-full"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Contraseña de tu cuenta de admin de Supabase</p>
+                      <p className="text-xs text-gray-500 mt-1">Contraseña de tu cuenta personal de Supabase</p>
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -317,7 +317,7 @@ export default function SetupPage() {
 
                 <Button 
                   onClick={testConnection} 
-                  disabled={isLoading || !supabaseUrl || (setupMethod === "manual" ? (!supabaseKey || !serviceRoleKey) : (!adminEmail || !adminPassword))}
+                  disabled={isLoading || !supabaseUrl || (setupMethod === "claves" ? (!supabaseKey || !serviceRoleKey) : (!adminEmail || !adminPassword))}
                   className="w-full"
                 >
                   {isLoading ? (
@@ -349,7 +349,7 @@ export default function SetupPage() {
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     <strong>URL:</strong> {supabaseUrl}
                   </div>
-                  {setupMethod === "manual" ? (
+                  {setupMethod === "claves" ? (
                     <>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         <strong>Anon Key:</strong> {supabaseKey.substring(0, 20)}...
