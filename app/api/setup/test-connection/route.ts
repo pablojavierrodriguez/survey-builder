@@ -28,16 +28,20 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Test service role key access (should work even with empty DB)
-    const { data: adminData, error: adminError } = await supabaseAdmin
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public')
-      .limit(1)
-    
-    if (adminError) {
+    // Test service role key with a simple RPC call that always exists
+    try {
+      const { data: testData, error: testError } = await supabaseAdmin
+        .rpc('version')
+      
+      if (testError) {
+        return NextResponse.json(
+          { success: false, error: `Error de conexión con Service Role Key: ${testError.message}` },
+          { status: 400 }
+        )
+      }
+    } catch (rpcError) {
       return NextResponse.json(
-        { success: false, error: `Error de conexión con Service Role Key: ${adminError.message}` },
+        { success: false, error: `Error de conexión con Service Role Key: ${rpcError}` },
         { status: 400 }
       )
     }
