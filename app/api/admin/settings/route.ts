@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch settings from database for specific environment
     const dbStartTime = Date.now()
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('app_settings')
       .select('*')
       .eq('environment', environment)
