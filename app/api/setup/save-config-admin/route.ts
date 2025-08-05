@@ -164,8 +164,16 @@ CREATE POLICY "profiles_self_read" ON public.profiles
       )
     }
 
-               // Save configuration locally for bootstrap
-           saveLocalConfig(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
+    // Save configuration locally for bootstrap
+    saveLocalConfig(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
+
+    // Clear any cached configuration to force fresh fetch
+    try {
+      const { clearSupabaseCache } = await import('@/lib/supabase')
+      clearSupabaseCache()
+    } catch (error) {
+      console.log('🔧 [Setup] Cache clear not available')
+    }
 
     return NextResponse.json({
       success: true,
