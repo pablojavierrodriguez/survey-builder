@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { configManager } from '@/lib/config-manager'
 
+interface SurveyResponse {
+  id: number
+  created_at: string
+  updated_at: string
+  response_data: any
+  session_id?: string
+  user_agent?: string
+  ip_address?: string
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get configuration from ConfigManager
@@ -38,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Calculate analytics
     const totalResponses = surveyData?.length || 0
     const today = new Date()
-    const todayResponses = surveyData?.filter(response => {
+    const todayResponses = surveyData?.filter((response: SurveyResponse) => {
       const responseDate = new Date(response.created_at)
       return responseDate.toDateString() === today.toDateString()
     }).length || 0
