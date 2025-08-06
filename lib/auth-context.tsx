@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+import { supabase, isSupabaseConfigured } from './supabase'
 import { Database } from './supabase'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -35,6 +35,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
+        if (!isSupabaseConfigured || !supabase) {
+          console.warn('Supabase not configured - auth features disabled')
+          if (mounted) setLoading(false)
+          return
+        }
+
         // Get initial session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
@@ -121,6 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithPassword = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
+      if (!supabase) return { error: new Error('Supabase not configured') }
+      
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       return { error }
     } catch (error) {
@@ -130,6 +138,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
+      if (!supabase) return { error: new Error('Supabase not configured') }
+      
       const { error } = await supabase.auth.signUp({ email, password })
       return { error }
     } catch (error) {
@@ -139,6 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     try {
+      if (!supabase) return { error: new Error('Supabase not configured') }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -153,6 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async (): Promise<{ error: Error | null }> => {
     try {
+      if (!supabase) return { error: new Error('Supabase not configured') }
+      
       const { error } = await supabase.auth.signOut()
       return { error }
     } catch (error) {
@@ -162,7 +176,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearCorruptedSession = async (): Promise<void> => {
     try {
-      await supabase.auth.signOut()
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
     } catch (error) {
       console.error('Error clearing session:', error)
     }
@@ -174,6 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (updates: Partial<Profile>): Promise<{ error: Error | null }> => {
     try {
+      if (!supabase) return { error: new Error('Supabase not configured') }
+      
       const { error } = await supabase
         .from('profiles')
         .update(updates)

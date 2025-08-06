@@ -1,12 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Hardcoded Supabase client
-export const supabase = createClient(
-  'https://pzfujrbrsfcevektarjv.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY'
-)
+// Use environment variables for Supabase configuration
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const isSupabaseConfigured = true
+// Create client only if environment variables are available
+export const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null
+
+export const isSupabaseConfigured = !!supabase
 
 // Legacy exports for backward compatibility
 export function getSupabaseClient() {
@@ -18,7 +21,7 @@ export function clearSupabaseCache() {
 }
 
 export async function requireSupabase() {
-  return true
+  return !!supabase
 }
 
 // Database types
