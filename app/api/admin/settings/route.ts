@@ -26,48 +26,58 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Try to use environment variables for bootstrap, but don't fail if not available
+    // Always use hardcoded credentials to read from database
     const { createClient } = await import('@supabase/supabase-js')
     
-    const bootstrapUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const bootstrapKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const bootstrapUrl = 'https://pzfujrbrsfcevektarjv.supabase.co'
+    const bootstrapKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY'
     
-    if (bootstrapUrl && bootstrapKey) {
-      // We have bootstrap credentials, try to fetch from database
-      const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
-      const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
+    const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
+    const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
 
-      try {
-        const { data, error } = await supabaseClient
-          .from('app_settings')
-          .select('*')
-          .eq('environment', environment)
-          .single()
+    try {
+      const { data, error } = await supabaseClient
+        .from('app_settings')
+        .select('*')
+        .eq('environment', environment)
+        .single()
 
-        if (!error && data?.settings) {
-          return NextResponse.json({
-            success: true,
-            data: data.settings,
-            environment: environment,
-            source: 'database'
-          })
-        }
-      } catch (dbError) {
-        logger.warn('Could not fetch from database, using fallback', {
+      if (!error && data?.settings) {
+        logger.info('Returning configuration from database', {
           requestId,
           ip,
-          error: dbError instanceof Error ? dbError.message : 'Unknown error'
+          environment,
+          source: 'database'
+        })
+        
+        return NextResponse.json({
+          success: true,
+          data: data.settings,
+          environment: environment,
+          source: 'database'
         })
       }
+    } catch (dbError) {
+      logger.warn('Could not fetch from database, using fallback', {
+        requestId,
+        ip,
+        error: dbError instanceof Error ? dbError.message : 'Unknown error'
+      })
     }
 
     // Fallback: return default configuration
+    logger.info('Using fallback configuration', {
+      requestId,
+      ip,
+      source: 'fallback'
+    })
+    
     return NextResponse.json({
       success: true,
       data: {
         database: {
-          url: 'https://pzfujrbrsfcevektarjv.supabase.co',
-          apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY',
+          url: bootstrapUrl,
+          apiKey: bootstrapKey,
           tableName: 'survey_data',
           environment: 'development'
         },
