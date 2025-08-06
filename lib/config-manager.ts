@@ -62,12 +62,13 @@ export class ConfigManager {
     }
   }
 
-  // Load config from local file
+  // Load config from local file (server-side only)
   private async loadFromLocalFile(): Promise<AppConfig | null> {
     try {
       // Only try to read local file on server side
       if (typeof window !== 'undefined') return null
 
+      // Dynamic import to avoid client-side issues
       const fs = await import('fs')
       const path = await import('path')
       
@@ -78,17 +79,19 @@ export class ConfigManager {
         return JSON.parse(configData)
       }
     } catch (error) {
+      // Silently fail if fs is not available (client-side)
       console.warn('Could not load local config file:', error)
     }
     return null
   }
 
-  // Save config to local file
+  // Save config to local file (server-side only)
   async saveToLocalFile(config: AppConfig): Promise<boolean> {
     try {
       // Only save on server side
       if (typeof window !== 'undefined') return false
 
+      // Dynamic import to avoid client-side issues
       const fs = await import('fs')
       const path = await import('path')
       
