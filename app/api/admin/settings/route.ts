@@ -26,67 +26,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Supabase client using environment variables
-    const { createClient } = await import('@supabase/supabase-js')
-    
-    const bootstrapUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const bootstrapKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
-    if (!bootstrapUrl || !bootstrapKey) {
-      logger.error('Supabase not configured for admin settings', {
-        requestId,
-        ip
-      })
-      
-      return NextResponse.json(
-        { success: false, error: 'System not configured' },
-        { status: 503 }
-      )
-    }
-
-    const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
-
-    // Get environment from NODE_ENV
-    const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
-
-    // Fetch settings from database
-    const { data, error } = await supabaseClient
-      .from('app_settings')
-      .select('*')
-      .eq('environment', environment)
-      .single()
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      logger.error('Database error fetching admin settings', {
-        requestId,
-        ip,
-        error: error.message,
-        environment
-      })
-      
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch settings' },
-        { status: 500 }
-      )
-    }
-
-    // Return user-saved settings from DB if they exist
-    if (data?.settings) {
-      return NextResponse.json({
-        success: true,
-        data: data.settings,
-        environment: environment,
-        source: 'database'
-      })
-    }
-
-    // Fallback: return bootstrap configuration
+    // For now, return a simple response indicating setup is required
+    // The actual configuration will be loaded by the AuthProvider from the database
     return NextResponse.json({
       success: true,
       data: {
         database: {
-          url: bootstrapUrl,
-          apiKey: bootstrapKey
+          url: '',
+          apiKey: '',
+          tableName: 'survey_data',
+          environment: 'development'
         },
         general: {
           appName: 'Survey Builder',
@@ -95,8 +44,8 @@ export async function GET(request: NextRequest) {
           analyticsEnabled: true
         }
       },
-      environment: environment,
-      source: 'bootstrap'
+      environment: 'dev',
+      source: 'default'
     })
 
   } catch (error) {
