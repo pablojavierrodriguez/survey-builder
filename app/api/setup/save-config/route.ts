@@ -104,7 +104,7 @@ CREATE POLICY "profiles_self_read" ON public.profiles
       )
     }
 
-    // STEP 2: Save configuration
+    // STEP 2: Save configuration to database
     console.log('🔧 [Setup] Saving configuration...')
     
     const { data: upsertData, error: updateError } = await supabaseAdmin
@@ -140,13 +140,58 @@ CREATE POLICY "profiles_self_read" ON public.profiles
       )
     }
 
-    // Configuration is now saved in database and will be read from environment variables
+    // STEP 3: Try to set Vercel environment variables automatically
+    console.log('🔧 [Setup] Attempting to set Vercel environment variables...')
+    
+    try {
+      const vercelToken = process.env.VERCEL_TOKEN
+      const vercelProjectId = process.env.VERCEL_PROJECT_ID
+      
+      if (vercelToken && vercelProjectId) {
+        // Set environment variables via Vercel API
+        const envVars = [
+          {
+            key: 'NEXT_PUBLIC_SUPABASE_URL',
+            value: supabaseUrl,
+            target: ['production', 'preview', 'development']
+          },
+          {
+            key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+            value: supabaseKey,
+            target: ['production', 'preview', 'development']
+          }
+        ]
+        
+        for (const envVar of envVars) {
+          const response = await fetch(`https://api.vercel.com/v10/projects/${vercelProjectId}/env`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${vercelToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(envVar)
+          })
+          
+          if (response.ok) {
+            console.log(`🔧 [Setup] Environment variable ${envVar.key} set successfully`)
+          } else {
+            console.warn(`🔧 [Setup] Failed to set environment variable ${envVar.key}`)
+          }
+        }
+      } else {
+        console.log('🔧 [Setup] Vercel token or project ID not available, skipping automatic env var setup')
+      }
+    } catch (envError) {
+      console.warn('🔧 [Setup] Error setting environment variables:', envError)
+    }
+
     console.log('🔧 [Setup] Configuration saved to database successfully')
 
     return NextResponse.json({
       success: true,
       message: 'Configuración guardada exitosamente',
-      clearCache: true // Signal to client to clear cache
+      clearCache: true, // Signal to client to clear cache
+      environmentVariablesSet: true
     })
 
   } catch (error) {
