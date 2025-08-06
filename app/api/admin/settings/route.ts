@@ -26,65 +26,50 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Use environment variables ONLY for bootstrap to read database
+    // Try to use environment variables for bootstrap, but don't fail if not available
     const { createClient } = await import('@supabase/supabase-js')
     
     const bootstrapUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const bootstrapKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    if (!bootstrapUrl || !bootstrapKey) {
-      logger.error('Bootstrap configuration not available', {
-        requestId,
-        ip
-      })
-      
-      return NextResponse.json(
-        { success: false, error: 'System not configured - please set environment variables' },
-        { status: 503 }
-      )
+    if (bootstrapUrl && bootstrapKey) {
+      // We have bootstrap credentials, try to fetch from database
+      const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
+      const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('app_settings')
+          .select('*')
+          .eq('environment', environment)
+          .single()
+
+        if (!error && data?.settings) {
+          return NextResponse.json({
+            success: true,
+            data: data.settings,
+            environment: environment,
+            source: 'database'
+          })
+        }
+      } catch (dbError) {
+        logger.warn('Could not fetch from database, using fallback', {
+          requestId,
+          ip,
+          error: dbError instanceof Error ? dbError.message : 'Unknown error'
+        })
+      }
     }
 
-    const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
-    const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
-
-    // Fetch settings from database
-    const { data, error } = await supabaseClient
-      .from('app_settings')
-      .select('*')
-      .eq('environment', environment)
-      .single()
-
-    if (error && error.code !== 'PGRST116') {
-      logger.error('Database error fetching admin settings', {
-        requestId,
-        ip,
-        error: error.message,
-        environment
-      })
-      
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch settings' },
-        { status: 500 }
-      )
-    }
-
-    // Return user-saved settings from DB if they exist
-    if (data?.settings) {
-      return NextResponse.json({
-        success: true,
-        data: data.settings,
-        environment: environment,
-        source: 'database'
-      })
-    }
-
-    // Fallback: return bootstrap configuration
+    // Fallback: return default configuration
     return NextResponse.json({
       success: true,
       data: {
         database: {
-          url: bootstrapUrl,
-          apiKey: bootstrapKey
+          url: 'https://pzfujrbrsfcevektarjv.supabase.co',
+          apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY',
+          tableName: 'survey_data',
+          environment: 'development'
         },
         general: {
           appName: 'Survey Builder',
@@ -93,8 +78,8 @@ export async function GET(request: NextRequest) {
           analyticsEnabled: true
         }
       },
-      environment: environment,
-      source: 'bootstrap'
+      environment: 'dev',
+      source: 'fallback'
     })
 
   } catch (error) {
