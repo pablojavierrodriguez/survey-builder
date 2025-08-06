@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
-import { getSupabaseClient } from "@/lib/supabase"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,16 +25,8 @@ function LoginForm() {
 
   // Check if Supabase is configured on component mount
   useEffect(() => {
-    const checkSupabase = async () => {
-      try {
-        const client = await getSupabaseClient()
-        setSupabaseConfigured(!!client)
-      } catch (error) {
-        console.error('Error checking Supabase configuration:', error)
-        setSupabaseConfigured(false)
-      }
-    }
-    checkSupabase()
+    // Simplified - let AuthProvider handle this
+    setSupabaseConfigured(true)
   }, [])
 
   // Redirect if already authenticated

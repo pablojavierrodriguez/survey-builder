@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSupabaseClient } from '@/lib/supabase'
+
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -10,28 +10,9 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const supabase = await getSupabaseClient()
-        if (!supabase) {
-          console.error('Supabase client not initialized')
-          router.push('/login?error=supabase_not_initialized')
-          return
-        }
-        
-        const { data, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Auth callback error:', error)
-          router.push('/login?error=auth_callback_error')
-          return
-        }
-
-        if (data.session) {
-          console.log('Auth callback successful, redirecting to dashboard')
-          router.push('/admin/dashboard')
-        } else {
-          console.log('No session found, redirecting to login')
-          router.push('/login')
-        }
+        // Simplified - let AuthProvider handle the session
+        console.log('Auth callback, redirecting to dashboard')
+        router.push('/admin/dashboard')
       } catch (error) {
         console.error('Auth callback exception:', error)
         router.push('/login?error=auth_callback_error')
