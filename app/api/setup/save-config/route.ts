@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { configManager, AppConfig } from '@/lib/config-manager'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,43 +12,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use service role key for setup
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
-    
-    // Save configuration to database
-    const { data, error } = await supabaseAdmin
-      .from('app_settings')
-      .upsert({
-        environment: 'dev',
-        survey_table_name: 'survey_data',
-        app_name: appName || 'Survey App',
-        settings: {
-          database: {
-            url: supabaseUrl,
-            apiKey: supabaseKey,
-            tableName: 'survey_data',
-            environment: 'development'
-          },
-          general: {
-            appName: appName || 'Survey App',
-            publicUrl: publicUrl || '',
-            maintenanceMode: false,
-            analyticsEnabled: true
-          }
-        }
-      })
-      .select()
+    // Create configuration object
+    const config: AppConfig = {
+      database: {
+        url: supabaseUrl,
+        apiKey: supabaseKey,
+        serviceRoleKey: serviceRoleKey,
+        tableName: 'survey_data',
+        environment: 'development'
+      },
+      general: {
+        appName: appName || 'Survey App',
+        publicUrl: publicUrl || 'http://localhost:3000',
+        maintenanceMode: false,
+        analyticsEnabled: true
+      }
+    }
 
-    if (error) {
+    // Save configuration using ConfigManager
+    const { success, savedTo } = await configManager.saveConfig(config)
+
+    if (!success) {
       return NextResponse.json(
-        { success: false, error: `Error al guardar configuración: ${error.message}` },
+        { success: false, error: 'Error al guardar configuración' },
         { status: 500 }
       )
     }
 
+    console.log(`✅ Configuration saved to: ${savedTo.join(', ')}`)
+
     return NextResponse.json({
       success: true,
-      message: 'Configuración guardada exitosamente'
+      message: 'Configuración guardada exitosamente',
+      savedTo,
+      clearCache: true
     })
 
   } catch (error) {

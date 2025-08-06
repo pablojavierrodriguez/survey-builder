@@ -1,29 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { configManager } from '@/lib/config-manager'
 
 export async function GET(request: NextRequest) {
   try {
-    // Return hardcoded configuration
+    // Get configuration from ConfigManager
+    const config = await configManager.getConfig()
+
+    if (!config) {
+      return NextResponse.json(
+        { success: false, error: 'System not configured' },
+        { status: 404 }
+      )
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
-        database: {
-          url: 'https://pzfujrbrsfcevektarjv.supabase.co',
-          apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY',
-          tableName: 'survey_data',
-          environment: 'development'
-        },
-        general: {
-          appName: 'Survey Builder',
-          publicUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-          maintenanceMode: false,
-          analyticsEnabled: true
-        }
-      },
-      environment: 'dev',
-      source: 'hardcoded'
+      data: config,
+      environment: config.database.environment,
+      source: 'config-manager'
     })
 
   } catch (error) {
+    console.error('Settings API error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

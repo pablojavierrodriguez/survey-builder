@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase, isSupabaseConfigured } from './supabase'
+import { getSupabaseClient, isSupabaseConfigured } from './supabase'
 import { Database } from './supabase'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -29,20 +29,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [supabase, setSupabase] = useState<any>(null)
 
   useEffect(() => {
     let mounted = true
 
     const initializeAuth = async () => {
       try {
-        if (!isSupabaseConfigured || !supabase) {
+        // Check if Supabase is configured
+        const configured = await isSupabaseConfigured()
+        if (!configured) {
           console.warn('Supabase not configured - auth features disabled')
           if (mounted) setLoading(false)
           return
         }
 
+        // Get Supabase client
+        const client = await getSupabaseClient()
+        if (!client) {
+          console.warn('Could not initialize Supabase client')
+          if (mounted) setLoading(false)
+          return
+        }
+
+        if (mounted) setSupabase(client)
+
         // Get initial session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const { data: { session }, error: sessionError } = await client.auth.getSession()
         
         if (sessionError && sessionError.message.includes('Refresh Token')) {
           console.warn('🔐 [Auth] Refresh token error detected - clearing session')
@@ -67,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Fetch user profile
             try {
-              const { data: profileData, error: profileError } = await supabase
+              const { data: profileData } = await client
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
@@ -82,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Set up auth state listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        const { data: { subscription } } = client.auth.onAuthStateChange(
           async (event: string, session: Session | null) => {
             console.log('🔐 [Auth] Auth state change:', event, session?.user?.email)
             
@@ -92,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
               if (session?.user?.id) {
                 try {
-                  const { data: profileData } = await supabase
+                  const { data: profileData } = await client
                     .from('profiles')
                     .select('*')
                     .eq('id', session.user.id)

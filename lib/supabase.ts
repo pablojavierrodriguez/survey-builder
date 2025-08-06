@@ -1,27 +1,55 @@
 import { createClient } from '@supabase/supabase-js'
+import { configManager } from './config-manager'
 
-// Use environment variables for Supabase configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Dynamic Supabase client that uses ConfigManager
+let supabaseClient: any = null
+let isInitialized = false
 
-// Create client only if environment variables are available
-export const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null
+// Initialize Supabase client
+async function initializeSupabase() {
+  if (isInitialized) return supabaseClient
 
-export const isSupabaseConfigured = !!supabase
-
-// Legacy exports for backward compatibility
-export function getSupabaseClient() {
-  return supabase
+  try {
+    supabaseClient = await configManager.getSupabaseClient()
+    isInitialized = true
+    return supabaseClient
+  } catch (error) {
+    console.error('Failed to initialize Supabase client:', error)
+    return null
+  }
 }
 
-export function clearSupabaseCache() {
-  // No cache to clear
+// Get Supabase client (async)
+export async function getSupabaseClient() {
+  return await initializeSupabase()
+}
+
+// Get Supabase client (sync - returns null if not ready)
+export function getSupabaseClientSync() {
+  return supabaseClient
+}
+
+// Check if Supabase is configured
+export async function isSupabaseConfigured() {
+  return await configManager.isConfigured()
+}
+
+// Clear cache and reinitialize
+export async function clearSupabaseCache() {
+  configManager.clearCache()
+  supabaseClient = null
+  isInitialized = false
+  console.log('🗑️ Supabase cache cleared')
+}
+
+// Legacy exports for backward compatibility
+export const supabase = {
+  get: async () => await getSupabaseClient(),
+  getSync: () => getSupabaseClientSync()
 }
 
 export async function requireSupabase() {
-  return !!supabase
+  return await isSupabaseConfigured()
 }
 
 // Database types
