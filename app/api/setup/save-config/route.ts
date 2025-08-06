@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { saveLocalConfig } from '@/lib/local-config'
 import { clearSupabaseCache } from '@/lib/supabase'
+import { writeFileSync, unlinkSync } from 'fs'
+import { join } from 'path'
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,49 +142,23 @@ CREATE POLICY "profiles_self_read" ON public.profiles
       )
     }
 
-    // STEP 3: Try to set Vercel environment variables automatically
-    console.log('🔧 [Setup] Attempting to set Vercel environment variables...')
+    // STEP 3: Create temporary credentials file
+    console.log('🔧 [Setup] Creating temporary credentials file...')
     
     try {
-      const vercelToken = process.env.VERCEL_TOKEN
-      const vercelProjectId = process.env.VERCEL_PROJECT_ID
-      
-      if (vercelToken && vercelProjectId) {
-        // Set environment variables via Vercel API
-        const envVars = [
-          {
-            key: 'NEXT_PUBLIC_SUPABASE_URL',
-            value: supabaseUrl,
-            target: ['production', 'preview', 'development']
-          },
-          {
-            key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-            value: supabaseKey,
-            target: ['production', 'preview', 'development']
-          }
-        ]
-        
-        for (const envVar of envVars) {
-          const response = await fetch(`https://api.vercel.com/v10/projects/${vercelProjectId}/env`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${vercelToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(envVar)
-          })
-          
-          if (response.ok) {
-            console.log(`🔧 [Setup] Environment variable ${envVar.key} set successfully`)
-          } else {
-            console.warn(`🔧 [Setup] Failed to set environment variable ${envVar.key}`)
-          }
-        }
-      } else {
-        console.log('🔧 [Setup] Vercel token or project ID not available, skipping automatic env var setup')
+      const tempConfig = {
+        supabaseUrl,
+        supabaseKey,
+        timestamp: Date.now(),
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
       }
-    } catch (envError) {
-      console.warn('🔧 [Setup] Error setting environment variables:', envError)
+      
+      const tempFilePath = join(process.cwd(), '.temp-supabase-config.json')
+      writeFileSync(tempFilePath, JSON.stringify(tempConfig, null, 2))
+      
+      console.log('🔧 [Setup] Temporary credentials file created successfully')
+    } catch (fileError) {
+      console.warn('🔧 [Setup] Could not create temporary file:', fileError)
     }
 
     console.log('🔧 [Setup] Configuration saved to database successfully')
@@ -191,7 +167,7 @@ CREATE POLICY "profiles_self_read" ON public.profiles
       success: true,
       message: 'Configuración guardada exitosamente',
       clearCache: true, // Signal to client to clear cache
-      environmentVariablesSet: true
+      tempFileCreated: true
     })
 
   } catch (error) {
