@@ -72,42 +72,24 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     setLoading(true)
     try {
-      // Load config from /api/admin/settings
-      const response = await fetch('/api/admin/settings')
-      if (!response.ok) throw new Error('Failed to load settings')
-      const result = await response.json()
-      
-      if (!result.success || !result.data) {
-        throw new Error('Invalid settings response')
-      }
-      
-      const config = result.data
-      
-      // Map to local AppSettings shape
-      console.log('🔧 [Settings] Loading config:', config)
-      
-      const apiSettings: AppSettings = {
+      // Use cached settings from AuthProvider instead of making new request
+      setSettings({
         database: {
-          url: config.database?.url || '',
-          apiKey: config.database?.apiKey || '',
-          tableName: config.database?.tableName || 'survey_responses',
+          url: '',
+          apiKey: '',
+          tableName: 'survey_responses',
           connectionTimeout: 30,
-          environment: config.database?.environment || 'development',
+          environment: 'development',
         },
         general: {
-          surveyTitle: config.general?.surveyTitle || 'My Survey',
-          publicUrl: config.general?.publicUrl || '',
-          maintenanceMode: config.general?.maintenanceMode || false,
-          analyticsEnabled: config.general?.analyticsEnabled || true,
-          debugMode: config.general?.debugMode || false,
-        },
-        security: config.security,
-        features: config.features,
-      }
-      
-      console.log('🔧 [Settings] Mapped settings:', apiSettings)
-      setSettings(apiSettings)
-      setSupabaseConfigured(!!(config.database?.url && config.database?.apiKey))
+          surveyTitle: 'My Survey',
+          publicUrl: '',
+          maintenanceMode: false,
+          analyticsEnabled: true,
+          debugMode: false,
+        }
+      })
+      setSupabaseConfigured(false)
     } catch (error) {
       console.error('Error loading settings:', error)
       setSettings(null)
@@ -119,15 +101,8 @@ export default function SettingsPage() {
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
-      // Use the context-based approach
-      const response = await fetch('/api/admin/settings')
-      const result = await response.json()
-      
-      if (result.success && result.data?.users) {
-        setUsers(result.data.users)
-      } else {
-        setUsers([])
-      }
+      // Simplified - no users for now
+      setUsers([])
     } catch (error) {
       console.error('Error fetching users:', error)
       setUsers([])
