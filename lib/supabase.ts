@@ -1,41 +1,27 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Hardcoded Supabase client
+export const supabase = createClient(
+  'https://pzfujrbrsfcevektarjv.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY'
+)
+
+export const isSupabaseConfigured = true
+
 // Legacy exports for backward compatibility
-export const supabase = null
-export const isSupabaseConfigured = false
-
-// Server-side Supabase client using environment variables
-export async function getSupabaseClient() {
-  try {
-    // Server-side: use environment variables directly
-    if (typeof window === 'undefined') {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
-      if (url && key) {
-        return createClient<Database>(url, key)
-      }
-    }
-
-    // Client-side: return null (use context instead)
-    return null
-  } catch (error) {
-    console.error('Error in getSupabaseClient:', error)
-    return null
-  }
+export function getSupabaseClient() {
+  return supabase
 }
 
 export function clearSupabaseCache() {
-  // Function kept for backward compatibility
-  console.log('🔧 [Supabase] Cache clear requested (no cache to clear)')
+  // No cache to clear
 }
 
 export async function requireSupabase() {
-  // Function kept for backward compatibility
-  return false
+  return true
 }
 
-// Database types for better TypeScript support
+// Database types
 export interface Database {
   public: {
     Tables: {

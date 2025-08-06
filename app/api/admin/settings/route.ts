@@ -1,83 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAdminSettings } from '@/lib/validation'
-import { rateLimit, getClientIP } from '@/lib/rate-limit'
-import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
-  const startTime = Date.now()
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const ip = getClientIP(request)
-  
-  logger.logRequest(requestId, 'GET', '/api/admin/settings', ip)
-  
   try {
-    // Rate limiting
-    const rateLimitResult = await rateLimit(ip, '/api/admin/settings', 'ADMIN')
-    if (!rateLimitResult.allowed) {
-      logger.warn('Rate limit exceeded for admin settings request', {
-        requestId,
-        ip,
-        error: rateLimitResult.error
-      })
-      
-      return NextResponse.json(
-        { success: false, error: rateLimitResult.error || 'Rate limit exceeded' },
-        { status: 429 }
-      )
-    }
-
-    // Always use hardcoded credentials to read from database
-    const { createClient } = await import('@supabase/supabase-js')
-    
-    const bootstrapUrl = 'https://pzfujrbrsfcevektarjv.supabase.co'
-    const bootstrapKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY'
-    
-    const supabaseClient = createClient(bootstrapUrl, bootstrapKey)
-    const environment = process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
-
-    try {
-      const { data, error } = await supabaseClient
-        .from('app_settings')
-        .select('*')
-        .eq('environment', environment)
-        .single()
-
-      if (!error && data?.settings) {
-        logger.info('Returning configuration from database', {
-          requestId,
-          ip,
-          environment,
-          source: 'database'
-        })
-        
-        return NextResponse.json({
-          success: true,
-          data: data.settings,
-          environment: environment,
-          source: 'database'
-        })
-      }
-    } catch (dbError) {
-      logger.warn('Could not fetch from database, using fallback', {
-        requestId,
-        ip,
-        error: dbError instanceof Error ? dbError.message : 'Unknown error'
-      })
-    }
-
-    // Fallback: return default configuration
-    logger.info('Using fallback configuration', {
-      requestId,
-      ip,
-      source: 'fallback'
-    })
-    
+    // Return hardcoded configuration
     return NextResponse.json({
       success: true,
       data: {
         database: {
-          url: bootstrapUrl,
-          apiKey: bootstrapKey,
+          url: 'https://pzfujrbrsfcevektarjv.supabase.co',
+          apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZnVqcmJyc2ZjZXZla3Rhcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3MzY5NTIsImV4cCI6MjA2OTMxMjk1Mn0.g5TLxNdpbCjisIX88hRwpAJglwT8xC3NibtS4InO5YY',
           tableName: 'survey_data',
           environment: 'development'
         },
@@ -89,16 +20,10 @@ export async function GET(request: NextRequest) {
         }
       },
       environment: 'dev',
-      source: 'fallback'
+      source: 'hardcoded'
     })
 
   } catch (error) {
-    logger.error('Unexpected error in admin settings', {
-      requestId,
-      ip,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-    
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
