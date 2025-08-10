@@ -278,16 +278,42 @@ export default function AnalyticsPage() {
   const fetchAnalyticsData = async () => {
     setIsLoading(true)
     try {
-      // Get dynamic database configuration
-      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
-      const config = getDatabaseConfig()
+      let responses = []
       
-      const response = await fetch(getDatabaseEndpoint(), {
-        headers: getDatabaseHeaders()
-      })
+      try {
+        // Try Supabase first if configured
+        const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
+        const config = getDatabaseConfig()
+        
+        if (config.isConfigured) {
+          const response = await fetch(getDatabaseEndpoint(), {
+            headers: getDatabaseHeaders()
+          })
 
-      if (response.ok) {
-        const responses = await response.json()
+          if (response.ok) {
+            responses = await response.json()
+            console.log('Analytics - Loaded from Supabase:', responses.length)
+          }
+        }
+      } catch (supabaseError) {
+        console.warn('Analytics - Supabase failed, using localStorage:', supabaseError)
+      }
+      
+      // Fallback to localStorage if Supabase failed or not configured
+      if (responses.length === 0) {
+        const localData = localStorage.getItem("survey")
+        if (localData) {
+          try {
+            responses = JSON.parse(localData)
+            console.log('Analytics - Loaded from localStorage:', responses.length)
+          } catch (parseError) {
+            console.warn('Analytics - Error parsing localStorage:', parseError)
+            responses = []
+          }
+        }
+      }
+
+      if (responses && responses.length > 0) {
 
         // Process data for analytics
         const roleDistribution: { [key: string]: number } = {}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle } from "lucide-react"
+import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Settings } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 
 interface SurveyData {
@@ -351,15 +351,43 @@ export default function ProductSurvey() {
 
   const submitSurvey = () => {
     try {
+      // Save to localStorage first (always works)
       const existing = JSON.parse(localStorage.getItem("survey") || "[]")
       const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
       localStorage.setItem("survey", JSON.stringify(updated))
       console.log("✅ Survey saved to localStorage:", updated)
 
+      // Try to save to Supabase if configured
+      saveSurveyToSupabase(surveyData)
+
       handleNext()
     } catch (error) {
       console.error("❌ Error saving to localStorage:", error)
       alert("Error saving survey locally.")
+    }
+  }
+
+  const saveSurveyToSupabase = async (data: SurveyData) => {
+    try {
+      // Get dynamic database configuration
+      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
+      
+      const response = await fetch(getDatabaseEndpoint(), {
+        method: 'POST',
+        headers: getDatabaseHeaders(),
+        body: JSON.stringify({
+          ...data,
+          created_at: new Date().toISOString()
+        })
+      })
+
+      if (response.ok) {
+        console.log("✅ Survey also saved to Supabase")
+      } else {
+        console.warn("⚠️ Supabase save failed, but localStorage succeeded")
+      }
+    } catch (error) {
+      console.warn("⚠️ Supabase not available, using localStorage only:", error)
     }
   }
 
@@ -790,6 +818,19 @@ export default function ProductSurvey() {
         >
           <Shield className="w-4 h-4 mr-2" />
           Admin Login
+        </Button>
+      </div>
+      
+      {/* Setup Button */}
+      <div className="fixed bottom-4 right-4 z-20">
+        <Button
+          onClick={() => window.open("/setup", "_blank")}
+          variant="outline"
+          size="sm"
+          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg"
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Setup
         </Button>
       </div>
 

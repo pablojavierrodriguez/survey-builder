@@ -77,24 +77,37 @@ export default function DatabasePage() {
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
-      // Try to fetch from environment-specific database first
-      const response = await fetch(
-        getDatabaseEndpoint("?select=*&order=created_at.desc"),
-        {
-          headers: getDatabaseHeaders()
-        }
-      )
+      let responses = []
+      
+      try {
+        // Try Supabase first if configured
+        const config = getDatabaseConfig()
+        
+        if (config.isConfigured) {
+          const response = await fetch(
+            getDatabaseEndpoint("?select=*&order=created_at.desc"),
+            {
+              headers: getDatabaseHeaders()
+            }
+          )
 
-      if (response.ok) {
-        const data = await response.json()
-        setResponses(data || [])
-      } else {
-        // Fallback to localStorage
+          if (response.ok) {
+            const data = await response.json()
+            responses = data || []
+            console.log('Database - Loaded from Supabase:', responses.length)
+          }
+        }
+      } catch (supabaseError) {
+        console.warn('Database - Supabase failed, using localStorage:', supabaseError)
+      }
+      
+      // Fallback to localStorage if Supabase failed or not configured
+      if (responses.length === 0) {
         const localData = localStorage.getItem("survey")
         if (localData) {
           const parsedData = JSON.parse(localData)
           // Transform local data to match expected format
-          const transformedData = parsedData.map((item: any, index: number) => ({
+          responses = parsedData.map((item: any, index: number) => ({
             id: item.id || `local-${index}`,
             role: item.role || 'Unknown',
             other_role: item.other_role,
@@ -105,32 +118,14 @@ export default function DatabasePage() {
             email: item.email,
             created_at: item.created_at || new Date().toISOString(),
           }))
-          setResponses(transformedData)
-        } else {
-          setResponses([])
+          console.log('Database - Loaded from localStorage:', responses.length)
         }
       }
+      
+      setResponses(responses)
     } catch (error) {
-      console.error("Error fetching responses, using localStorage:", error)
-      // Fallback to localStorage
-      const localData = localStorage.getItem("survey")
-      if (localData) {
-        const parsedData = JSON.parse(localData)
-        const transformedData = parsedData.map((item: any, index: number) => ({
-          id: item.id || `local-${index}`,
-          role: item.role || 'Unknown',
-          other_role: item.other_role,
-          company_type: item.company_type || item.company_size || 'Unknown',
-          main_challenge: item.main_challenge || 'No challenge provided',
-          daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
-          learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
-          email: item.email,
-          created_at: item.created_at || new Date().toISOString(),
-        }))
-        setResponses(transformedData)
-      } else {
-        setResponses([])
-      }
+      console.error("Error fetching responses:", error)
+      setResponses([])
     } finally {
       setIsLoading(false)
     }

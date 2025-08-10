@@ -68,46 +68,40 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setError(null)
-      
-      // Get dynamic database configuration
-      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
-      const config = getDatabaseConfig()
-      
-      console.log('Dashboard - Using database config:', config)
-      
       let data = []
       
-      // Try to fetch from configured database
       try {
-        const response = await fetch(`${getDatabaseEndpoint()}?select=*&order=created_at.desc`, {
-          headers: getDatabaseHeaders()
-        })
+        // Try Supabase first if configured
+        const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
+        const config = getDatabaseConfig()
         
-        console.log('Dashboard - API response status:', response.status)
-        
-        if (response.ok) {
-          const fetchedData = await response.json()
-          console.log('Dashboard - Fetched data length:', fetchedData?.length || 0)
-          if (Array.isArray(fetchedData)) {
-            data = fetchedData
+        if (config.isConfigured) {
+          const response = await fetch(`${getDatabaseEndpoint()}?select=*&order=created_at.desc`, {
+            headers: getDatabaseHeaders()
+          })
+          
+          if (response.ok) {
+            const fetchedData = await response.json()
+            if (Array.isArray(fetchedData)) {
+              data = fetchedData
+              console.log('Dashboard - Loaded from Supabase:', data.length)
+            }
           }
-        } else {
-          console.warn('Dashboard - API response not ok:', response.status, response.statusText)
         }
-      } catch (apiError) {
-        console.warn('Dashboard - API fetch failed:', apiError)
+      } catch (supabaseError) {
+        console.warn('Dashboard - Supabase failed, using localStorage:', supabaseError)
       }
       
-      // Fallback to localStorage only if no data from API
+      // Fallback to localStorage if Supabase failed or not configured
       if (data.length === 0) {
-        console.log('Dashboard - Falling back to localStorage')
         const localData = localStorage.getItem("survey")
         if (localData) {
           try {
             data = JSON.parse(localData)
-            console.log('Dashboard - LocalStorage data length:', data.length)
+            console.log('Dashboard - Loaded from localStorage:', data.length)
           } catch (parseError) {
-            console.warn('Dashboard - Error parsing localStorage data:', parseError)
+            console.warn('Dashboard - Error parsing localStorage:', parseError)
+            data = []
           }
         }
       }

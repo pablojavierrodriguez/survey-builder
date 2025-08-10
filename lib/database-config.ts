@@ -4,6 +4,7 @@ export interface DatabaseConfig {
   anonKey: string
   tableName: string
   environment: 'dev' | 'main'
+  isConfigured: boolean
 }
 
 // Get current branch/environment from various sources
@@ -43,9 +44,20 @@ function getCurrentEnvironment(): 'dev' | 'main' {
 export function getDatabaseConfig(): DatabaseConfig {
   const environment = getCurrentEnvironment()
   
+  // Check if we have actual Supabase configuration
+  const hasSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 
+                         (typeof window !== 'undefined' && localStorage.getItem('supabase_url'))
+  const hasSupabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+                         (typeof window !== 'undefined' && localStorage.getItem('supabase_anon_key'))
+  
   const baseConfig = {
-    supabaseUrl: "https://qaauhwulohxeeacexrav.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8"
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 
+                  (typeof window !== 'undefined' ? localStorage.getItem('supabase_url') : null) ||
+                  "https://your-project.supabase.co",
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+             (typeof window !== 'undefined' ? localStorage.getItem('supabase_anon_key') : null) ||
+             "your_supabase_anon_key_here",
+    isConfigured: !!(hasSupabaseUrl && hasSupabaseKey)
   }
   
   // Check if user has manually configured a table name in localStorage
@@ -58,7 +70,10 @@ export function getDatabaseConfig(): DatabaseConfig {
           return {
             ...baseConfig,
             tableName: settings.database.tableName,
-            environment: settings.database.tableName.includes('_dev') ? 'dev' : 'main'
+            environment: settings.database.tableName.includes('_dev') ? 'dev' : 'main',
+            supabaseUrl: settings.database?.url || baseConfig.supabaseUrl,
+            anonKey: settings.database?.apiKey || baseConfig.anonKey,
+            isConfigured: !!(settings.database?.url && settings.database?.apiKey)
           }
         }
       } catch (error) {
@@ -86,12 +101,27 @@ export function getDatabaseConfig(): DatabaseConfig {
 // Helper function to get the API endpoint
 export function getDatabaseEndpoint(path: string = ""): string {
   const config = getDatabaseConfig()
+  
+  // If not configured, return a placeholder that will fail gracefully
+  if (!config.isConfigured) {
+    return `${config.supabaseUrl}/rest/v1/${config.tableName}${path}`
+  }
+  
   return `${config.supabaseUrl}/rest/v1/${config.tableName}${path}`
 }
 
 // Helper function to get headers for Supabase requests
 export function getDatabaseHeaders(): HeadersInit {
   const config = getDatabaseConfig()
+  
+  // If not configured, return headers that will fail gracefully
+  if (!config.isConfigured) {
+    return {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    }
+  }
+  
   return {
     "apikey": config.anonKey,
     "Authorization": `Bearer ${config.anonKey}`,

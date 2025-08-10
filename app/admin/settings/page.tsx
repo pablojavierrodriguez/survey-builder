@@ -359,41 +359,44 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Supabase URL</label>
-                             <Input
-                 value={safeSettings.database.url}
-                 onChange={(e) => updateSettings("database", "url", e.target.value)}
-                 placeholder="https://your-project.supabase.co"
-                 className="bg-background text-foreground border-border"
-                 disabled={!permissions.canEditSettings}
-               />
+              <Input
+                value={safeSettings.database.url}
+                onChange={(e) => updateSettings("database", "url", e.target.value)}
+                placeholder="https://your-project.supabase.co"
+                className="bg-background text-foreground border-border"
+                disabled={!permissions.canEditSettings}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Table Name</label>
-                             <Input
-                 value={safeSettings.database.tableName}
-                 onChange={(e) => updateSettings("database", "tableName", e.target.value)}
-                 placeholder="pc_survey_data"
-                 className="bg-background text-foreground border-border"
-                 disabled={!permissions.canEditSettings}
-               />
+              <Input
+                value={safeSettings.database.tableName}
+                onChange={(e) => updateSettings("database", "tableName", e.target.value)}
+                placeholder="pc_survey_data"
+                className="bg-background text-foreground border-border"
+                disabled={!permissions.canEditSettings}
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground mb-2">API Key</label>
             <div className="flex gap-2">
-                             <Input
-                 type={showApiKey ? "text" : "password"}
-                 value={safeSettings.database.apiKey}
-                 onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
-                 placeholder="Your Supabase anon key"
-                 className="flex-1 bg-background text-foreground border-border"
-                 disabled={!permissions.canEditSettings}
-               />
+              <Input
+                type={showApiKey ? "text" : "password"}
+                value={safeSettings.database.apiKey}
+                onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
+                placeholder="Your Supabase anon key"
+                className="flex-1 bg-background text-foreground border-border"
+                disabled={!permissions.canEditSettings}
+              />
               <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)}>
                 {showApiKey ? <Eye className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              💡 You can also configure this via the Setup Wizard at <code>/setup</code>
+            </p>
           </div>
 
           <div className="flex items-center justify-between">

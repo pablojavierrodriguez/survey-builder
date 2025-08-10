@@ -37,38 +37,54 @@ A modern, responsive survey platform designed for product and community feedback
 
 ## 🚀 Quick Start
 
+### Option 1: Demo Mode (No Setup Required)
+The application works immediately in demo mode using localStorage:
+
+1. **Clone and run**
+   ```bash
+   git clone https://github.com/your-username/product-survey-builder.git
+   cd product-survey-builder
+   npm install
+   npm run dev
+   ```
+
+2. **Access the application**
+   - Survey Form: `http://localhost:3000`
+   - Admin Login: `http://localhost:3000/auth/login`
+   - Setup Wizard: `http://localhost:3000/setup`
+
+### Option 2: Full Supabase Setup
+
 ### Demo Access
 Try the application with these demo accounts:
 
 - **Viewer Access**: `viewer` / `viewer123` (Read-only analytics)
 - **Admin Demo**: `admin-demo` / `demo123` (Read-only admin interface)
 
-### Production Setup
+### Supabase Configuration
 
-1. **Clone the repository**
-   \`\`\`bash
-   git clone https://github.com/your-username/product-survey-builder.git
-   cd product-survey-builder
-   \`\`\`
+1. **Create Supabase project**
+   - Go to [supabase.com](https://supabase.com)
+   - Create a new project
+   - Note your Project URL and anon key
 
-2. **Install dependencies**
+2. **Configure environment variables**
    \`\`\`bash
-   npm install
-   \`\`\`
-
-3. **Configure environment variables**
-   \`\`\`bash
-   # Create .env.local file
+   # Create .env.local file (optional - can also use setup wizard)
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    \`\`\`
 
-4. **Set up database**
-   - Create a new Supabase project
-   - Run the SQL setup script: `database-setup.sql`
+3. **Set up database**
+   - Run the migration: `supabase/migrations/001_create_survey_tables.sql`
    - Configure authentication providers in Supabase dashboard
 
-5. **Run development server**
+4. **Alternative: Use Setup Wizard**
+   - Visit `/setup` in your running application
+   - Enter your Supabase credentials
+   - Test connection and complete setup
+
+5. **Run the application**
    \`\`\`bash
    npm run dev
    \`\`\`
