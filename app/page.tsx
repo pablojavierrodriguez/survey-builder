@@ -4,11 +4,9 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Database, Settings } from "lucide-react"
+import { ArrowRight, ArrowLeft, Check, Shield, Wrench, Settings } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useAuth } from "@/lib/auth-context"
-import { isDatabaseConfigured } from "@/lib/database-validator"
 import { useDebugMode } from "@/lib/use-debug-mode"
 import { SurveyProgress } from "@/components/ui/survey-progress"
 import { SingleChoiceQuestion } from "@/components/ui/single-choice-question"
@@ -186,26 +184,26 @@ export default function ProductSurvey() {
 
   useEffect(() => {
     setIsMounted(true)
-    
+
     // Check configuration status
     const checkConfig = async () => {
       try {
-        const response = await fetch('/api/config/check')
+        const response = await fetch("/api/config/check")
         const data = await response.json()
-        
+
         if (data.success) {
           setDatabaseStatus(data.configured ? "configured" : "not-configured")
         } else {
           setDatabaseStatus("not-configured")
         }
       } catch (error) {
-        console.error('Error checking config:', error)
+        console.error("Error checking config:", error)
         setDatabaseStatus("not-configured")
       } finally {
         setIsLoading(false)
       }
     }
-    
+
     checkConfig()
   }, [])
 
@@ -213,27 +211,27 @@ export default function ProductSurvey() {
 
   // Handlers for single choice questions (no auto-advance)
   const handleRoleSelect = (role: string) => {
-    setSurveyData(prev => ({ ...prev, role }))
+    setSurveyData((prev) => ({ ...prev, role }))
   }
 
   const handleSenioritySelect = (seniority: string) => {
-    setSurveyData(prev => ({ ...prev, seniority }))
+    setSurveyData((prev) => ({ ...prev, seniority }))
   }
 
   const handleCompanySizeSelect = (company_size: string) => {
-    setSurveyData(prev => ({ ...prev, company_size }))
+    setSurveyData((prev) => ({ ...prev, company_size }))
   }
 
   const handleIndustrySelect = (industry: string) => {
-    setSurveyData(prev => ({ ...prev, industry }))
+    setSurveyData((prev) => ({ ...prev, industry }))
   }
 
   const handleProductTypeSelect = (product_type: string) => {
-    setSurveyData(prev => ({ ...prev, product_type }))
+    setSurveyData((prev) => ({ ...prev, product_type }))
   }
 
   const handleCustomerSegmentSelect = (customer_segment: string) => {
-    setSurveyData(prev => ({ ...prev, customer_segment }))
+    setSurveyData((prev) => ({ ...prev, customer_segment }))
   }
 
   // Manual navigation handlers
@@ -250,37 +248,37 @@ export default function ProductSurvey() {
   }
 
   const handleOtherRoleChange = (other_role: string) => {
-    setSurveyData(prev => ({ ...prev, other_role }))
+    setSurveyData((prev) => ({ ...prev, other_role }))
   }
 
   const handleChallengeChange = (main_challenge: string) => {
-    setSurveyData(prev => ({ ...prev, main_challenge }))
+    setSurveyData((prev) => ({ ...prev, main_challenge }))
   }
 
   const handleToolToggle = (tool: string) => {
-    setSurveyData(prev => ({
+    setSurveyData((prev) => ({
       ...prev,
       daily_tools: prev.daily_tools.includes(tool)
-        ? prev.daily_tools.filter(t => t !== tool)
-        : [...prev.daily_tools, tool]
+        ? prev.daily_tools.filter((t) => t !== tool)
+        : [...prev.daily_tools, tool],
     }))
   }
 
   const handleLearningToggle = (method: string) => {
-    setSurveyData(prev => ({
+    setSurveyData((prev) => ({
       ...prev,
       learning_methods: prev.learning_methods.includes(method)
-        ? prev.learning_methods.filter(m => m !== method)
-        : [...prev.learning_methods, method]
+        ? prev.learning_methods.filter((m) => m !== method)
+        : [...prev.learning_methods, method],
     }))
   }
 
   const handleEmailChange = (email: string) => {
-    setSurveyData(prev => ({ ...prev, email }))
+    setSurveyData((prev) => ({ ...prev, email }))
   }
 
   const handleOtherToolChange = (other_tool: string) => {
-    setSurveyData(prev => ({ ...prev, other_tool }))
+    setSurveyData((prev) => ({ ...prev, other_tool }))
   }
 
   const isValidEmail = (email: string) => {
@@ -321,24 +319,40 @@ export default function ProductSurvey() {
     setError(null)
 
     try {
-      const response = await fetch('/api/survey', {
-        method: 'POST',
+      const payload = {
+        response_data: surveyData,
+        session_id:
+          typeof window !== "undefined"
+            ? window.sessionStorage?.getItem("survey_session_id") || crypto.randomUUID()
+            : crypto.randomUUID(),
+        user_agent: typeof window !== "undefined" ? window.navigator?.userAgent : "Unknown",
+        ip_address: null, // Will be handled server-side if needed
+      }
+
+      // Store session ID for future reference
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        window.sessionStorage.setItem("survey_session_id", payload.session_id)
+      }
+
+      const response = await fetch("/api/survey", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(surveyData),
+        body: JSON.stringify(payload),
       })
 
-      if (response.ok) {
+      const result = await response.json()
+
+      if (response.ok && result.success) {
         // Success - show completion message
         setCurrentStep(totalSteps + 1) // Show completion step
       } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Error submitting survey')
+        setError(result.error || "Error submitting survey")
       }
     } catch (error) {
-      console.error('Error submitting survey:', error)
-      setError('Network error. Please try again.')
+      console.error("Error submitting survey:", error)
+      setError("Network error. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -356,7 +370,7 @@ export default function ProductSurvey() {
       showBack: hasPrevious,
       showContinue: hasNext,
       continueDisabled: isRequired && !canProceedResult,
-      isAutoAdvance
+      isAutoAdvance,
     }
   }
 
@@ -489,9 +503,10 @@ export default function ProductSurvey() {
                   className={`
                     p-3.5 sm:p-4 text-left rounded-xl border-2 transition-all duration-200
                     min-h-[52px] sm:min-h-[56px] flex items-center justify-between
-                    ${surveyData.daily_tools.includes(tool)
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
+                    ${
+                      surveyData.daily_tools.includes(tool)
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
                     }
                   `}
                 >
@@ -532,52 +547,10 @@ export default function ProductSurvey() {
                   className={`
                     p-4 text-left rounded-xl border-2 transition-all duration-200
                     min-h-[56px] flex items-center justify-between
-                    ${surveyData.learning_methods.includes(method)
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
-                    }
-                  `}
-                >
-                  <span className="text-base font-medium">{method}</span>
-                  {surveyData.learning_methods.includes(method) && (
-                    <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  )}
-                </motion.button>
-              ))}
-            </div>
-            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-              {surveyData.learning_methods.length} selected
-            </div>
-          </motion.div>
-        )
-
-      case 9:
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
-          >
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
-            >
-              How do you learn about product? (Select all that apply)
-            </motion.h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {learningOptions.map((method) => (
-                <motion.button
-                  key={method}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleLearningToggle(method)}
-                  className={`
-                    p-4 text-left rounded-xl border-2 transition-all duration-200
-                    min-h-[56px] flex items-center justify-between
-                    ${surveyData.learning_methods.includes(method)
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white'
+                    ${
+                      surveyData.learning_methods.includes(method)
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
                     }
                   `}
                 >
@@ -615,7 +588,15 @@ export default function ProductSurvey() {
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "ARS", salary_min: "", salary_max: "", salary_average: "" })}
+                    onClick={() =>
+                      setSurveyData({
+                        ...surveyData,
+                        salary_currency: "ARS",
+                        salary_min: "",
+                        salary_max: "",
+                        salary_average: "",
+                      })
+                    }
                     className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
                       surveyData.salary_currency === "ARS"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
@@ -629,7 +610,15 @@ export default function ProductSurvey() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "USD", salary_min: "", salary_max: "", salary_average: "" })}
+                    onClick={() =>
+                      setSurveyData({
+                        ...surveyData,
+                        salary_currency: "USD",
+                        salary_min: "",
+                        salary_max: "",
+                        salary_average: "",
+                      })
+                    }
                     className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
                       surveyData.salary_currency === "USD"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
@@ -653,13 +642,13 @@ export default function ProductSurvey() {
                       type="number"
                       value={surveyData.salary_min}
                       onChange={(e) => {
-                        const min = parseInt(e.target.value) || 0
-                        const max = parseInt(surveyData.salary_max) || 0
+                        const min = Number.parseInt(e.target.value) || 0
+                        const max = Number.parseInt(surveyData.salary_max) || 0
                         const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
-                        setSurveyData({ 
-                          ...surveyData, 
+                        setSurveyData({
+                          ...surveyData,
                           salary_min: e.target.value,
-                          salary_average: avg
+                          salary_average: avg,
                         })
                       }}
                       placeholder={surveyData.salary_currency === "USD" ? "Min (e.g., 80000)" : "Min (e.g., 2000000)"}
@@ -670,13 +659,13 @@ export default function ProductSurvey() {
                       type="number"
                       value={surveyData.salary_max}
                       onChange={(e) => {
-                        const min = parseInt(surveyData.salary_min) || 0
-                        const max = parseInt(e.target.value) || 0
+                        const min = Number.parseInt(surveyData.salary_min) || 0
+                        const max = Number.parseInt(e.target.value) || 0
                         const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
-                        setSurveyData({ 
-                          ...surveyData, 
+                        setSurveyData({
+                          ...surveyData,
                           salary_max: e.target.value,
-                          salary_average: avg
+                          salary_average: avg,
                         })
                       }}
                       placeholder={surveyData.salary_currency === "USD" ? "Max (e.g., 120000)" : "Max (e.g., 3000000)"}
@@ -684,39 +673,41 @@ export default function ProductSurvey() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="text-center">
                   <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
                     OR
                   </span>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Average Salary</label>
                   <Input
                     type="number"
                     value={surveyData.salary_average}
                     onChange={(e) => {
-                      const avg = parseInt(e.target.value) || 0
-                      setSurveyData({ 
-                        ...surveyData, 
+                      const avg = Number.parseInt(e.target.value) || 0
+                      setSurveyData({
+                        ...surveyData,
                         salary_average: e.target.value,
                         salary_min: avg > 0 ? Math.round(avg * 0.85).toString() : "",
-                        salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : ""
+                        salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : "",
                       })
                     }}
-                    placeholder={surveyData.salary_currency === "USD" ? "Average (e.g., 100000)" : "Average (e.g., 2500000)"}
+                    placeholder={
+                      surveyData.salary_currency === "USD" ? "Average (e.g., 100000)" : "Average (e.g., 2500000)"
+                    }
                     className="text-lg p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                   />
                   {surveyData.salary_average && surveyData.salary_min && surveyData.salary_max && (
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Auto-calculated range: {parseInt(surveyData.salary_min).toLocaleString()} - {parseInt(surveyData.salary_max).toLocaleString()} {surveyData.salary_currency}
+                      Auto-calculated range: {Number.parseInt(surveyData.salary_min).toLocaleString()} -{" "}
+                      {Number.parseInt(surveyData.salary_max).toLocaleString()} {surveyData.salary_currency}
                     </p>
                   )}
                 </div>
               </div>
             </div>
-
           </motion.div>
         )
 
@@ -748,7 +739,6 @@ export default function ProductSurvey() {
             {surveyData.email && !isValidEmail(surveyData.email) && (
               <p className="text-red-500 dark:text-red-400 text-sm">Please enter a valid email address</p>
             )}
-
           </motion.div>
         )
 
@@ -762,18 +752,13 @@ export default function ProductSurvey() {
             <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto">
               <Check className="w-10 h-10 text-green-600 dark:text-green-400" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Thank you!
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Thank you!</h2>
             <p className="text-gray-600 dark:text-gray-400">
               Your responses help us build better products and create more valuable content for the product community.
               {surveyData.email && " We'll follow up with you soon."}
             </p>
             {userIsAdmin && (
-              <Button
-                onClick={() => window.location.href = '/admin/dashboard'}
-                className="px-8 py-3"
-              >
+              <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
                 View Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -796,8 +781,8 @@ export default function ProductSurvey() {
 
   if (error) {
     return (
-      <ErrorDisplay 
-        error={error} 
+      <ErrorDisplay
+        error={error}
         onRetry={() => {
           setError(null)
           // Reload page instead of calling loadSettings
@@ -814,16 +799,11 @@ export default function ProductSurvey() {
           <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto">
             <Settings className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Configuración Requerida
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configuración Requerida</h1>
           <p className="text-gray-600 dark:text-gray-400">
             La aplicación necesita ser configurada antes de poder usarla.
           </p>
-          <Button
-            onClick={() => window.location.href = '/setup'}
-            className="w-full"
-          >
+          <Button onClick={() => (window.location.href = "/setup")} className="w-full">
             Configurar Aplicación
             <Settings className="ml-2 h-4 w-4" />
           </Button>
@@ -839,9 +819,7 @@ export default function ProductSurvey() {
           <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto">
             <Wrench className="w-8 h-8 text-orange-600 dark:text-orange-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Under Maintenance
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Under Maintenance</h1>
           <p className="text-gray-600 dark:text-gray-400">
             The application is under maintenance. Please check back later.
           </p>
@@ -858,7 +836,7 @@ export default function ProductSurvey() {
           <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
             <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
               <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">
-                {settings?.general?.surveyTitle || 'My Survey'}
+                {settings?.general?.surveyTitle || "My Survey"}
               </h1>
             </div>
             <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">
@@ -866,7 +844,7 @@ export default function ProductSurvey() {
               {/* Login/Admin Panel Button */}
               {user ? (
                 <Button
-                  onClick={() => window.location.href = '/admin/dashboard'}
+                  onClick={() => (window.location.href = "/admin/dashboard")}
                   size="sm"
                   className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
                 >
@@ -876,7 +854,7 @@ export default function ProductSurvey() {
                 </Button>
               ) : (
                 <Button
-                  onClick={() => window.location.href = '/auth/login'}
+                  onClick={() => (window.location.href = "/auth/login")}
                   size="sm"
                   className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
                 >
@@ -945,7 +923,7 @@ export default function ProductSurvey() {
                         onClick={handlePrevious}
                         variant="outline"
                         size="sm"
-                        className="px-3 sm:px-4 md:px-6 h-9 sm:h-10 md:h-11 text-sm"
+                        className="px-3 sm:px-4 md:px-6 h-9 sm:h-10 md:h-11 text-sm bg-transparent"
                       >
                         <ArrowLeft className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         Back
@@ -953,7 +931,7 @@ export default function ProductSurvey() {
                     ) : (
                       <div />
                     )}
-                    
+
                     {navConfig.showContinue && (
                       <Button
                         onClick={handleNext}

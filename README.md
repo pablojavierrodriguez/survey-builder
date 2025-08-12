@@ -5,11 +5,11 @@ Una aplicación simple y escalable para crear y gestionar encuestas con Supabase
 ## 🚀 Configuración Inicial
 
 ### Paso 1: Clonar el repositorio
-```bash
+\`\`\`bash
 git clone https://github.com/pablojavierrodriguez/survey-builder.git
 cd survey-builder
 npm install
-```
+\`\`\`
 
 ### Paso 2: Crear proyecto Supabase
 1. Ve a [supabase.com](https://supabase.com)
@@ -41,7 +41,7 @@ La aplicación está configurada y lista para usar.
 
 ## 📁 Estructura del Proyecto
 
-```
+\`\`\`
 ├── app/                    # Next.js App Router
 │   ├── admin/             # Panel de administración
 │   ├── auth/              # Páginas de autenticación
@@ -50,7 +50,7 @@ La aplicación está configurada y lista para usar.
 ├── components/            # Componentes React
 ├── lib/                   # Utilidades y configuración
 └── INITIALIZATION.sql     # Script de inicialización
-```
+\`\`\`
 
 ## 🔧 Características
 

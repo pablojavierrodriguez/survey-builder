@@ -9,6 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Product Community Survey',
   description: 'Help us understand the product community better',
+    generator: 'v0.app'
 }
 
 export default function RootLayout({
