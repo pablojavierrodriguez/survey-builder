@@ -152,3 +152,7 @@ export class ConfigManager {
     this.supabaseClient = createClient(config.database.url, config.database.apiKey)
     return this.supabaseClient
   }
+}
+
+// Export singleton instance
+export const configManager = ConfigManager.getInstance()
