@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react"
-import { getCurrentUserPermissions } from "@/lib/permissions"
+import { getPermissions, getUserRoleFromProfile } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BarChart3, PieChart, TrendingUp, Users, RefreshCw, Download, Trophy, MessageSquare } from "lucide-react"
@@ -224,9 +224,9 @@ export default function AnalyticsPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   const permissions = useMemo(() => {
-    const userRole = profile?.full_name ? "admin" : "viewer"
-    return getCurrentUserPermissions(userRole as any)
-  }, [profile])
+    const userRole = getUserRoleFromProfile(profile, user?.email)
+    return getPermissions(userRole === "admin" ? "admin" : "viewer")
+  }, [profile, user?.email])
 
   // Memoized fetch function
   const fetchAnalyticsData = useCallback(async () => {
