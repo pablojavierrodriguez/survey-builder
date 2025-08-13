@@ -73,68 +73,54 @@ export default function AdminDashboard() {
     try {
       setError(null)
 
-      // Get dynamic database configuration
-      const { getSupabaseConfig } = await import("@/lib/database-config")
-      const config = await getSupabaseConfig()
-
-      console.log("Dashboard - Using database config:", config)
-
       let data = []
 
-      // Try to fetch from analytics API (authenticated)
+      // Try analytics API first (faster)
       try {
-        const response = await fetch("/api/admin/analytics")
-
-        console.log("Dashboard - Analytics API response status:", response.status)
+        const response = await fetch("/api/admin/analytics", {
+          method: "GET",
+          headers: {
+            "Cache-Control": "no-cache",
+          },
+        })
 
         if (response.ok) {
           const result = await response.json()
-          console.log("Dashboard - Analytics API result:", result)
-
           if (result.success && result.data) {
-            // Extract recent responses from analytics data
-            const recentResponses = result.data.recentResponses || []
-            console.log("Dashboard - Recent responses length:", recentResponses.length)
-            data = recentResponses
-          } else {
-            console.log("Dashboard - Analytics API returned error:", result.error)
+            data = result.data.recentResponses || []
           }
-        } else {
-          console.log("Dashboard - Analytics API failed with status:", response.status)
         }
       } catch (apiError) {
-        console.warn("Dashboard - API fetch failed:", apiError)
+        console.warn("Dashboard - API fetch failed, using fallback")
       }
 
-      // Fallback to localStorage only if no data from API
       if (data.length === 0) {
-        console.log("Dashboard - Falling back to localStorage")
         const localData = localStorage.getItem("survey")
         if (localData) {
           try {
-            data = JSON.parse(localData)
-            console.log("Dashboard - LocalStorage data length:", data.length)
+            const parsed = JSON.parse(localData)
+            data = Array.isArray(parsed) ? parsed : []
           } catch (parseError) {
-            console.warn("Dashboard - Error parsing localStorage data:", parseError)
+            console.warn("Dashboard - Error parsing localStorage data")
+            data = []
           }
         }
       }
 
-      console.log("Dashboard - Final data length:", data.length)
-
-      // Process the data
-      if (typeof calculateStats === "function") {
-        calculateStats(data)
-      } else {
-        console.error("calculateStats function not defined")
-        // Process data inline
-        processDataInline(data)
-      }
-
+      processDataInline(data)
       setLastUpdated(new Date())
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
       setError("Failed to load dashboard data. Please try again later.")
+      setStats({
+        totalResponses: 0,
+        todayResponses: 0,
+        completionRate: 0,
+        avgTimeToComplete: 0,
+        topRole: "No data",
+        topIndustry: "No data",
+        recentResponses: [],
+      })
     } finally {
       setIsLoading(false)
     }

@@ -221,26 +221,31 @@ export default function SettingsPage() {
     if (!settings) return
     setSaving(true)
     try {
+      // Save to localStorage for immediate effect
+      localStorage.setItem("app_settings", JSON.stringify(settings))
+
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(
+        new CustomEvent("app_settings_changed", {
+          detail: settings,
+        }),
+      )
+
+      // Also trigger storage event manually for cross-tab communication
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "app_settings",
+          newValue: JSON.stringify(settings),
+          storageArea: localStorage,
+        }),
+      )
+
       // Format settings for the API
       const apiSettings = {
-        environment: "dev",
-        settings: {
-          database: {
-            url: settings.database.url,
-            apiKey: settings.database.apiKey,
-            tableName: settings.database.tableName,
-            environment: settings.database.environment,
-          },
-          general: {
-            surveyTitle: settings.general.surveyTitle,
-            publicUrl: settings.general.publicUrl,
-            maintenanceMode: settings.general.maintenanceMode,
-            analyticsEnabled: settings.general.analyticsEnabled,
-            debugMode: settings.general.debugMode,
-          },
-          security: settings.security,
-          features: settings.features,
-        },
+        general: settings.general,
+        database: settings.database,
+        security: settings.security,
+        features: settings.features,
       }
 
       // POST to /api/admin/settings with the correct format
@@ -253,14 +258,24 @@ export default function SettingsPage() {
       })
 
       if (response.ok) {
-        await loadSettings()
-        alert("Settings saved successfully!")
+        // Update document title immediately
+        if (settings.general.surveyTitle) {
+          document.title = settings.general.surveyTitle
+        }
+
+        // Force reload of settings in other components
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
+
+        alert("✅ Settings saved successfully! The page will refresh to apply changes.")
       } else {
         const error = await response.json()
-        alert(`Failed to save settings: ${error.error || "Unknown error"}`)
+        alert(`❌ Failed to save settings: ${error.error || "Unknown error"}`)
       }
     } catch (error) {
-      alert("Error saving settings. Please try again.")
+      console.error("Error saving settings:", error)
+      alert("❌ Error saving settings. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -289,17 +304,21 @@ export default function SettingsPage() {
       return
     }
     if (!settings) return
-    setSettings((prev) =>
-      prev
-        ? {
-            ...prev,
-            [section]: {
-              ...prev[section],
-              [key]: value,
-            },
-          }
-        : prev,
-    )
+
+    const newSettings = {
+      ...settings,
+      [section]: {
+        ...settings[section],
+        [key]: value,
+      },
+    }
+
+    setSettings(newSettings)
+
+    // Immediate feedback for survey title changes
+    if (section === "general" && key === "surveyTitle") {
+      document.title = value || "My Survey"
+    }
   }
 
   if (loading || !settings) {
@@ -339,8 +358,8 @@ export default function SettingsPage() {
             </div>
             {envStatus.configured ? (
               <div className="text-sm text-green-700 dark:text-green-300">
-                Las variables de entorno tienen prioridad sobre la configuración manual. La aplicación está lista para
-                usar.
+                Las variables de entorno tienen prioridad sobre la configuración manual. Los cambios en settings se
+                aplicarán a la configuración local y se sincronizarán con otros componentes.
               </div>
             ) : (
               <div className="text-sm text-amber-700 dark:text-amber-300">
@@ -479,6 +498,7 @@ export default function SettingsPage() {
             <Settings className="w-5 h-5" />
             General Settings
           </CardTitle>
+          <CardDescription>Estos cambios se aplicarán inmediatamente en toda la aplicación</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -502,7 +522,8 @@ export default function SettingsPage() {
               className="bg-background text-foreground border-border"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              This title will be displayed in the survey header and admin panel
+              Este título se mostrará en el header del survey y en el panel admin. Los cambios se aplican
+              inmediatamente.
             </p>
           </div>
 
