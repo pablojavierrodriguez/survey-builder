@@ -1,9 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { getTableName } from '@/lib/config-manager'
+import { getSupabaseClient } from '@/lib/supabase'
+
+// Get table name from database settings
+async function getTableName(): Promise<string> {
+  try {
+    const supabase = await getSupabaseClient()
+    if (!supabase) {
+      return 'survey_responses' // fallback
+    }
+    
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('settings')
+      .eq('environment', 'dev')
+      .single()
+    
+    if (error || !data?.settings?.database?.tableName) {
+      return 'survey_responses' // fallback
+    }
+    
+    return data.settings.database.tableName
+  } catch (error) {
+    return 'survey_responses' // fallback
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       return NextResponse.json({
         success: false,

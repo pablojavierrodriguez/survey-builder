@@ -1,377 +1,383 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Settings, Database, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import React, { useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Loader2, CheckCircle, AlertCircle, Database, FileText, Settings } from 'lucide-react'
+import { clearSupabaseCache } from '@/lib/supabase'
+
+interface SetupResponse {
+  success: boolean
+  message: string
+  savedTo?: string[]
+  clearCache?: boolean
+}
 
 export default function SetupPage() {
   const [step, setStep] = useState(1)
-  const [supabaseUrl, setSupabaseUrl] = useState("")
-  const [supabaseKey, setSupabaseKey] = useState("")
-  const [publicUrl, setPublicUrl] = useState("")
-  const [appName, setAppName] = useState("")
+  const [setupMethod, setSetupMethod] = useState<'claves' | 'login'>('claves')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Check if already configured
-    checkConfiguration()
-  }, [])
+  // Form data
+  const [formData, setFormData] = useState({
+    supabaseUrl: '',
+    supabaseKey: '',
+    serviceRoleKey: '',
+    adminEmail: '',
+    adminPassword: '',
+    publicUrl: '',
+    appName: ''
+  })
 
-  const checkConfiguration = async () => {
-    try {
-      const response = await fetch('/api/config/check')
-      const data = await response.json()
-      
-      console.log('🔧 [Setup] Configuration check:', data)
-      
-      if (data.configured) {
-        // Show current configuration but allow reconfiguration
-        setSuccess("✅ Supabase está configurado. Puedes modificar la configuración actual.")
-        // Don't auto-advance to step 3, let user choose
-      } else {
-        console.log('🔧 [Setup] Configuration missing:', {
-          hasEnvUrl: data.hasEnvUrl,
-          hasEnvKey: data.hasEnvKey,
-          canConnect: data.canConnect,
-          error: data.error
-        })
-      }
-    } catch (error) {
-      console.error('Error checking configuration:', error)
-    }
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const testConnection = async () => {
     setIsLoading(true)
-    setError("")
-    
+    setError(null)
+    setSuccess(null)
+
     try {
-      const response = await fetch('/api/setup/test-connection', {
+      const endpoint = setupMethod === 'login' ? '/api/setup/test-connection-admin' : '/api/setup/test-connection'
+      const body = setupMethod === 'login' 
+        ? { adminEmail: formData.adminEmail, adminPassword: formData.adminPassword }
+        : { supabaseUrl: formData.supabaseUrl, supabaseKey: formData.supabaseKey, serviceRoleKey: formData.serviceRoleKey }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          supabaseUrl,
-          supabaseKey
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
-        setSuccess("✅ Conexión exitosa con Supabase")
+        setSuccess('✅ Conexión exitosa! Puedes continuar con la configuración.')
         setStep(2)
       } else {
-        setError(data.error || "Error al conectar con Supabase")
+        setError(`❌ Error de conexión: ${data.error}`)
       }
     } catch (error) {
-      setError("Error de red al probar la conexión")
+      setError('❌ Error de conexión: No se pudo conectar al servidor')
     } finally {
       setIsLoading(false)
     }
   }
 
-                const saveConfiguration = async () => {
-                setIsLoading(true)
-                setError("")
-                
-                try {
-                  const response = await fetch('/api/setup/save-config', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      supabaseUrl,
-                      supabaseKey,
-                      publicUrl,
-                      appName
-                    })
-                  })
+  const saveConfiguration = async () => {
+    setIsLoading(true)
+    setError(null)
+    setSuccess(null)
 
-                  const data = await response.json()
-                  
-                  if (data.success) {
-                    setSuccess("✅ Configuración guardada exitosamente")
-                    setStep(3)
-                  } else {
-                    setError(data.error || "Error al guardar la configuración")
-                  }
-                } catch (error) {
-                  setError("Error de red al guardar la configuración")
-                } finally {
-                  setIsLoading(false)
-                }
-              }
+    try {
+      const endpoint = setupMethod === 'login' ? '/api/setup/save-config-admin' : '/api/setup/save-config'
+      const body = setupMethod === 'login'
+        ? { adminEmail: formData.adminEmail, adminPassword: formData.adminPassword, publicUrl: formData.publicUrl, appName: formData.appName }
+        : { supabaseUrl: formData.supabaseUrl, supabaseKey: formData.supabaseKey, serviceRoleKey: formData.serviceRoleKey, publicUrl: formData.publicUrl, appName: formData.appName }
 
-              const clearConfiguration = async () => {
-                setIsLoading(true)
-                setError("")
-                
-                try {
-                  const response = await fetch('/api/setup/clear-config', {
-                    method: 'POST'
-                  })
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
 
-                  const data = await response.json()
-                  
-                  if (data.success) {
-                    setStep(1)
-                    setSuccess("")
-                    setError("")
-                  } else {
-                    setError(data.error || "Error al limpiar la configuración")
-                  }
-                } catch (error) {
-                  setError("Error de red al limpiar la configuración")
-                } finally {
-                  setIsLoading(false)
-                }
-              }
+      const data: SetupResponse = await response.json()
+
+      if (data.success) {
+        setSuccess(`✅ ${data.message}`)
+        
+        // Show where config was saved
+        if (data.savedTo && data.savedTo.length > 0) {
+          const savedToText = data.savedTo.map(source => {
+            switch (source) {
+              case 'local': return 'archivo local'
+              case 'database': return 'base de datos'
+              default: return source
+            }
+          }).join(' y ')
+          setSuccess(prev => `${prev}\n📁 Configuración guardada en: ${savedToText}`)
+        }
+
+        // Clear cache if needed
+        if (data.clearCache) {
+          await clearSupabaseCache()
+        }
+
+        setStep(3)
+      } else {
+        setError(`❌ Error al guardar: ${data.error}`)
+      }
+    } catch (error) {
+      setError('❌ Error al guardar configuración: No se pudo conectar al servidor')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const canTestConnection = () => {
+    if (setupMethod === 'claves') {
+      return formData.supabaseUrl && formData.supabaseKey && formData.serviceRoleKey
+    } else {
+      return formData.adminEmail && formData.adminPassword
+    }
+  }
+
+  const canSaveConfiguration = () => {
+    return step === 2 && (formData.publicUrl || formData.appName)
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-lg">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4">
-              <Settings className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Configuración Inicial</CardTitle>
-            <p className="text-gray-600 dark:text-gray-400">
-              Configura tu base de datos Supabase
-            </p>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            {/* Step Indicator */}
-            <div className="flex items-center justify-center space-x-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold text-gray-800">
+            🚀 Configuración de Survey App
+          </CardTitle>
+          <CardDescription className="text-lg">
+            Configura tu aplicación de encuestas paso a paso
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {/* Step Indicator */}
+          <div className="flex justify-center space-x-4 mb-6">
+            <div className={`flex items-center space-x-2 ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
                 1
               </div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
+              <span className="hidden sm:inline">Conexión</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
                 2
               </div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= 3 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
-              }`}>
+              <span className="hidden sm:inline">Configuración</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
                 3
               </div>
+              <span className="hidden sm:inline">Completado</span>
             </div>
+          </div>
 
-            {/* Step 1: Configuration */}
-            {step === 1 && (
-              <div className="space-y-4">
-                                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Nombre de la Aplicación
-                              </label>
-                              <Input
-                                type="text"
-                                value={appName}
-                                onChange={(e) => setAppName(e.target.value)}
-                                placeholder="Nombre de tu aplicación"
-                                className="w-full"
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Supabase URL
-                              </label>
-                              <Input
-                                type="url"
-                                value={supabaseUrl}
-                                onChange={(e) => setSupabaseUrl(e.target.value)}
-                                placeholder="https://your-project.supabase.co"
-                                className="w-full"
-                              />
-                            </div>
-                
-                                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Supabase Anon Key
-                              </label>
-                              <Input
-                                type="password"
-                                value={supabaseKey}
-                                onChange={(e) => setSupabaseKey(e.target.value)}
-                                placeholder="Ingresa tu Supabase Anon Key"
-                                className="w-full"
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Public URL (Opcional)
-                              </label>
-                              <Input
-                                type="url"
-                                value={publicUrl}
-                                onChange={(e) => setPublicUrl(e.target.value)}
-                                placeholder="https://tu-dominio.com"
-                                className="w-full"
-                              />
-                            </div>
+          {/* Step 1: Connection */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <Tabs value={setupMethod} onValueChange={(value) => setSetupMethod(value as 'claves' | 'login')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="claves" title="Configuración manual con claves de API">
+                    <Database className="w-4 h-4 mr-2" />
+                    Con claves
+                  </TabsTrigger>
+                  <TabsTrigger value="login" title="Configuración automática con credenciales de admin">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Con login
+                  </TabsTrigger>
+                </TabsList>
 
+                <TabsContent value="claves" className="space-y-4">
+                  <div>
+                    <Label htmlFor="supabaseUrl">URL de Supabase</Label>
+                    <Input
+                      id="supabaseUrl"
+                      type="url"
+                      placeholder="https://tu-proyecto.supabase.co"
+                      value={formData.supabaseUrl}
+                      onChange={(e) => handleInputChange('supabaseUrl', e.target.value)}
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Encuentra esto en Supabase → Settings → API → Project URL
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="supabaseKey">Anon Key</Label>
+                    <Input
+                      id="supabaseKey"
+                      type="password"
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      value={formData.supabaseKey}
+                      onChange={(e) => handleInputChange('supabaseKey', e.target.value)}
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Encuentra esto en Supabase → Settings → API → anon public
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="serviceRoleKey">Service Role Key</Label>
+                    <Input
+                      id="serviceRoleKey"
+                      type="password"
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      value={formData.serviceRoleKey}
+                      onChange={(e) => handleInputChange('serviceRoleKey', e.target.value)}
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Encuentra esto en Supabase → Settings → API → service_role secret
+                    </p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="login" className="space-y-4">
+                  <div>
+                    <Label htmlFor="adminEmail">Email de Administrador</Label>
+                    <Input
+                      id="adminEmail"
+                      type="email"
+                      placeholder="admin@tuempresa.com"
+                      value={formData.adminEmail}
+                      onChange={(e) => handleInputChange('adminEmail', e.target.value)}
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Email del usuario administrador en Supabase
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="adminPassword">Contraseña de Administrador</Label>
+                    <Input
+                      id="adminPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={formData.adminPassword}
+                      onChange={(e) => handleInputChange('adminPassword', e.target.value)}
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Contraseña del usuario administrador
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <Button 
+                onClick={testConnection} 
+                disabled={!canTestConnection() || isLoading}
+                className="w-full"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Probando conexión...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Probar Conexión
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Step 2: Configuration */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="appName">Nombre de la Aplicación</Label>
+                <Input
+                  id="appName"
+                  placeholder="Mi App de Encuestas"
+                  value={formData.appName}
+                  onChange={(e) => handleInputChange('appName', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="publicUrl">URL Pública</Label>
+                <Input
+                  id="publicUrl"
+                  type="url"
+                  placeholder="https://tu-app.vercel.app"
+                  value={formData.publicUrl}
+                  onChange={(e) => handleInputChange('publicUrl', e.target.value)}
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  URL donde estará desplegada tu aplicación
+                </p>
+              </div>
+
+              <div className="flex space-x-2">
                 <Button 
-                  onClick={testConnection} 
-                  disabled={isLoading || !supabaseUrl || !supabaseKey}
-                  className="w-full"
+                  variant="outline" 
+                  onClick={() => setStep(1)}
+                  className="flex-1"
+                >
+                  ← Volver
+                </Button>
+                <Button 
+                  onClick={saveConfiguration} 
+                  disabled={!canSaveConfiguration() || isLoading}
+                  className="flex-1"
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Probando conexión...
+                      Guardando...
                     </>
                   ) : (
                     <>
-                      <Database className="w-4 h-4 mr-2" />
-                      Probar Conexión
+                      <FileText className="w-4 h-4 mr-2" />
+                      Guardar Configuración
                     </>
                   )}
                 </Button>
               </div>
-            )}
+            </div>
+          )}
 
-                                    {/* Step 2: Save Configuration */}
-                        {step === 2 && (
-                          <div className="space-y-4">
-                            <Alert>
-                              <CheckCircle className="h-4 w-4" />
-                              <AlertDescription>
-                                Conexión exitosa. Ahora guardaremos la configuración.
-                              </AlertDescription>
-                            </Alert>
+          {/* Step 3: Success */}
+          {step === 3 && (
+            <div className="text-center space-y-4">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+              <h3 className="text-xl font-semibold text-gray-800">
+                ¡Configuración Completada!
+              </h3>
+              <p className="text-gray-600">
+                Tu aplicación está lista para usar. Puedes acceder al dashboard de administración.
+              </p>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => window.location.href = '/'}
+                  className="flex-1"
+                >
+                  Ir al Dashboard
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => window.location.href = '/admin'}
+                  className="flex-1"
+                >
+                  Panel de Admin
+                </Button>
+              </div>
+            </div>
+          )}
 
-                            <div className="space-y-2">
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
-                                <strong>URL:</strong> {supabaseUrl}
-                              </div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
-                                <strong>API Key:</strong> {supabaseKey.substring(0, 20)}...
-                              </div>
-                            </div>
+          {/* Error/Success Messages */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
+            </Alert>
+          )}
 
-                            <div className="flex space-x-2">
-                              <Button 
-                                variant="outline"
-                                onClick={() => setStep(1)}
-                                className="flex-1"
-                              >
-                                ← Volver
-                              </Button>
-                              <Button 
-                                onClick={saveConfiguration} 
-                                disabled={isLoading}
-                                className="flex-1"
-                              >
-                                {isLoading ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Guardando...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Settings className="w-4 h-4 mr-2" />
-                                    Guardar
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                                    {/* Step 3: Success */}
-                        {step === 3 && (
-                          <div className="space-y-4">
-                            <Alert>
-                              <CheckCircle className="h-4 w-4" />
-                              <AlertDescription>
-                                ¡Configuración completada! Ya puedes usar la aplicación.
-                              </AlertDescription>
-                            </Alert>
-
-                            <div className="flex space-x-2">
-                              <Button 
-                                variant="outline"
-                                onClick={() => {
-                                  setStep(1)
-                                  setSuccess("")
-                                }}
-                                className="flex-1"
-                              >
-                                Reconfigurar
-                              </Button>
-                                                          <Button 
-                              onClick={() => {
-                                // Redirect to home page, not admin
-                                window.location.href = '/'
-                              }} 
-                              className="flex-1"
-                            >
-                              Ir a la Aplicación
-                            </Button>
-                            </div>
-                            
-                            <div className="pt-4 border-t">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={clearConfiguration}
-                                disabled={isLoading}
-                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                Limpiar Configuración
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-            {/* Error Message */}
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>{success}</AlertDescription>
-              </Alert>
-            )}
-
-                                    {/* Quick Setup */}
-                        {step === 1 && (
-                          <div className="pt-4 border-t">
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              ¿No tienes Supabase? Puedes crear una cuenta gratuita en:
-                            </p>
-                            <Button 
-                              variant="outline" 
-                              onClick={() => window.open("https://supabase.com", "_blank")}
-                              className="w-full text-xs"
-                            >
-                              Crear Cuenta en Supabase
-                            </Button>
-                          </div>
-                        )}
-          </CardContent>
-        </Card>
-      </div>
+          {success && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription className="whitespace-pre-line">{success}</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

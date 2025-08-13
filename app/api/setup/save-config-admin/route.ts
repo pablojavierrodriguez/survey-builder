@@ -3,11 +3,20 @@ import { configManager, AppConfig } from '@/lib/config-manager'
 
 export async function POST(request: NextRequest) {
   try {
-    const { supabaseUrl, supabaseKey, serviceRoleKey, publicUrl, appName } = await request.json()
+    const { adminEmail, adminPassword, publicUrl, appName } = await request.json()
 
-    if (!supabaseUrl || !supabaseKey || !serviceRoleKey) {
+    if (!adminEmail || !adminPassword) {
       return NextResponse.json(
-        { success: false, error: 'URL, Anon Key y Service Role Key son requeridos' },
+        { success: false, error: 'Email y contraseña de admin son requeridos' },
+        { status: 400 }
+      )
+    }
+
+    // For admin login method, we need to get the Supabase URL from environment or use a default
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!supabaseUrl) {
+      return NextResponse.json(
+        { success: false, error: 'NEXT_PUBLIC_SUPABASE_URL no está configurado' },
         { status: 400 }
       )
     }
@@ -16,8 +25,7 @@ export async function POST(request: NextRequest) {
     const config: AppConfig = {
       database: {
         url: supabaseUrl,
-        apiKey: supabaseKey,
-        serviceRoleKey: serviceRoleKey,
+        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
         tableName: 'survey_data',
         environment: 'development'
       },

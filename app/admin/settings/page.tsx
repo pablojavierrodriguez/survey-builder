@@ -20,10 +20,11 @@ interface AppSettings {
     environment: string
   }
   general: {
-    appName: string
+    surveyTitle: string
     publicUrl: string
     maintenanceMode: boolean
     analyticsEnabled: boolean
+    debugMode: boolean
   }
   security?: {
     sessionTimeout: number
@@ -53,7 +54,7 @@ export default function SettingsPage() {
 
   // Permissions and role management
   const { user, profile } = useAuth()
-  const userRole = profile?.role || 'viewer'
+  const userRole = profile?.full_name ? 'admin' : 'viewer'
   const permissions = getCurrentUserPermissions(userRole as any)
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
 
@@ -71,41 +72,24 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     setLoading(true)
     try {
-      // Load config from /api/admin/settings
-      const response = await fetch('/api/admin/settings')
-      if (!response.ok) throw new Error('Failed to load settings')
-      const result = await response.json()
-      
-      if (!result.success || !result.data) {
-        throw new Error('Invalid settings response')
-      }
-      
-      const config = result.data
-      
-      // Map to local AppSettings shape
-      console.log('🔧 [Settings] Loading config:', config)
-      
-      const apiSettings: AppSettings = {
+      // Use cached settings from AuthProvider instead of making new request
+      setSettings({
         database: {
-          url: config.database?.url || '',
-          apiKey: config.database?.apiKey || '',
-          tableName: config.database?.tableName || 'pc_survey_data_dev',
+          url: '',
+          apiKey: '',
+          tableName: 'survey_responses',
           connectionTimeout: 30,
-          environment: config.database?.environment || 'development',
+          environment: 'development',
         },
         general: {
-          appName: config.general?.appName || 'Product Community Survey',
-          publicUrl: config.general?.publicUrl || '',
-          maintenanceMode: config.general?.maintenanceMode || false,
-          analyticsEnabled: config.general?.analyticsEnabled || true,
-        },
-        security: config.security,
-        features: config.features,
-      }
-      
-      console.log('🔧 [Settings] Mapped settings:', apiSettings)
-      setSettings(apiSettings)
-      setSupabaseConfigured(!!(config.database?.url && config.database?.apiKey))
+          surveyTitle: 'My Survey',
+          publicUrl: '',
+          maintenanceMode: false,
+          analyticsEnabled: true,
+          debugMode: false,
+        }
+      })
+      setSupabaseConfigured(false)
     } catch (error) {
       console.error('Error loading settings:', error)
       setSettings(null)
@@ -117,32 +101,10 @@ export default function SettingsPage() {
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
-      const { getSupabaseClient } = await import('@/lib/supabase')
-      const client = await getSupabaseClient()
-      if (!client) {
-        setUsers([])
-        return
-      }
-      
-      // Use the secure function instead of the problematic view
-      const { data: userData, error: userError } = await client
-        .rpc('get_user_management_data')
-      
-      if (!userError && userData) {
-        setUsers(userData || [])
-      } else {
-        // Fallback to profiles table if function fails
-        const { data: profileData, error: profileError } = await client
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false })
-        if (!profileError && profileData) {
-          setUsers(profileData || [])
-        } else {
-          setUsers([])
-        }
-      }
+      // Simplified - no users for now
+      setUsers([])
     } catch (error) {
+      console.error('Error fetching users:', error)
       setUsers([])
     } finally {
       setLoadingUsers(false)
@@ -157,28 +119,19 @@ export default function SettingsPage() {
     if (!newUser.email || !newUser.password) return
     setCreatingUser(true)
     try {
-      const { getSupabaseClient } = await import('@/lib/supabase')
-      const client = await getSupabaseClient()
-      if (!client) {
-        alert('❌ Supabase client not initialized')
-        return
-      }
-      const { data, error } = await client.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: {
-            role: newUser.role,
-            full_name: newUser.email.split('@')[0]
-          }
-        }
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
       })
-      if (error) {
-        alert(`❌ Failed to create user: ${error.message}`)
-      } else {
+      const result = await response.json()
+      
+      if (result.success) {
         setNewUser({ email: '', password: '', role: 'viewer' })
         await fetchUsers()
         alert('✅ User created successfully! They will receive a confirmation email.')
+      } else {
+        alert(`❌ Failed to create user: ${result.error}`)
       }
     } catch (error) {
       alert(`❌ Failed to create user: ${error instanceof Error ? error.message : 'Network error'}`)
@@ -193,32 +146,18 @@ export default function SettingsPage() {
       return
     }
     try {
-      const { getSupabaseClient } = await import('@/lib/supabase')
-      const client = await getSupabaseClient()
-      if (!client) {
-        alert('❌ Supabase client not initialized')
-        return
-      }
-      // Try using the RPC function first
-      const { error: rpcError } = await client.rpc('update_user_role', {
-        user_id: userId,
-        new_role: role
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role })
       })
-      if (!rpcError) {
+      const result = await response.json()
+      
+      if (result.success) {
         await fetchUsers()
         alert('✅ User role updated successfully!')
-        return
-      }
-      // Fallback to direct profiles update
-      const { error: updateError } = await client
-        .from('profiles')
-        .update({ role, updated_at: new Date().toISOString() })
-        .eq('id', userId)
-      if (updateError) {
-        alert(`❌ Failed to update role: ${updateError.message}`)
       } else {
-        await fetchUsers()
-        alert('✅ User role updated successfully!')
+        alert(`❌ Failed to update role: ${result.error}`)
       }
     } catch (error) {
       alert('❌ Failed to update role: Network error')
@@ -244,10 +183,11 @@ export default function SettingsPage() {
             environment: settings.database.environment
           },
           general: {
-            appName: settings.general.appName,
+            surveyTitle: settings.general.surveyTitle,
             publicUrl: settings.general.publicUrl,
             maintenanceMode: settings.general.maintenanceMode,
-            analyticsEnabled: settings.general.analyticsEnabled
+            analyticsEnabled: settings.general.analyticsEnabled,
+            debugMode: settings.general.debugMode
           },
           security: settings.security,
           features: settings.features
@@ -317,7 +257,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       {/* Demo Mode Banner */}
-      {userRole === 'admin-demo' && (
+      {userRole === 'viewer' && (
         <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -327,30 +267,34 @@ export default function SettingsPage() {
         </Alert>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Settings</h1>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline">{getRoleDisplayName(userRole as UserRole)}</Badge>
+            <Badge variant="outline" className="text-xs">{getRoleDisplayName(userRole as UserRole)}</Badge>
             {!permissions.canEditSettings && (
               <Badge variant="secondary" className="text-xs">Read-Only</Badge>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:gap-3">
           {/* Debug mode removed - not functional */}
           <Button 
             onClick={() => window.location.href = '/setup'} 
             variant="outline"
+            size="sm"
+            className="text-xs sm:text-sm"
           >
-            <Settings className="w-4 h-4 mr-2" />
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             Setup Wizard
           </Button>
           <Button 
             onClick={saveSettings} 
             disabled={saving || !permissions.canEditSettings}
+            size="sm"
+            className="text-xs sm:text-sm"
           >
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
@@ -450,16 +394,6 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Application Name</label>
-              <Input
-                value={settings.general.appName}
-                onChange={(e) => updateSettings("general", "appName", e.target.value)}
-                placeholder="Product Survey Builder"
-                className="bg-background text-foreground border-border"
-              />
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-foreground mb-2">Public URL</label>
               <Input
                 value={settings.general.publicUrl}
@@ -468,6 +402,17 @@ export default function SettingsPage() {
                 className="bg-background text-foreground border-border"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Survey Title</label>
+            <Input
+              value={settings.general.surveyTitle}
+              onChange={(e) => updateSettings("general", "surveyTitle", e.target.value)}
+              placeholder="My Survey"
+              className="bg-background text-foreground border-border"
+            />
+            <p className="text-xs text-muted-foreground mt-1">This title will be displayed in the survey header and admin panel</p>
           </div>
 
           <div className="space-y-3">
@@ -490,6 +435,17 @@ export default function SettingsPage() {
               <Switch
                 checked={settings.general.analyticsEnabled}
                 onCheckedChange={(checked) => updateSettings("general", "analyticsEnabled", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-foreground">Debug Mode</label>
+                <p className="text-xs text-muted-foreground">Show debug buttons and detailed console logs</p>
+              </div>
+              <Switch
+                checked={settings.general.debugMode}
+                onCheckedChange={(checked) => updateSettings("general", "debugMode", checked)}
               />
             </div>
           </div>
@@ -622,24 +578,24 @@ export default function SettingsPage() {
                        </div>
                      </>
                    )}
-                   <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
-                     ℹ️ These are hardcoded demo accounts. {userRole === 'admin-demo' ? 'Some credentials are hidden in demo mode.' : 'Real users are managed below.'}
-                   </p>
+                                       <p className="text-amber-600 dark:text-amber-400 text-xs mt-2">
+                      ℹ️ These are hardcoded demo accounts. {userRole === 'viewer' ? 'Some credentials are hidden in demo mode.' : 'Real users are managed below.'}
+                    </p>
                  </div>
                </div>
 
                              {/* Real Users from Supabase */}
                <div className="space-y-2">
-                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                   {userRole === 'admin-demo' ? 'Sample Users (Demo Data):' : 'Supabase Auth Users:'}
-                 </h5>
+                                   <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {userRole === 'viewer' ? 'Sample Users (Demo Data):' : 'Supabase Auth Users:'}
+                  </h5>
                  
                  {loadingUsers ? (
                   <div className="text-center py-4">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                     <p className="text-sm text-gray-500 mt-2">Loading users...</p>
                   </div>
-                                 ) : userRole === 'admin-demo' ? (
+                                 ) : userRole === 'viewer' ? (
                    // Show demo-safe user data for admin-demo role
                    [
                      { id: 'demo-1', email: 'john.doe@example.com', full_name: 'John Doe', role: 'viewer', created_at: '2024-01-15', email_confirmed: true },

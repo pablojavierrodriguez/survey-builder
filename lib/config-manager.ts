@@ -1,23 +1,11 @@
-// Centralized configuration management with secure API access
-interface AppConfig {
-  appName: string
-  appUrl: string
-  enableExport: boolean
-  enableEmailNotifications: boolean
-  enableAnalytics: boolean
-  environment: string
-  isProduction: boolean
-}
+import { createClient } from '@supabase/supabase-js'
 
-interface DatabaseConfig {
-  supabaseUrl: string
-  anonKey: string
-  tableName: string
-  environment: string
-}
-
-interface SettingsConfig {
+// Configuration interface
+export interface AppConfig {
   database: {
+    url: string
+    apiKey: string
+    serviceRoleKey?: string
     tableName: string
     environment: string
   }
@@ -27,396 +15,217 @@ interface SettingsConfig {
     maintenanceMode: boolean
     analyticsEnabled: boolean
   }
-  security: {
-    sessionTimeout: number
-    maxLoginAttempts: number
-    enableRateLimit: boolean
-    enforceStrongPasswords: boolean
-    enableTwoFactor: boolean
-  }
-  features: {
-    enableExport: boolean
-    enableEmailNotifications: boolean
-    enableAnalytics: boolean
-  }
 }
 
-interface CompleteConfig {
-  app: AppConfig
-  database: DatabaseConfig
-  settings: SettingsConfig
-}
+// Configuration sources priority:
+// 1. Environment variables (highest priority)
+// 2. Local config file (.app-config.json)
+// 3. Database (lowest priority)
 
-class ConfigManager {
-  private appConfig: AppConfig | null = null
-  private databaseConfig: DatabaseConfig | null = null
-  private settingsConfig: SettingsConfig | null = null
-  private completeConfig: CompleteConfig | null = null
-  private lastFetch: number = 0
-  private lastSettingsFetch: number = 0
-  private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+export class ConfigManager {
+  private static instance: ConfigManager
+  private config: AppConfig | null = null
+  private supabaseClient: any = null
 
-  // Get current environment from NODE_ENV
-  private getCurrentEnvironment(): string {
-    return process.env.NODE_ENV === 'production' ? 'prod' : 'dev'
-  }
+  private constructor() {}
 
-  // Get database configuration from environment variables (ALWAYS)
-  getDatabaseConfig(): DatabaseConfig {
-    const environment = this.getCurrentEnvironment()
-    const isProd = environment === 'prod'
-    
-    return {
-      supabaseUrl: 
-        process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL ||
-        process.env.POSTGRES_SUPABASE_URL ||
-        process.env.NEXT_PUBLIC_SUPABASE_URL ||
-        '',
-      anonKey: 
-        process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        process.env.POSTGRES_SUPABASE_ANON_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-        '',
-      tableName: process.env.NEXT_PUBLIC_DB_TABLE || (isProd ? 'pc_survey_data' : 'pc_survey_data_dev'),
-      environment: environment
+  static getInstance(): ConfigManager {
+    if (!ConfigManager.instance) {
+      ConfigManager.instance = new ConfigManager()
     }
+    return ConfigManager.instance
   }
 
-  // Get default app settings (no database credentials)
-  private getDefaultAppSettings(): SettingsConfig {
-    const environment = this.getCurrentEnvironment()
-    const isProd = environment === 'prod'
-    
+  // Check if environment variables are available
+  private hasEnvironmentConfig(): boolean {
+    return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  }
+
+  // Load config from environment variables
+  private loadFromEnvironment(): AppConfig | null {
+    if (!this.hasEnvironmentConfig()) return null
+
     return {
       database: {
-        tableName: isProd ? 'pc_survey_data' : 'pc_survey_data_dev',
-        environment: environment
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        tableName: 'survey_data',
+        environment: process.env.NODE_ENV || 'development'
       },
       general: {
-        appName: isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)',
-        publicUrl: isProd ? 'https://productcommunitysurvey.vercel.app' : 'https://productcommunitysurvey-dev.vercel.app',
-        maintenanceMode: false,
-        analyticsEnabled: true
-      },
-      security: {
-        sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000'),
-        maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3'),
-        enableRateLimit: true,
-        enforceStrongPasswords: isProd,
-        enableTwoFactor: false
-      },
-      features: {
-        enableExport: process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true',
-        enableEmailNotifications: isProd,
-        enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
+        appName: process.env.NEXT_PUBLIC_APP_NAME || 'Survey App',
+        publicUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        maintenanceMode: process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true',
+        analyticsEnabled: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== 'false'
       }
     }
   }
 
-  // Get complete configuration (all settings)
-  async getCompleteConfig(): Promise<CompleteConfig> {
-    const now = Date.now()
-    
-    // Return cached config if still valid
-    if (this.completeConfig && (now - this.lastFetch) < this.CACHE_DURATION) {
-      return this.completeConfig
-    }
-
+  // Load config from local file (server-side only)
+  private async loadFromLocalFile(): Promise<AppConfig | null> {
     try {
-      const [appConfig, settingsConfig] = await Promise.all([
-        this.getAppConfig(),
-        this.getSettingsConfig()
-      ])
+      // Only try to read local file on server side
+      if (typeof window !== 'undefined') return null
 
-      const databaseConfig = this.getDatabaseConfig()
-
-      this.completeConfig = {
-        app: appConfig,
-        database: databaseConfig,
-        settings: settingsConfig
-      }
+      // Dynamic import to avoid client-side issues
+      const fs = await import('fs')
+      const path = await import('path')
       
-      this.lastFetch = now
-      return this.completeConfig
-    } catch (error) {
-      console.error('Error getting complete config:', error)
+      const configPath = path.join(process.cwd(), '.app-config.json')
       
-      // Return fallback config
-      const fallbackConfig: CompleteConfig = {
-        app: {
-          appName: 'Product Community Survey',
-          appUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
-          enableExport: true,
-          enableEmailNotifications: false,
-          enableAnalytics: true,
-          environment: 'development',
-          isProduction: false
-        },
-        database: this.getDatabaseConfig(),
-        settings: this.getDefaultAppSettings()
-      }
-      
-      this.completeConfig = fallbackConfig
-      this.lastFetch = now
-      
-      return fallbackConfig
-    }
-  }
-
-  // Get app configuration from secure API
-  async getAppConfig(): Promise<AppConfig> {
-    const now = Date.now()
-    
-    // Return cached config if still valid
-    if (this.appConfig && (now - this.lastFetch) < this.CACHE_DURATION) {
-      return this.appConfig
-    }
-
-    try {
-      const response = await fetch('/api/config/app')
-      const result = await response.json()
-      
-      if (result.success && result.data) {
-        this.appConfig = result.data
-        this.lastFetch = now
-        return result.data
-      } else {
-        throw new Error(result.error || 'Failed to fetch app config')
+      if (fs.existsSync(configPath)) {
+        const configData = fs.readFileSync(configPath, 'utf8')
+        return JSON.parse(configData)
       }
     } catch (error) {
-      console.error('Error fetching app config:', error)
+      // Silently fail if fs is not available (client-side)
+      console.warn('Could not load local config file:', error)
+    }
+    return null
+  }
+
+  // Save config to local file (server-side only)
+  async saveToLocalFile(config: AppConfig): Promise<boolean> {
+    try {
+      // Only save on server side
+      if (typeof window !== 'undefined') return false
+
+      // Dynamic import to avoid client-side issues
+      const fs = await import('fs')
+      const path = await import('path')
       
-      // Return fallback config
-      const fallbackConfig: AppConfig = {
-        appName: 'Product Community Survey',
-        appUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
-        enableExport: true,
-        enableEmailNotifications: false,
-        enableAnalytics: true,
-        environment: 'development',
-        isProduction: false
-      }
+      const configPath = path.join(process.cwd(), '.app-config.json')
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
       
-      this.appConfig = fallbackConfig
-      this.lastFetch = now
-      
-      return fallbackConfig
-    }
-  }
-
-  // Get settings configuration with priority: DB > Default
-  async getSettingsConfig(): Promise<SettingsConfig> {
-    const now = Date.now()
-    
-    // Return cached config if still valid
-    if (this.settingsConfig && (now - this.lastSettingsFetch) < this.CACHE_DURATION) {
-      return this.settingsConfig
-    }
-
-    try {
-      const environment = this.getCurrentEnvironment()
-      const response = await fetch(`/api/admin/settings?environment=${environment}`)
-      const result = await response.json()
-      
-      if (result.success && result.data) {
-        // User has saved settings in DB - use them
-        this.settingsConfig = result.data
-        this.lastSettingsFetch = now
-        return result.data
-      } else {
-        // No saved settings - use defaults
-        console.warn('No saved settings found, using default configuration')
-        const defaultSettings = this.getDefaultAppSettings()
-        this.settingsConfig = defaultSettings
-        this.lastSettingsFetch = now
-        return defaultSettings
-      }
+      console.log('✅ Configuration saved to local file')
+      return true
     } catch (error) {
-      console.error('Error fetching settings config:', error)
-      
-      // Return default settings
-      const defaultSettings = this.getDefaultAppSettings()
-      this.settingsConfig = defaultSettings
-      this.lastSettingsFetch = now
-      return defaultSettings
-    }
-  }
-
-  // Get dynamic table name from settings
-  async getTableName(): Promise<string> {
-    try {
-      const settings = await this.getSettingsConfig()
-      return settings.database.tableName
-    } catch (error) {
-      console.error('Error getting table name from settings:', error)
-      // Fallback to environment variable or default based on environment
-      const environment = this.getCurrentEnvironment()
-      const isProd = environment === 'prod'
-      return process.env.NEXT_PUBLIC_DB_TABLE || (isProd ? 'pc_survey_data' : 'pc_survey_data_dev')
-    }
-  }
-
-  // Get app name from settings
-  async getAppName(): Promise<string> {
-    try {
-      const settings = await this.getSettingsConfig()
-      return settings.general.appName
-    } catch (error) {
-      console.error('Error getting app name from settings:', error)
-      const environment = this.getCurrentEnvironment()
-      const isProd = environment === 'prod'
-      return process.env.NEXT_PUBLIC_APP_NAME || (isProd ? 'Product Community Survey' : 'Product Community Survey (DEV)')
-    }
-  }
-
-  // Get session timeout from settings
-  async getSessionTimeout(): Promise<number> {
-    try {
-      const settings = await this.getSettingsConfig()
-      return settings.security.sessionTimeout
-    } catch (error) {
-      console.error('Error getting session timeout from settings:', error)
-      return parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '28800000')
-    }
-  }
-
-  // Get max login attempts from settings
-  async getMaxLoginAttempts(): Promise<number> {
-    try {
-      const settings = await this.getSettingsConfig()
-      return settings.security.maxLoginAttempts
-    } catch (error) {
-      console.error('Error getting max login attempts from settings:', error)
-      return parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '3')
-    }
-  }
-
-  // Get analytics enabled from settings
-  async getAnalyticsEnabled(): Promise<boolean> {
-    try {
-      const settings = await this.getSettingsConfig()
-      return settings.features.enableAnalytics
-    } catch (error) {
-      console.error('Error getting analytics enabled from settings:', error)
-      return process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true'
-    }
-  }
-
-  // Get export enabled from settings
-  async getExportEnabled(): Promise<boolean> {
-    try {
-      const settings = await this.getSettingsConfig()
-      return settings.features.enableExport
-    } catch (error) {
-      console.error('Error getting export enabled from settings:', error)
-      return process.env.NEXT_PUBLIC_ENABLE_EXPORT === 'true'
-    }
-  }
-
-  // Get email notifications enabled from settings
-  async getEmailNotificationsEnabled(): Promise<boolean> {
-    try {
-      const settings = await this.getSettingsConfig()
-      return settings.features.enableEmailNotifications
-    } catch (error) {
-      console.error('Error getting email notifications enabled from settings:', error)
-      const environment = this.getCurrentEnvironment()
-      return environment === 'prod' // Only enabled in production
-    }
-  }
-
-  // Get database configuration with dynamic table name (server-side only)
-  async getDatabaseConfigWithDynamicTable(): Promise<DatabaseConfig> {
-    const baseConfig = this.getDatabaseConfig()
-    const dynamicTableName = await this.getTableName()
-    
-    return {
-      ...baseConfig,
-      tableName: dynamicTableName
-    }
-  }
-
-  // Check if database is configured
-  isDatabaseConfigured(): boolean {
-    try {
-      const config = this.getDatabaseConfig()
-      return !!(config.supabaseUrl && config.anonKey)
-    } catch {
+      console.error('❌ Error saving local config:', error)
       return false
     }
   }
 
-  // Get specific config value
-  async getConfigValue(key: keyof AppConfig): Promise<any> {
-    const config = await this.getAppConfig()
-    return config[key]
-  }
-
-  // Refresh configuration cache
-  async refreshConfig(): Promise<void> {
-    this.lastFetch = 0
-    this.lastSettingsFetch = 0
-    this.appConfig = null
-    this.settingsConfig = null
-    this.completeConfig = null
-    await this.getCompleteConfig()
-  }
-
-  // Get environment variable safely (server-side only)
-  getEnvVar(key: string): string {
-    if (typeof window !== 'undefined') {
-      throw new Error('Environment variables are server-side only')
-    }
-    return process.env[key] || ''
-  }
-
-  // Get current environment (public method)
-  getEnvironment(): string {
-    return this.getCurrentEnvironment()
-  }
-
-  // Check if settings are configured by user
-  async hasUserConfiguredSettings(): Promise<boolean> {
+  // Load config from database using bootstrap credentials
+  private async loadFromDatabase(bootstrapUrl?: string, bootstrapKey?: string): Promise<AppConfig | null> {
     try {
-      const environment = this.getCurrentEnvironment()
-      const response = await fetch(`/api/admin/settings?environment=${environment}`)
-      const result = await response.json()
+      // Use bootstrap credentials or fallback to environment
+      const url = bootstrapUrl || process.env.NEXT_PUBLIC_SUPABASE_URL
+      const key = bootstrapKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (!url || !key) return null
+
+      const supabase = createClient(url, key)
       
-      return result.success && result.data
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('settings')
+        .eq('environment', 'dev')
+        .limit(1)
+        .single()
+
+      if (error || !data) return null
+
+      return data.settings
     } catch (error) {
-      return false
+      console.warn('Could not load config from database:', error)
+      return null
     }
   }
 
-  // Check if app needs initial setup
-  async needsInitialSetup(): Promise<boolean> {
-    const hasDatabaseConfig = this.isDatabaseConfigured()
-    const hasUserSettings = await this.hasUserConfiguredSettings()
-    
-    return !hasDatabaseConfig || !hasUserSettings
+  // Get configuration with fallback chain
+  async getConfig(bootstrapUrl?: string, bootstrapKey?: string): Promise<AppConfig | null> {
+    // Return cached config if available
+    if (this.config) return this.config
+
+    // Try environment variables first
+    let config = this.loadFromEnvironment()
+    if (config) {
+      console.log('📋 Config loaded from environment variables')
+      this.config = config
+      return config
+    }
+
+    // Try local file
+    config = await this.loadFromLocalFile()
+    if (config) {
+      console.log('📋 Config loaded from local file')
+      this.config = config
+      return config
+    }
+
+    // Try database with bootstrap credentials
+    config = await this.loadFromDatabase(bootstrapUrl, bootstrapKey)
+    if (config) {
+      console.log('📋 Config loaded from database')
+      this.config = config
+      return config
+    }
+
+    console.warn('⚠️ No configuration found')
+    return null
+  }
+
+  // Create Supabase client from config
+  async getSupabaseClient(bootstrapUrl?: string, bootstrapKey?: string): Promise<any> {
+    if (this.supabaseClient) return this.supabaseClient
+
+    const config = await this.getConfig(bootstrapUrl, bootstrapKey)
+    if (!config) return null
+
+    this.supabaseClient = createClient(config.database.url, config.database.apiKey)
+    return this.supabaseClient
+  }
+
+  // Save configuration to multiple sources
+  async saveConfig(config: AppConfig): Promise<{ success: boolean; savedTo: string[] }> {
+    const savedTo: string[] = []
+
+    try {
+      // Save to local file
+      const localSaved = await this.saveToLocalFile(config)
+      if (localSaved) savedTo.push('local')
+
+      // Save to database if we have a client
+      if (this.supabaseClient) {
+        const { error } = await this.supabaseClient
+          .from('app_settings')
+          .upsert({
+            environment: 'dev',
+            survey_table_name: config.database.tableName,
+            app_name: config.general.appName,
+            settings: config
+          })
+
+        if (!error) {
+          savedTo.push('database')
+          console.log('✅ Configuration saved to database')
+        }
+      }
+
+      // Update cached config
+      this.config = config
+
+      return { success: savedTo.length > 0, savedTo }
+    } catch (error) {
+      console.error('❌ Error saving configuration:', error)
+      return { success: false, savedTo }
+    }
+  }
+
+  // Clear cached configuration
+  clearCache(): void {
+    this.config = null
+    this.supabaseClient = null
+    console.log('🗑️ Configuration cache cleared')
+  }
+
+  // Check if configuration is available
+  async isConfigured(bootstrapUrl?: string, bootstrapKey?: string): Promise<boolean> {
+    const config = await this.getConfig(bootstrapUrl, bootstrapKey)
+    return !!config
   }
 }
 
-// Global config manager instance
-export const configManager = new ConfigManager()
-
-// Convenience functions
-export const getCompleteConfig = () => configManager.getCompleteConfig()
-export const getAppConfig = () => configManager.getAppConfig()
-export const getSettingsConfig = () => configManager.getSettingsConfig()
-export const getTableName = () => configManager.getTableName()
-export const getAppName = () => configManager.getAppName()
-export const getSessionTimeout = () => configManager.getSessionTimeout()
-export const getMaxLoginAttempts = () => configManager.getMaxLoginAttempts()
-export const getAnalyticsEnabled = () => configManager.getAnalyticsEnabled()
-export const getExportEnabled = () => configManager.getExportEnabled()
-export const getEmailNotificationsEnabled = () => configManager.getEmailNotificationsEnabled()
-export const getDatabaseConfig = () => configManager.getDatabaseConfig()
-export const getDatabaseConfigWithDynamicTable = () => configManager.getDatabaseConfigWithDynamicTable()
-export const isDatabaseConfigured = () => configManager.isDatabaseConfigured()
-export const getConfigValue = (key: keyof AppConfig) => configManager.getConfigValue(key)
-export const refreshConfig = () => configManager.refreshConfig()
-export const getEnvVar = (key: string) => configManager.getEnvVar(key)
-export const getEnvironment = () => configManager.getEnvironment()
-export const hasUserConfiguredSettings = () => configManager.hasUserConfiguredSettings()
-export const needsInitialSetup = () => configManager.needsInitialSetup()
+// Export singleton instance
+export const configManager = ConfigManager.getInstance()

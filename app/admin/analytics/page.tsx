@@ -17,7 +17,6 @@ interface AnalyticsData {
   companyDistribution: { [key: string]: number }
   toolsUsage: { [key: string]: number }
   learningMethods: { [key: string]: number }
-  recentResponses: any[]
   totalResponses: number
 }
 
@@ -94,16 +93,16 @@ const RankingChart = memo(({
       <CardContent>
         <div className="space-y-2">
           {sortedData.map(([key, count]) => (
-            <div key={key} className="flex items-center justify-between">
-              <span className="text-sm truncate flex-1">{key}</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-16 bg-secondary rounded-full h-2">
+            <div key={key} className="flex items-center justify-between gap-2">
+              <span className="text-xs sm:text-sm truncate flex-1 min-w-0">{key}</span>
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                <div className="w-12 sm:w-16 bg-secondary rounded-full h-2">
                   <div
                     className="bg-primary h-2 rounded-full"
                     style={{ width: `${(count / total) * 100}%` }}
                   />
                 </div>
-                <span className="text-sm font-medium min-w-[3rem] text-right">
+                <span className="text-xs sm:text-sm font-medium min-w-[2rem] sm:min-w-[3rem] text-right">
                   {count}
                 </span>
               </div>
@@ -295,12 +294,12 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Survey response analytics and insights
             {lastUpdated && (
               <span className="ml-2 text-xs">
@@ -310,21 +309,22 @@ export default function AnalyticsPage() {
           </p>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={fetchAnalyticsData}
             disabled={loading}
+            className="text-xs sm:text-sm"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
+              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                 Export
               </Button>
             </DropdownMenuTrigger>
@@ -341,7 +341,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Responses"
           value={data.totalResponses}
@@ -365,7 +365,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <RankingChart
           data={data.roleDistribution}
           title="Role Distribution"
@@ -400,31 +400,7 @@ export default function AnalyticsPage() {
         />
       </div>
 
-      {/* Recent Responses */}
-      {data.recentResponses && data.recentResponses.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Responses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {data.recentResponses.slice(0, 5).map((response: any) => (
-                <div key={response.id} className="flex items-center justify-between p-2 border rounded">
-                  <div>
-                    <p className="font-medium">{response.role || 'Unknown Role'}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {response.company_type} • {response.industry}
-                    </p>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(response.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
     </div>
   )
 }

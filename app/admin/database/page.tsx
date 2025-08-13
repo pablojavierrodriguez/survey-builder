@@ -282,24 +282,29 @@ Note: Auto-setup is not available. Please configure the database manually using 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Database Management</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Database Management</h1>
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
             {connectionStatus === "connected" ? (
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             ) : connectionStatus === "disconnected" ? (
-              <XCircle className="w-5 h-5 text-red-500" />
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
             ) : (
-              <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />
+              <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 animate-spin" />
             )}
-            <span className="text-sm text-muted-foreground capitalize">{connectionStatus}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground capitalize">{connectionStatus}</span>
           </div>
-          <Button onClick={() => {
-            testConnection()
-            fetchResponses()
-          }} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button 
+            onClick={() => {
+              testConnection()
+              fetchResponses()
+            }} 
+            variant="outline"
+            size="sm"
+            className="text-xs sm:text-sm"
+          >
+            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             Refresh
           </Button>
         </div>
@@ -423,15 +428,15 @@ Note: Auto-setup is not available. Please configure the database manually using 
           <CardTitle className="text-foreground">Filters & Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <Input
                   placeholder="Search responses..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 sm:pl-10 text-sm"
                 />
               </div>
             </div>
@@ -439,7 +444,7 @@ Note: Auto-setup is not available. Please configure the database manually using 
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-3 py-2 border bg-input text-input-foreground border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-background"
+              className="px-3 py-2 border bg-input text-input-foreground border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-background text-sm"
             >
               <option value="" className="bg-popover text-popover-foreground">All Roles</option>
               {uniqueRoles.map((role) => (
@@ -449,8 +454,8 @@ Note: Auto-setup is not available. Please configure the database manually using 
               ))}
             </select>
 
-            <Button onClick={exportData} disabled={filteredResponses.length === 0}>
-              <Download className="w-4 h-4 mr-2" />
+            <Button onClick={exportData} disabled={filteredResponses.length === 0} size="sm" className="text-xs sm:text-sm">
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
               Export CSV
             </Button>
           </div>
@@ -475,18 +480,18 @@ Note: Auto-setup is not available. Please configure the database manually using 
           ) : filteredResponses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No responses found matching your criteria.</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {filteredResponses.map((response) => (
-                <div key={response.id} className="border border-border rounded-lg p-4 bg-card text-card-foreground">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{response.role}</Badge>
-                        <Badge variant="secondary">{response.company_type}</Badge>
+                <div key={response.id} className="border border-border rounded-lg p-3 sm:p-4 bg-card text-card-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">{response.role}</Badge>
+                        <Badge variant="secondary" className="text-xs">{response.company_type}</Badge>
                         <span className="text-xs text-muted-foreground">{new Date(response.created_at).toLocaleString()}</span>
                       </div>
 
-                      <p className="text-sm text-foreground mb-2">
+                      <p className="text-xs sm:text-sm text-foreground mb-2 break-words">
                         <strong>Challenge:</strong> {response.main_challenge}
                       </p>
 
@@ -500,7 +505,7 @@ Note: Auto-setup is not available. Please configure the database manually using 
                       </div>
 
                       {response.email && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground break-all">
                           <strong>Email:</strong> {response.email}
                         </p>
                       )}
@@ -510,9 +515,9 @@ Note: Auto-setup is not available. Please configure the database manually using 
                       size="sm"
                       variant="ghost"
                       onClick={() => deleteResponse(response.id)}
-                      className="text-destructive hover:text-destructive-foreground hover:bg-destructive/10"
+                      className="text-destructive hover:text-destructive-foreground hover:bg-destructive/10 h-8 w-8 p-0 flex-shrink-0"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </Button>
                   </div>
                 </div>

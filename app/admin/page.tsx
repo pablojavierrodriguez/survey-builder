@@ -12,7 +12,7 @@ import {
   CheckCircle
 } from 'lucide-react'
 import Link from 'next/link'
-import { StatusChecker } from '@/components/debug/status-checker'
+
 
 export const metadata: Metadata = {
   title: 'Admin Dashboard - Product Community Survey',
@@ -34,8 +34,7 @@ export default function AdminDashboard() {
         </Badge>
       </div>
 
-      {/* System Status Checker */}
-      <StatusChecker />
+
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

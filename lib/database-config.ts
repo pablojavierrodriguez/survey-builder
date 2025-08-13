@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { getSupabaseClient } from './supabase'
 
 // Simple environment variable getter (server-side only)
 function getEnvVar(key: string): string {
@@ -55,7 +55,7 @@ export async function checkDatabaseConnection(): Promise<{ success: boolean; err
   }
 
   try {
-    const client = supabase
+    const client = await getSupabaseClient()
     if (!client) {
       return { success: false, error: 'Supabase client not available' }
     }
@@ -87,7 +87,7 @@ export async function submitSurveyToDatabase(surveyData: any): Promise<{ success
   }
 
   try {
-    const client = supabase
+    const client = await getSupabaseClient()
     if (!client) {
       return { success: false, error: 'Supabase client not available' }
     }
@@ -137,7 +137,7 @@ export async function ensureTableExists(tableName?: string): Promise<boolean> {
   }
 
   try {
-    const client = supabase
+    const client = await getSupabaseClient()
     if (!client) {
       return false
     }

@@ -1,115 +1,58 @@
 import { createClient } from '@supabase/supabase-js'
+import { configManager } from './config-manager'
 
-// Simple environment variable getter (server-side only)
-function getEnvVar(key: string): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: only use NEXT_PUBLIC_ variables
-    return process.env[key] || ''
-  } else {
-    // Server-side: try POSTGRES_ variables first, then NEXT_PUBLIC_
-    const postgresKey = key.replace('NEXT_PUBLIC_', 'POSTGRES_')
-    return process.env[postgresKey] || process.env[key] || ''
+// Dynamic Supabase client that uses ConfigManager
+let supabaseClient: any = null
+let isInitialized = false
+
+// Initialize Supabase client
+async function initializeSupabase() {
+  if (isInitialized) return supabaseClient
+
+  try {
+    supabaseClient = await configManager.getSupabaseClient()
+    isInitialized = true
+    return supabaseClient
+  } catch (error) {
+    console.error('Failed to initialize Supabase client:', error)
+    return null
   }
 }
 
-// Get Supabase configuration with multiple fallbacks
-function getSupabaseConfig() {
-  // Try multiple possible variable names
-  const supabaseUrl = 
-    getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ||
-    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ||
-    getEnvVar('POSTGRES_SUPABASE_URL') ||
-    ''
-
-  const supabaseAnonKey = 
-    getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-    getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-    getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ||
-    ''
-
-  // Only log on server side to avoid POSTGRES_ warnings
-  if (typeof window === 'undefined') {
-    console.log('🔧 [Supabase] Config Check:', {
-      supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-      supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
-      envKeys: {
-        NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        POSTGRES_NEXT_PUBLIC_SUPABASE_URL: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        POSTGRES_SUPABASE_URL: getEnvVar('POSTGRES_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-        POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-        POSTGRES_SUPABASE_ANON_KEY: getEnvVar('POSTGRES_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-      }
-    })
-  } else {
-    // Client-side logging without POSTGRES_ variables
-    console.log('🔧 [Supabase] Config Check:', {
-      supabaseUrl: supabaseUrl ? 'SET' : 'EMPTY',
-      supabaseAnonKey: supabaseAnonKey ? 'SET' : 'EMPTY',
-      envKeys: {
-        NEXT_PUBLIC_SUPABASE_URL: getEnvVar('NEXT_PUBLIC_SUPABASE_URL') ? 'SET' : 'EMPTY',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? 'SET' : 'EMPTY',
-      }
-    })
-  }
-
-  return { supabaseUrl, supabaseAnonKey }
+// Get Supabase client (async)
+export async function getSupabaseClient() {
+  return await initializeSupabase()
 }
 
-const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig()
+// Get Supabase client (sync - returns null if not ready)
+export function getSupabaseClientSync() {
+  return supabaseClient
+}
 
 // Check if Supabase is configured
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
-
-console.log('🔧 [Supabase] Client initialization:', {
-  isConfigured: isSupabaseConfigured,
-  urlLength: supabaseUrl?.length || 0,
-  keyLength: supabaseAnonKey?.length || 0
-})
-
-// Create Supabase client only if properly configured
-export const supabase = isSupabaseConfigured 
-  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
-  : null
-
-// Function to get Supabase client with dynamic config
-export async function getSupabaseClient() {
-  if (supabase) {
-    return supabase
-  }
-  
-  // Try to fetch config from API if not available
-  try {
-    console.log('🔧 [Supabase] Attempting to fetch config from API...')
-    const response = await fetch('/api/config/supabase')
-    const config = await response.json()
-    
-    console.log('🔧 [Supabase] API config response:', {
-      success: !config.error,
-      hasUrl: !!config.supabaseUrl,
-      hasKey: !!config.supabaseAnonKey
-    })
-    
-    if (config.supabaseUrl && config.supabaseAnonKey) {
-      return createClient<Database>(config.supabaseUrl, config.supabaseAnonKey)
-    }
-  } catch (error) {
-    console.error('❌ [Supabase] Error fetching config from API:', error)
-  }
-  
-  return null
+export async function isSupabaseConfigured() {
+  return await configManager.isConfigured()
 }
 
-// Helper function to check if we can use Supabase features
-export function requireSupabase() {
-  if (!isSupabaseConfigured || !supabase) {
-    console.warn('⚠️ [Supabase] Not configured - falling back to demo mode')
-    return false
-  }
-  return true
+// Clear cache and reinitialize
+export async function clearSupabaseCache() {
+  configManager.clearCache()
+  supabaseClient = null
+  isInitialized = false
+  console.log('🗑️ Supabase cache cleared')
 }
 
-// Database types for better TypeScript support
+// Legacy exports for backward compatibility
+export const supabase = {
+  get: async () => await getSupabaseClient(),
+  getSync: () => getSupabaseClientSync()
+}
+
+export async function requireSupabase() {
+  return await isSupabaseConfigured()
+}
+
+// Database types
 export interface Database {
   public: {
     Tables: {
@@ -117,70 +60,81 @@ export interface Database {
         Row: {
           id: string
           email: string
-          role: string
+          full_name?: string
           created_at: string
           updated_at: string
         }
         Insert: {
           id: string
           email: string
-          role?: string
+          full_name?: string
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           email?: string
-          role?: string
+          full_name?: string
           created_at?: string
           updated_at?: string
         }
       }
-      survey_data: {
+      app_settings: {
         Row: {
-          id: string
-          role: string
-          seniority_level: string
-          company_type: string
-          industry: string
-          product_type: string
-          customer_segment: string
-          main_challenge: string
-          tools: string[]
-          learning_methods: string[]
-          salary_range?: string
-          email?: string
+          id: number
           created_at: string
+          updated_at: string
+          environment: string
+          survey_table_name: string
+          app_name: string
+          settings: any
         }
         Insert: {
-          id?: string
-          role: string
-          seniority_level: string
-          company_type: string
-          industry: string
-          product_type: string
-          customer_segment: string
-          main_challenge: string
-          tools: string[]
-          learning_methods: string[]
-          salary_range?: string
-          email?: string
+          id?: number
           created_at?: string
+          updated_at?: string
+          environment: string
+          survey_table_name: string
+          app_name: string
+          settings?: any
         }
         Update: {
-          id?: string
-          role?: string
-          seniority_level?: string
-          company_type?: string
-          industry?: string
-          product_type?: string
-          customer_segment?: string
-          main_challenge?: string
-          tools?: string[]
-          learning_methods?: string[]
-          salary_range?: string
-          email?: string
+          id?: number
           created_at?: string
+          updated_at?: string
+          environment?: string
+          survey_table_name?: string
+          app_name?: string
+          settings?: any
+        }
+      }
+      survey_data: {
+        Row: {
+          id: number
+          created_at: string
+          updated_at: string
+          response_data: any
+          session_id?: string
+          user_agent?: string
+          ip_address?: string
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          updated_at?: string
+          response_data: any
+          session_id?: string
+          user_agent?: string
+          ip_address?: string
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          updated_at?: string
+          response_data?: any
+          session_id?: string
+          user_agent?: string
+          ip_address?: string
         }
       }
     }

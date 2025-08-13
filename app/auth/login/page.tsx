@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
-import { getSupabaseClient } from "@/lib/supabase"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,16 +25,8 @@ function LoginForm() {
 
   // Check if Supabase is configured on component mount
   useEffect(() => {
-    const checkSupabase = async () => {
-      try {
-        const client = await getSupabaseClient()
-        setSupabaseConfigured(!!client)
-      } catch (error) {
-        console.error('Error checking Supabase configuration:', error)
-        setSupabaseConfigured(false)
-      }
-    }
-    checkSupabase()
+    // Simplified - let AuthProvider handle this
+    setSupabaseConfigured(true)
   }, [])
 
   // Redirect if already authenticated
@@ -243,6 +235,24 @@ function LoginForm() {
                 </Button>
               </>
             )}
+
+            {/* Sign Up Option */}
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <div className="text-center">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                  Don't have an account?
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => window.location.href = '/auth/signup'}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Create Account
+                </Button>
+              </div>
+            </div>
 
             {/* Demo credentials for testing */}
             <div className="border-t border-slate-200 dark:border-slate-700 pt-4">

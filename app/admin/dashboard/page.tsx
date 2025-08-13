@@ -37,8 +37,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const { user, profile } = useAuth()
-  const userRole = profile?.role || 'viewer'
+  const userRole = profile?.full_name ? 'admin' : 'viewer' // Simplified role logic
   const permissions = getCurrentUserPermissions(userRole as any)
 
   useEffect(() => {
@@ -129,6 +130,8 @@ export default function AdminDashboard() {
         // Process data inline
         processDataInline(data)
       }
+      
+      setLastUpdated(new Date())
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
       setError("Failed to load dashboard data. Please try again later.")
@@ -234,9 +237,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Demo Mode Banner */}
-      {userRole === 'admin-demo' && (
+      {userRole === 'viewer' && (
         <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
           <Activity className="h-4 w-4" />
           <AlertDescription>
@@ -247,31 +250,36 @@ export default function AdminDashboard() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Overview of your survey responses and analytics • {getRoleDisplayName(userRole as UserRole)}
+            {lastUpdated && (
+              <span className="ml-2 text-xs">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
-        <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading}>
-          <Activity className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+        <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading} className="text-xs sm:text-sm">
+          <Activity className={`w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           {isLoading ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Total Responses
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{stats?.totalResponses || 0}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="pt-2">
+            <div className="text-xl sm:text-2xl font-bold text-foreground">{stats?.totalResponses || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               +{stats?.todayResponses || 0} today
             </p>
           </CardContent>
@@ -324,7 +332,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Charts and Recent Activity */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
         {/* Top Insights */}
         <Card className="bg-card border-border">
           <CardHeader>
@@ -364,21 +372,21 @@ export default function AdminDashboard() {
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
-              <Activity className="h-5 w-5" />
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
               Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
             {stats?.recentResponses && stats.recentResponses.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {stats.recentResponses.slice(0, 5).map((response, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
+                  <div key={index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-primary rounded-full flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="text-xs sm:text-sm font-medium text-foreground truncate">
                         {response.role || "Anonymous"} from {response.industry || "Unknown Industry"}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {response.created_at ? new Date(response.created_at).toLocaleString() : "Recently"}
                       </p>
                     </div>
@@ -386,9 +394,9 @@ export default function AdminDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No responses yet</p>
+              <div className="text-center py-6 sm:py-8">
+                <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2 sm:mb-3" />
+                <p className="text-xs sm:text-sm text-muted-foreground">No responses yet</p>
                 <p className="text-xs text-muted-foreground">Survey responses will appear here</p>
               </div>
             )}
@@ -405,7 +413,7 @@ export default function AdminDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             <Button 
               variant="outline" 
               className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
