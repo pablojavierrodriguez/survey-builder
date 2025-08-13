@@ -319,6 +319,9 @@ export default function ProductSurvey() {
     setError(null)
 
     try {
+      console.log("🚀 Starting survey submission...")
+      console.log("📊 Survey data:", surveyData)
+
       const payload = {
         response_data: surveyData,
         session_id:
@@ -328,6 +331,8 @@ export default function ProductSurvey() {
         user_agent: typeof window !== "undefined" ? window.navigator?.userAgent : "Unknown",
         ip_address: null, // Will be handled server-side if needed
       }
+
+      console.log("📤 Sending payload:", payload)
 
       // Store session ID for future reference
       if (typeof window !== "undefined" && window.sessionStorage) {
@@ -342,9 +347,14 @@ export default function ProductSurvey() {
         body: JSON.stringify(payload),
       })
 
+      console.log("📥 Response status:", response.status)
+      console.log("📥 Response ok:", response.ok)
+
       const result = await response.json()
+      console.log("📥 Response data:", result)
 
       if (response.ok && result.success) {
+        console.log("✅ Survey submitted successfully!")
         setCurrentStep(totalSteps + 1) // Show completion step
         // Store success state for better UX
         if (typeof window !== "undefined" && window.sessionStorage) {
@@ -352,11 +362,12 @@ export default function ProductSurvey() {
         }
       } else {
         const errorMessage = result.error || result.message || "Error submitting survey"
+        console.error("❌ Submission failed:", errorMessage)
         setError(`Submission failed: ${errorMessage}`)
         console.error("Survey submission error:", result)
       }
     } catch (error) {
-      console.error("Error submitting survey:", error)
+      console.error("❌ Error submitting survey:", error)
       setError("Network error. Please check your connection and try again.")
     } finally {
       setIsSubmitting(false)
