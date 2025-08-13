@@ -40,17 +40,17 @@ export async function GET(request: NextRequest) {
     }
 
     const transformedRecords =
-      surveyData?.map((record) => {
-        // Handle both survey_data format (with response_data) and direct format
-        if (record.response_data) {
-          return {
-            id: record.id,
-            ...record.response_data,
-            created_at: record.created_at,
-          }
-        }
-        return record
-      }) || []
+  surveyData?.map((record: any) => {
+    // Handle both survey_data format (with response_data) and direct format
+    if (record.response_data) {
+      return {
+        id: record.id,
+        ...record.response_data,
+        created_at: record.created_at,
+      }
+    }
+    return record
+  }) || []
 
     // Get database info
     const { data: tables, error: tablesError } = await supabase
