@@ -216,13 +216,17 @@ const StatsCard = memo(
 StatsCard.displayName = "StatsCard"
 
 export default function AnalyticsPage() {
-  const { user, profile } = useAuth()
+  const authContext = useAuth()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const isAdmin = profile?.full_name || user?.email === "admin@demo.com" || user?.email === "admin@example.com"
+  const isAdmin = Boolean(
+    authContext?.profile?.full_name ||
+      authContext?.user?.email === "admin@demo.com" ||
+      authContext?.user?.email === "admin@example.com",
+  )
 
   // Memoized fetch function
   const fetchAnalyticsData = useCallback(async () => {
