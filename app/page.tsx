@@ -345,14 +345,19 @@ export default function ProductSurvey() {
       const result = await response.json()
 
       if (response.ok && result.success) {
-        // Success - show completion message
         setCurrentStep(totalSteps + 1) // Show completion step
+        // Store success state for better UX
+        if (typeof window !== "undefined" && window.sessionStorage) {
+          window.sessionStorage.setItem("survey_completed", "true")
+        }
       } else {
-        setError(result.error || "Error submitting survey")
+        const errorMessage = result.error || result.message || "Error submitting survey"
+        setError(`Submission failed: ${errorMessage}`)
+        console.error("Survey submission error:", result)
       }
     } catch (error) {
       console.error("Error submitting survey:", error)
-      setError("Network error. Please try again.")
+      setError("Network error. Please check your connection and try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -749,20 +754,33 @@ export default function ProductSurvey() {
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-2xl mx-auto text-center space-y-6"
           >
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto">
-              <Check className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <Check className="w-12 h-12 text-green-600 dark:text-green-400" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Thank you!</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Your responses help us build better products and create more valuable content for the product community.
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Survey Completed!</h2>
+              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-green-800 dark:text-green-200 font-medium">
+                  ✅ Your responses have been successfully saved
+                </p>
+              </div>
+            </div>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              Thank you for participating! Your responses help us build better products and create more valuable content
+              for the product community.
               {surveyData.email && " We'll follow up with you soon."}
             </p>
-            {userIsAdmin && (
-              <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
-                View Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {userIsAdmin && (
+                <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
+                  View Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => window.location.reload()} className="px-8 py-3">
+                Take Survey Again
               </Button>
-            )}
+            </div>
           </motion.div>
         )
 
@@ -946,6 +964,38 @@ export default function ProductSurvey() {
                   </>
                 )
               })()}
+            </div>
+          )}
+
+          {/* Submit Button for Final Step */}
+          {currentStep === totalSteps && (
+            <div className="mt-8 text-center">
+              <Button
+                onClick={submitSurvey}
+                disabled={isSubmitting}
+                size="lg"
+                className="px-12 py-4 text-lg font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    Submitting Survey...
+                  </>
+                ) : (
+                  <>
+                    Submit Survey
+                    <Check className="ml-2 h-5 w-5" />
+                  </>
+                )}
+              </Button>
+              {error && (
+                <div className="mt-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <p className="text-red-800 dark:text-red-200 font-medium">❌ {error}</p>
+                  <Button variant="outline" size="sm" onClick={() => setError(null)} className="mt-2">
+                    Try Again
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
