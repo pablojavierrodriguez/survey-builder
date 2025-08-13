@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getCurrentUserPermissions, getRoleDisplayName, type UserRole } from "@/lib/permissions"
-import { getUserRoleFromProfile } from "@/lib/auth-helpers"
+import { getRoleDisplayName, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,7 +66,7 @@ export default function SettingsPage() {
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [creatingUser, setCreatingUser] = useState(false)
-  const [newUser, setNewUser] = useState({ email: "", password: "", role: "viewer" as UserRole })
+  const [newUser, setNewUser] = useState({ email: "", password: "", role: "viewer" })
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
   const [envStatus, setEnvStatus] = useState<EnvStatus>({
@@ -78,14 +77,17 @@ export default function SettingsPage() {
   })
 
   const { user, profile } = useAuth()
-  const userRole = getUserRoleFromProfile(profile, user?.email)
-  const permissions = getCurrentUserPermissions(userRole as any)
-  const [supabaseConfigured, setSupabaseConfigured] = useState(false)
+
+  const isAdmin = profile?.full_name || user?.email === "admin@demo.com" || user?.email === "admin@example.com"
+  const userRole = isAdmin ? "admin" : "viewer"
+  const canEditSettings = isAdmin
+  const canManageUsers = isAdmin
+  const canViewUsers = true
 
   useEffect(() => {
     loadSettings()
     checkEnvironmentVariables()
-    if (permissions.canViewUsers) {
+    if (canViewUsers) {
       fetchUsers()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,7 +105,6 @@ export default function SettingsPage() {
           hasServiceRole: data.hasServiceRole,
           configured: data.configured,
         })
-        setSupabaseConfigured(data.configured)
       }
     } catch (error) {
       console.error("Error checking environment variables:", error)
@@ -160,7 +161,7 @@ export default function SettingsPage() {
   }
 
   const createUser = async () => {
-    if (!permissions.canManageUsers) {
+    if (!canManageUsers) {
       alert("⚠️ Demo mode: User creation is not allowed")
       return
     }
@@ -189,7 +190,7 @@ export default function SettingsPage() {
   }
 
   const updateUserRole = async (userId: string, role: string) => {
-    if (!permissions.canManageUsers) {
+    if (!canManageUsers) {
       alert("⚠️ Demo mode: User role changes are not allowed")
       return
     }
@@ -213,7 +214,7 @@ export default function SettingsPage() {
   }
 
   const saveSettings = async () => {
-    if (!permissions.canEditSettings) {
+    if (!canEditSettings) {
       alert("⚠️ Demo mode: Settings cannot be saved")
       return
     }
@@ -283,7 +284,7 @@ export default function SettingsPage() {
   }
 
   const updateSettings = (section: keyof AppSettings, key: string, value: any) => {
-    if (!permissions.canEditSettings) {
+    if (!canEditSettings) {
       alert("⚠️ Demo mode: Settings changes are not allowed")
       return
     }
@@ -357,7 +358,7 @@ export default function SettingsPage() {
             <Badge variant="outline" className="text-xs">
               {getRoleDisplayName(userRole as UserRole)}
             </Badge>
-            {!permissions.canEditSettings && (
+            {!canEditSettings && (
               <Badge variant="secondary" className="text-xs">
                 Read-Only
               </Badge>
@@ -374,12 +375,7 @@ export default function SettingsPage() {
             <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             Setup Wizard
           </Button>
-          <Button
-            onClick={saveSettings}
-            disabled={saving || !permissions.canEditSettings}
-            size="sm"
-            className="text-xs sm:text-sm"
-          >
+          <Button onClick={saveSettings} disabled={saving || !canEditSettings} size="sm" className="text-xs sm:text-sm">
             <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
             {saving ? "Saving..." : "Save Changes"}
           </Button>
@@ -426,7 +422,7 @@ export default function SettingsPage() {
                 onChange={(e) => updateSettings("database", "tableName", e.target.value)}
                 placeholder="Enter table name (e.g., survey_data)"
                 className="bg-background text-foreground border-border"
-                disabled={!permissions.canEditSettings}
+                disabled={!canEditSettings}
               />
             </div>
           </div>
@@ -476,7 +472,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* ... existing General Settings and User Management cards remain the same ... */}
       {/* General Settings */}
       <Card className="bg-card border-border">
         <CardHeader>
@@ -575,18 +570,18 @@ export default function SettingsPage() {
               )}
               <li>
                 • <strong>Google OAuth:</strong>{" "}
-                {supabaseConfigured ? "Available on login page" : "Requires Supabase config"}
+                {envStatus.configured ? "Available on login page" : "Requires Supabase config"}
               </li>
               <li>
                 • <strong>Email/Password:</strong>{" "}
-                {supabaseConfigured ? "Created via form below" : "Requires Supabase config"}
+                {envStatus.configured ? "Created via form below" : "Requires Supabase config"}
               </li>
             </ul>
           </div>
 
           <div className="space-y-4">
             {/* Create New User */}
-            {permissions.canManageUsers ? (
+            {canManageUsers ? (
               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                 <h4 className="text-sm font-medium text-green-800 dark:text-green-200 mb-3">
                   ➕ Create New User (Supabase Auth)

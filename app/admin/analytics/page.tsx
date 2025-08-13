@@ -222,6 +222,8 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
+  const isAdmin = profile?.full_name || user?.email === "admin@demo.com" || user?.email === "admin@example.com"
+
   // Memoized fetch function
   const fetchAnalyticsData = useCallback(async () => {
     try {
