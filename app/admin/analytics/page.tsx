@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react"
-import { getPermissions, getUserRoleFromProfile } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BarChart3, PieChart, TrendingUp, Users, RefreshCw, Download, Trophy, MessageSquare } from "lucide-react"
@@ -217,16 +216,11 @@ const StatsCard = memo(
 StatsCard.displayName = "StatsCard"
 
 export default function AnalyticsPage() {
-  const { user, profile } = useAuth() // Added profile to destructuring
+  const { user, profile } = useAuth()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-
-  const permissions = useMemo(() => {
-    const userRole = getUserRoleFromProfile(profile, user?.email)
-    return getPermissions(userRole === "admin" ? "admin" : "viewer")
-  }, [profile, user?.email])
 
   // Memoized fetch function
   const fetchAnalyticsData = useCallback(async () => {
