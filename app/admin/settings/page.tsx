@@ -9,7 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Settings, Database, Save, TestTube, Eye, Users, Loader2, UserPlus, Info } from "lucide-react"
+import {
+  Settings,
+  Database,
+  Save,
+  TestTube,
+  Eye,
+  Users,
+  Loader2,
+  UserPlus,
+  Info,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
 interface AppSettings {
@@ -41,6 +53,13 @@ interface AppSettings {
   }
 }
 
+interface EnvStatus {
+  hasUrl: boolean
+  hasKey: boolean
+  hasServiceRole: boolean
+  configured: boolean
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,6 +70,12 @@ export default function SettingsPage() {
   const [newUser, setNewUser] = useState({ email: "", password: "", role: "viewer" as UserRole })
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
+  const [envStatus, setEnvStatus] = useState<EnvStatus>({
+    hasUrl: false,
+    hasKey: false,
+    hasServiceRole: false,
+    configured: false,
+  })
 
   const { user, profile } = useAuth()
   const userRole = getUserRoleFromProfile(profile, user?.email)
@@ -58,35 +83,61 @@ export default function SettingsPage() {
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
 
   useEffect(() => {
-    // Load user role and permissions
     loadSettings()
+    checkEnvironmentVariables()
     if (permissions.canViewUsers) {
       fetchUsers()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const checkEnvironmentVariables = async () => {
+    try {
+      const response = await fetch("/api/config/check")
+      const data = await response.json()
+
+      if (data.success) {
+        setEnvStatus({
+          hasUrl: data.hasEnvUrl,
+          hasKey: data.hasEnvKey,
+          hasServiceRole: data.hasServiceRole,
+          configured: data.configured,
+        })
+        setSupabaseConfigured(data.configured)
+      }
+    } catch (error) {
+      console.error("Error checking environment variables:", error)
+    }
+  }
+
   const loadSettings = async () => {
     setLoading(true)
     try {
-      // Use cached settings from AuthProvider instead of making new request
+      const response = await fetch("/api/admin/settings")
+      let settingsData = null
+
+      if (response.ok) {
+        const result = await response.json()
+        settingsData = result.data
+      }
+
+      // Use environment variables or fallback to saved settings
       setSettings({
         database: {
-          url: "",
-          apiKey: "",
-          tableName: "survey_responses",
-          connectionTimeout: 30,
-          environment: "development",
+          url: envStatus.hasUrl ? "https://*****.supabase.co (from env)" : settingsData?.database?.url || "",
+          apiKey: envStatus.hasKey ? "eyJ***...*** (from env)" : settingsData?.database?.apiKey || "",
+          tableName: settingsData?.database?.tableName || "survey_data",
+          connectionTimeout: settingsData?.database?.connectionTimeout || 30,
+          environment: settingsData?.database?.environment || "development",
         },
         general: {
-          surveyTitle: "My Survey",
-          publicUrl: "",
-          maintenanceMode: false,
-          analyticsEnabled: true,
-          debugMode: false,
+          surveyTitle: settingsData?.general?.surveyTitle || "My Survey",
+          publicUrl: settingsData?.general?.publicUrl || "",
+          maintenanceMode: settingsData?.general?.maintenanceMode || false,
+          analyticsEnabled: settingsData?.general?.analyticsEnabled !== false,
+          debugMode: settingsData?.general?.debugMode || false,
         },
       })
-      setSupabaseConfigured(false)
     } catch (error) {
       console.error("Error loading settings:", error)
       setSettings(null)
@@ -218,15 +269,14 @@ export default function SettingsPage() {
     setSaving(true) // Use saving state for testing
     setTestResult(null)
     try {
-      if (!settings) return
-      const response = await fetch(`${settings.database.url}/rest/v1/`, {
-        headers: {
-          apikey: settings.database.apiKey || "",
-        },
+      const response = await fetch("/api/config/check")
+      const data = await response.json()
+      setTestResult({
+        success: data.configured,
+        message: data.configured ? "✅ Connected" : "❌ Not configured",
       })
-      setTestResult({ success: response.ok, message: response.ok ? "Connected" : "Failed" })
     } catch (error) {
-      setTestResult({ success: false, message: "Network error" })
+      setTestResult({ success: false, message: "❌ Network error" })
     } finally {
       setSaving(false)
     }
@@ -268,6 +318,38 @@ export default function SettingsPage() {
         </Alert>
       )}
 
+      <Alert
+        className={
+          envStatus.configured
+            ? "border-green-200 bg-green-50 dark:bg-green-900/20"
+            : "border-amber-200 bg-amber-50 dark:bg-amber-900/20"
+        }
+      >
+        {envStatus.configured ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+        <AlertDescription>
+          <div className="space-y-2">
+            <div className="font-medium">
+              {envStatus.configured ? "✅ Variables de entorno configuradas" : "⚠️ Estado de configuración"}
+            </div>
+            <div className="text-sm space-y-1">
+              <div>NEXT_PUBLIC_SUPABASE_URL: {envStatus.hasUrl ? "✅ Configurada" : "❌ Faltante"}</div>
+              <div>NEXT_PUBLIC_SUPABASE_ANON_KEY: {envStatus.hasKey ? "✅ Configurada" : "❌ Faltante"}</div>
+              <div>SUPABASE_SERVICE_ROLE_KEY: {envStatus.hasServiceRole ? "✅ Configurada" : "❌ Faltante"}</div>
+            </div>
+            {envStatus.configured ? (
+              <div className="text-sm text-green-700 dark:text-green-300">
+                Las variables de entorno tienen prioridad sobre la configuración manual. La aplicación está lista para
+                usar.
+              </div>
+            ) : (
+              <div className="text-sm text-amber-700 dark:text-amber-300">
+                Usa el Setup Wizard para configurar las variables de entorno faltantes.
+              </div>
+            )}
+          </div>
+        </AlertDescription>
+      </Alert>
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Settings</h1>
@@ -283,7 +365,6 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="flex gap-2 sm:gap-3">
-          {/* Debug mode removed - not functional */}
           <Button
             onClick={() => (window.location.href = "/setup")}
             variant="outline"
@@ -312,18 +393,30 @@ export default function SettingsPage() {
             <Database className="w-5 h-5" />
             Database Configuration
           </CardTitle>
+          <CardDescription>
+            {envStatus.configured
+              ? "Configuración activa desde variables de entorno (prioridad alta)"
+              : "Configuración manual (requiere Setup Wizard para variables de entorno)"}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Supabase URL</label>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Supabase URL{" "}
+                {envStatus.hasUrl && (
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    ENV
+                  </Badge>
+                )}
+              </label>
               <Input
                 value={settings.database.url || ""}
                 onChange={(e) => updateSettings("database", "url", e.target.value)}
                 placeholder="https://your-project.supabase.co"
                 className="bg-background text-foreground border-border"
-                disabled={true}
-                title="Configurar desde Setup Wizard"
+                disabled={envStatus.hasUrl}
+                title={envStatus.hasUrl ? "Configurado desde variables de entorno" : "Configurar desde Setup Wizard"}
               />
             </div>
             <div>
@@ -339,7 +432,14 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground mb-2">API Key</label>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              API Key{" "}
+              {envStatus.hasKey && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  ENV
+                </Badge>
+              )}
+            </label>
             <div className="flex gap-2">
               <Input
                 type={showApiKey ? "text" : "password"}
@@ -347,11 +447,11 @@ export default function SettingsPage() {
                 onChange={(e) => updateSettings("database", "apiKey", e.target.value)}
                 placeholder="Your Supabase anon key"
                 className="flex-1 bg-background text-foreground border-border"
-                disabled={true}
-                title="Configurar desde Setup Wizard"
+                disabled={envStatus.hasKey}
+                title={envStatus.hasKey ? "Configurado desde variables de entorno" : "Configurar desde Setup Wizard"}
               />
-              <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)} disabled={true}>
-                {showApiKey ? <Eye className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <Button variant="outline" onClick={() => setShowApiKey(!showApiKey)} disabled={!envStatus.hasKey}>
+                <Eye className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -376,6 +476,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* ... existing General Settings and User Management cards remain the same ... */}
       {/* General Settings */}
       <Card className="bg-card border-border">
         <CardHeader>
