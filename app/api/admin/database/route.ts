@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         url: config.database?.url,
         environment: config.database?.environment,
         tableName: tableName,
-        tables: tables?.map((t) => t.table_name) || [],
+        tables: tables?.map((t: { table_name: string }) => t.table_name) || [],
         records: transformedRecords,
       },
     })
