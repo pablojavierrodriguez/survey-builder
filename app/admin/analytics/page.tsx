@@ -223,11 +223,10 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  // Memoized permissions check
   const permissions = useMemo(() => {
-    const userRole = profile?.role || "viewer"
+    const userRole = profile?.full_name ? "admin" : "viewer"
     return getCurrentUserPermissions(userRole as any)
-  }, [profile]) // Changed dependency from user to profile
+  }, [profile])
 
   // Memoized fetch function
   const fetchAnalyticsData = useCallback(async () => {

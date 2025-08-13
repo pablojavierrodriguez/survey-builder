@@ -2,25 +2,25 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { getCurrentUserPermissions, getUserRole, getRoleDisplayName } from "@/lib/permissions"
+import { getCurrentUserPermissions, getRoleDisplayName, getUserRoleFromProfile } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  Users, 
-  FileText, 
-  TrendingUp, 
-  Database, 
-  Activity, 
-  Clock, 
-  CheckCircle, 
+import {
+  Users,
+  FileText,
+  TrendingUp,
+  Database,
+  Activity,
+  Clock,
+  CheckCircle,
   AlertCircle,
   BarChart3,
   PieChart,
-  Calendar
+  Calendar,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-import { UserRole } from "@/lib/permissions"
+import type { UserRole } from "@/lib/permissions"
 
 interface DashboardStats {
   totalResponses: number
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const { user, profile } = useAuth()
-  const userRole = profile?.full_name ? 'admin' : 'viewer' // Simplified role logic
+  const userRole = getUserRoleFromProfile(profile, user?.email)
   const permissions = getCurrentUserPermissions(userRole as any)
 
   useEffect(() => {
@@ -49,88 +49,88 @@ export default function AdminDashboard() {
   // Listen for storage changes to refresh when table configuration changes
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'app_settings') {
-        console.log('Dashboard - Settings changed, refreshing data')
+      if (e.key === "app_settings") {
+        console.log("Dashboard - Settings changed, refreshing data")
         fetchDashboardData()
       }
     }
 
     const handleCustomStorageChange = () => {
-      console.log('Dashboard - Custom storage change detected, refreshing data')
+      console.log("Dashboard - Custom storage change detected, refreshing data")
       fetchDashboardData()
     }
 
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('app_settings_changed', handleCustomStorageChange)
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("app_settings_changed", handleCustomStorageChange)
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('app_settings_changed', handleCustomStorageChange)
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("app_settings_changed", handleCustomStorageChange)
     }
   }, [])
 
   const fetchDashboardData = async () => {
     try {
       setError(null)
-      
+
       // Get dynamic database configuration
-      const { getSupabaseConfig } = await import('@/lib/database-config')
+      const { getSupabaseConfig } = await import("@/lib/database-config")
       const config = await getSupabaseConfig()
-      
-      console.log('Dashboard - Using database config:', config)
-      
+
+      console.log("Dashboard - Using database config:", config)
+
       let data = []
-      
+
       // Try to fetch from analytics API (authenticated)
       try {
-        const response = await fetch('/api/admin/analytics')
-        
-        console.log('Dashboard - Analytics API response status:', response.status)
-        
+        const response = await fetch("/api/admin/analytics")
+
+        console.log("Dashboard - Analytics API response status:", response.status)
+
         if (response.ok) {
           const result = await response.json()
-          console.log('Dashboard - Analytics API result:', result)
-          
+          console.log("Dashboard - Analytics API result:", result)
+
           if (result.success && result.data) {
             // Extract recent responses from analytics data
             const recentResponses = result.data.recentResponses || []
-            console.log('Dashboard - Recent responses length:', recentResponses.length)
+            console.log("Dashboard - Recent responses length:", recentResponses.length)
             data = recentResponses
           } else {
-            console.log('Dashboard - Analytics API returned error:', result.error)
+            console.log("Dashboard - Analytics API returned error:", result.error)
           }
         } else {
-          console.log('Dashboard - Analytics API failed with status:', response.status)
+          console.log("Dashboard - Analytics API failed with status:", response.status)
         }
       } catch (apiError) {
-        console.warn('Dashboard - API fetch failed:', apiError)
+        console.warn("Dashboard - API fetch failed:", apiError)
       }
-      
+
       // Fallback to localStorage only if no data from API
       if (data.length === 0) {
-        console.log('Dashboard - Falling back to localStorage')
+        console.log("Dashboard - Falling back to localStorage")
         const localData = localStorage.getItem("survey")
         if (localData) {
           try {
             data = JSON.parse(localData)
-            console.log('Dashboard - LocalStorage data length:', data.length)
+            console.log("Dashboard - LocalStorage data length:", data.length)
           } catch (parseError) {
-            console.warn('Dashboard - Error parsing localStorage data:', parseError)
+            console.warn("Dashboard - Error parsing localStorage data:", parseError)
           }
         }
       }
 
-      console.log('Dashboard - Final data length:', data.length)
+      console.log("Dashboard - Final data length:", data.length)
 
       // Process the data
-      if (typeof calculateStats === 'function') {
+      if (typeof calculateStats === "function") {
         calculateStats(data)
       } else {
-        console.error('calculateStats function not defined')
+        console.error("calculateStats function not defined")
         // Process data inline
         processDataInline(data)
       }
-      
+
       setLastUpdated(new Date())
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
@@ -139,16 +139,14 @@ export default function AdminDashboard() {
       setIsLoading(false)
     }
   }
-  
+
   const processDataInline = (data: any[]) => {
     const today = new Date().toDateString()
-    const todayResponses = data.filter((r: any) => 
-      new Date(r.created_at).toDateString() === today
-    ).length
+    const todayResponses = data.filter((r: any) => new Date(r.created_at).toDateString() === today).length
 
     const roles = data.map((r: any) => r.role).filter(Boolean)
     const topRole = getMostFrequent(roles) || "Product Manager"
-    
+
     const industries = data.map((r: any) => r.industry).filter(Boolean)
     const topIndustry = getMostFrequent(industries) || "Technology/Software"
 
@@ -162,16 +160,14 @@ export default function AdminDashboard() {
       recentResponses: data.slice(0, 5),
     })
   }
-  
+
   const calculateStats = (data: any[]) => {
     const today = new Date().toDateString()
-    const todayResponses = data.filter((r: any) => 
-      new Date(r.created_at).toDateString() === today
-    ).length
+    const todayResponses = data.filter((r: any) => new Date(r.created_at).toDateString() === today).length
 
     const roles = data.map((r: any) => r.role).filter(Boolean)
     const topRole = getMostFrequent(roles) || "Product Manager"
-    
+
     const industries = data.map((r: any) => r.industry).filter(Boolean)
     const topIndustry = getMostFrequent(industries) || "Technology/Software"
 
@@ -189,10 +185,10 @@ export default function AdminDashboard() {
   const getMostFrequent = (arr: string[]) => {
     if (!arr.length) return null
     const frequency: { [key: string]: number } = {}
-    arr.forEach(item => {
+    arr.forEach((item) => {
       frequency[item] = (frequency[item] || 0) + 1
     })
-    return Object.keys(frequency).reduce((a, b) => frequency[a] > frequency[b] ? a : b)
+    return Object.keys(frequency).reduce((a, b) => (frequency[a] > frequency[b] ? a : b))
   }
 
   if (isLoading) {
@@ -225,9 +221,7 @@ export default function AdminDashboard() {
         </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-          </AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button onClick={fetchDashboardData} className="mt-4">
           Try Again
@@ -239,12 +233,12 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Demo Mode Banner */}
-      {userRole === 'viewer' && (
+      {userRole === "viewer" && (
         <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
           <Activity className="h-4 w-4" />
           <AlertDescription>
-            <strong>Demo Mode:</strong> You're viewing the dashboard in read-only mode. 
-            Administrative actions are disabled for security.
+            <strong>Demo Mode:</strong> You're viewing the dashboard in read-only mode. Administrative actions are
+            disabled for security.
           </AlertDescription>
         </Alert>
       )}
@@ -255,16 +249,18 @@ export default function AdminDashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Overview of your survey responses and analytics • {getRoleDisplayName(userRole as UserRole)}
-            {lastUpdated && (
-              <span className="ml-2 text-xs">
-                Last updated: {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
+            {lastUpdated && <span className="ml-2 text-xs">Last updated: {lastUpdated.toLocaleTimeString()}</span>}
           </p>
         </div>
-        <Button onClick={fetchDashboardData} variant="outline" size="sm" disabled={isLoading} className="text-xs sm:text-sm">
-          <Activity className={`w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? 'Refreshing...' : 'Refresh'}
+        <Button
+          onClick={fetchDashboardData}
+          variant="outline"
+          size="sm"
+          disabled={isLoading}
+          className="text-xs sm:text-sm bg-transparent"
+        >
+          <Activity className={`w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 ${isLoading ? "animate-spin" : ""}`} />
+          {isLoading ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
 
@@ -272,61 +268,45 @@ export default function AdminDashboard() {
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              Total Responses
-            </CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Responses</CardTitle>
             <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="pt-2">
             <div className="text-xl sm:text-2xl font-bold text-foreground">{stats?.totalResponses || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +{stats?.todayResponses || 0} today
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">+{stats?.todayResponses || 0} today</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Completion Rate
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Completion Rate</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stats?.completionRate || 0}%</div>
-            <p className="text-xs text-muted-foreground">
-              Above average
-            </p>
+            <p className="text-xs text-muted-foreground">Above average</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg. Time
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Time</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stats?.avgTimeToComplete || 0}m</div>
-            <p className="text-xs text-muted-foreground">
-              To complete survey
-            </p>
+            <p className="text-xs text-muted-foreground">To complete survey</p>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Today
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Today</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stats?.todayResponses || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              New responses
-            </p>
+            <p className="text-xs text-muted-foreground">New responses</p>
           </CardContent>
         </Card>
       </div>
@@ -349,7 +329,7 @@ export default function AdminDashboard() {
               </div>
               <Users className="h-4 w-4 text-muted-foreground" />
             </div>
-            
+
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div>
                 <p className="text-sm font-medium text-foreground">Top Industry</p>
@@ -414,18 +394,18 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-            <Button 
-              variant="outline" 
-              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
               onClick={() => router.push("/admin/analytics")}
             >
               <BarChart3 className="h-5 w-5" />
               <span className="text-sm">View Analytics</span>
             </Button>
             {permissions.canModifyDatabase && (
-              <Button 
-                variant="outline" 
-                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
                 onClick={() => router.push("/admin/database")}
               >
                 <Database className="h-5 w-5" />
@@ -433,9 +413,9 @@ export default function AdminDashboard() {
               </Button>
             )}
             {permissions.canEditSurveys && (
-              <Button 
-                variant="outline" 
-                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
                 onClick={() => router.push("/admin/survey-config")}
               >
                 <FileText className="h-5 w-5" />
@@ -449,9 +429,7 @@ export default function AdminDashboard() {
       {error && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Some data may be incomplete due to connectivity issues.
-          </AlertDescription>
+          <AlertDescription>Some data may be incomplete due to connectivity issues.</AlertDescription>
         </Alert>
       )}
     </div>
