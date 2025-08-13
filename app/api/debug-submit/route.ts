@@ -7,6 +7,11 @@ export async function GET() {
 
     // Test 1: Check config manager
     const config = await configManager.getConfig()
+    
+    if (!config) {
+      throw new Error("❌ Config not found")
+    }
+    
     console.log("✅ Config loaded:", {
       hasUrl: !!config.supabase_url,
       hasKey: !!config.supabase_anon_key,
