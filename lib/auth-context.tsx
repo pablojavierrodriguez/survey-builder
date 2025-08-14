@@ -37,9 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
-        // Check if Supabase is configured
-        const configured = await isSupabaseConfigured()
-        if (!configured) {
+        if (!isSupabaseConfigured) {
           console.warn("Supabase not configured - auth features disabled")
           if (mounted) setLoading(false)
           return
