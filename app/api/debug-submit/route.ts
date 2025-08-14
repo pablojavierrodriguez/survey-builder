@@ -13,8 +13,8 @@ export async function GET() {
     }
     
     console.log("✅ Config loaded:", {
-      hasUrl: !!config.supabase_url,
-      hasKey: !!config.supabase_anon_key,
+      hasUrl: !!config.database.url,
+      hasKey: !!config.database.apiKey,
     })
 
     // Test 2: Get Supabase client
