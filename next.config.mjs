@@ -26,6 +26,9 @@ const nextConfig = {
       },
     ]
   },
+  experimental: {
+    outputFileTracingIncludes: ['fs', 'path'],
+  },
 }
 
 export default nextConfig
