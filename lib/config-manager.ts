@@ -69,8 +69,8 @@ export class ConfigManager {
         environment: process.env.NODE_ENV || "development",
       },
       general: {
-        appName: process.env.NEXT_PUBLIC_APP_NAME || "Survey App",
-        publicUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        appName: process.env.NEXT_PUBLIC_APP_NAME || "",
+        publicUrl: process.env.NEXT_PUBLIC_APP_URL || "",
         maintenanceMode: process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true",
         analyticsEnabled: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== "false",
       },
