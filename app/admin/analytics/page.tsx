@@ -458,33 +458,33 @@ export default function AnalyticsPage() {
       {/* Charts Grid */}
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <RankingChart
-          data={data.roleDistribution}
+          data={data.roleDistribution || {}}
           title="Role Distribution"
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
         />
         <RankingChart
-          data={data.seniorityDistribution}
+          data={data.seniorityDistribution || {}}
           title="Seniority Distribution"
           icon={<Trophy className="h-4 w-4 text-muted-foreground" />}
         />
         <RankingChart
-          data={data.companyDistribution}
+          data={data.companyDistribution || {}}
           title="Company Type"
           icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
         />
         <RankingChart
-          data={data.industryDistribution}
+          data={data.industryDistribution || {}}
           title="Industry Distribution"
           icon={<PieChart className="h-4 w-4 text-muted-foreground" />}
         />
         <RankingChart
-          data={data.toolsUsage}
+          data={data.toolsUsage || {}}
           title="Most Used Tools"
           icon={<MessageSquare className="h-4 w-4 text-muted-foreground" />}
           maxItems={8}
         />
         <RankingChart
-          data={data.learningMethods}
+          data={data.learningMethods || {}}
           title="Learning Methods"
           icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
           maxItems={8}
