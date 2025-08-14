@@ -185,6 +185,15 @@ export default function ProductSurvey() {
   useEffect(() => {
     setIsMounted(true)
 
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const surveyCompleted = window.sessionStorage.getItem("survey_completed")
+      if (surveyCompleted === "true") {
+        setCurrentStep(totalSteps + 1) // Show completion step
+        setIsLoading(false)
+        return
+      }
+    }
+
     // Check configuration status
     const checkConfig = async () => {
       try {
@@ -372,6 +381,33 @@ export default function ProductSurvey() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const restartSurvey = () => {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      window.sessionStorage.removeItem("survey_completed")
+      window.sessionStorage.removeItem("survey_session_id")
+    }
+    setCurrentStep(1)
+    setSurveyData({
+      role: "",
+      other_role: "",
+      seniority: "",
+      company_type: "",
+      company_size: "",
+      industry: "",
+      product_type: "",
+      customer_segment: "",
+      main_challenge: "",
+      daily_tools: [],
+      other_tool: "",
+      learning_methods: [],
+      salary_currency: "ARS",
+      salary_min: "",
+      salary_max: "",
+      salary_average: "",
+      email: "",
+    })
   }
 
   // Centralized navigation logic
@@ -788,7 +824,7 @@ export default function ProductSurvey() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               )}
-              <Button variant="outline" onClick={() => window.location.reload()} className="px-8 py-3">
+              <Button variant="outline" onClick={restartSurvey} className="px-8 py-3 bg-transparent">
                 Take Survey Again
               </Button>
             </div>
