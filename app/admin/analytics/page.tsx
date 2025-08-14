@@ -440,17 +440,17 @@ export default function AnalyticsPage() {
         />
         <StatsCard
           title="Roles"
-          value={Object.keys(data.roleDistribution).length}
+          value={Object.keys(data.roleDistribution || {}).length}
           icon={<Trophy className="h-4 w-4 text-muted-foreground" />}
         />
         <StatsCard
           title="Industries"
-          value={Object.keys(data.industryDistribution).length}
+          value={Object.keys(data.industryDistribution || {}).length}
           icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
         />
         <StatsCard
           title="Tools Used"
-          value={Object.keys(data.toolsUsage).length}
+          value={Object.keys(data.toolsUsage || {}).length}
           icon={<MessageSquare className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
