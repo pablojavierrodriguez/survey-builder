@@ -112,6 +112,32 @@ export class ConfigManager {
     }
   }
 
+
+  async saveConfig(config: AppConfig): Promise<{ success: boolean; savedTo: string }> {
+    try {
+      const supabase = await this.getSupabaseClient()
+      if (!supabase) throw new Error("Supabase client not available")
+
+      const { error } = await supabase
+        .from("app_settings")
+        .upsert({
+          environment: config.database.environment,
+          settings: config,
+        })
+
+      if (error) {
+        console.error("Error saving config to database:", error)
+        return { success: false, savedTo: "none" }
+      }
+
+      console.log("Config saved to database successfully")
+      return { success: true, savedTo: "database" }
+    } catch (err) {
+      console.error("Failed saveConfig:", err)
+      return { success: false, savedTo: "error" }
+    }
+  }
+
   private async loadFromDatabase(bootstrapUrl?: string, bootstrapKey?: string): Promise<AppConfig | null> {
     try {
       const url = bootstrapUrl || process.env.NEXT_PUBLIC_SUPABASE_URL
