@@ -1,55 +1,50 @@
-import { createClient } from '@supabase/supabase-js'
-import { configManager } from './config-manager'
+import { createClient } from "@supabase/supabase-js"
 
-// Dynamic Supabase client that uses ConfigManager
+export const isSupabaseConfigured =
+  typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
+  typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
+
 let supabaseClient: any = null
-let isInitialized = false
 
-// Initialize Supabase client
-async function initializeSupabase() {
-  if (isInitialized) return supabaseClient
+export async function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient
+
+  if (!isSupabaseConfigured) {
+    console.warn(
+      "⚠️ Supabase environment variables are not set. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    )
+    return null
+  }
 
   try {
-    supabaseClient = await configManager.getSupabaseClient()
-    isInitialized = true
+    supabaseClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+    console.log("✅ Supabase client initialized successfully")
     return supabaseClient
   } catch (error) {
-    console.error('Failed to initialize Supabase client:', error)
+    console.error("❌ Failed to initialize Supabase client:", error)
     return null
   }
 }
 
-// Get Supabase client (async)
-export async function getSupabaseClient() {
-  return await initializeSupabase()
-}
-
-// Get Supabase client (sync - returns null if not ready)
 export function getSupabaseClientSync() {
   return supabaseClient
 }
 
-// Check if Supabase is configured
-export async function isSupabaseConfigured() {
-  return await configManager.isConfigured()
-}
-
-// Clear cache and reinitialize
 export async function clearSupabaseCache() {
-  configManager.clearCache()
   supabaseClient = null
-  isInitialized = false
-  console.log('🗑️ Supabase cache cleared')
+  console.log("🗑️ Supabase cache cleared")
 }
 
 // Legacy exports for backward compatibility
 export const supabase = {
   get: async () => await getSupabaseClient(),
-  getSync: () => getSupabaseClientSync()
+  getSync: () => getSupabaseClientSync(),
 }
 
 export async function requireSupabase() {
-  return await isSupabaseConfigured()
+  return isSupabaseConfigured
 }
 
 // Database types

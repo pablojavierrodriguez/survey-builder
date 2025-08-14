@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js"
+import { getSupabaseClient } from "./supabase"
 
 // Configuration interface
 export interface AppConfig {
@@ -43,49 +44,49 @@ export class ConfigManager {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
         apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        tableName: 'survey_data',
-        environment: process.env.NODE_ENV || 'development'
+        tableName: "survey_data",
+        environment: process.env.NODE_ENV || "development",
       },
       general: {
-        appName: process.env.NEXT_PUBLIC_APP_NAME || 'Survey App',
-        publicUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-        maintenanceMode: process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true',
-        analyticsEnabled: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== 'false'
-      }
+        appName: process.env.NEXT_PUBLIC_APP_NAME || "Survey App",
+        publicUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        maintenanceMode: process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true",
+        analyticsEnabled: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== "false",
+      },
     }
   }
 
   private async loadFromLocalFile(): Promise<AppConfig | null> {
-    if (typeof window !== 'undefined') return null
+    if (typeof window !== "undefined") return null
 
     try {
-      const fs = await import('fs')
-      const path = await import('path')
-      const configPath = path.join(process.cwd(), '.app-config.json')
+      const fs = await import("fs")
+      const path = await import("path")
+      const configPath = path.join(process.cwd(), ".app-config.json")
 
       if (fs.existsSync(configPath)) {
-        const configData = fs.readFileSync(configPath, 'utf8')
+        const configData = fs.readFileSync(configPath, "utf8")
         return JSON.parse(configData)
       }
     } catch (error) {
-      console.warn('Could not load local config file:', error)
+      console.warn("Could not load local config file:", error)
     }
     return null
   }
 
   async saveToLocalFile(config: AppConfig): Promise<boolean> {
-    if (typeof window !== 'undefined') return false
+    if (typeof window !== "undefined") return false
 
     try {
-      const fs = await import('fs')
-      const path = await import('path')
-      const configPath = path.join(process.cwd(), '.app-config.json')
+      const fs = await import("fs")
+      const path = await import("path")
+      const configPath = path.join(process.cwd(), ".app-config.json")
 
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
-      console.log('✅ Configuration saved to local file')
+      console.log("✅ Configuration saved to local file")
       return true
     } catch (error) {
-      console.error('❌ Error saving local config:', error)
+      console.error("❌ Error saving local config:", error)
       return false
     }
   }
@@ -100,9 +101,9 @@ export class ConfigManager {
       const supabase = createClient(url, key)
 
       const { data, error } = await supabase
-        .from('app_settings')
-        .select('settings')
-        .eq('environment', 'dev')
+        .from("app_settings")
+        .select("settings")
+        .eq("environment", "dev")
         .limit(1)
         .single()
 
@@ -110,7 +111,7 @@ export class ConfigManager {
 
       return data.settings
     } catch (error) {
-      console.warn('Could not load config from database:', error)
+      console.warn("Could not load config from database:", error)
       return null
     }
   }
@@ -120,36 +121,33 @@ export class ConfigManager {
 
     let config = this.loadFromEnvironment()
     if (config) {
-      console.log('📋 Config loaded from environment variables')
+      console.log("📋 Config loaded from environment variables")
       this.config = config
       return config
     }
 
     config = await this.loadFromLocalFile()
     if (config) {
-      console.log('📋 Config loaded from local file')
+      console.log("📋 Config loaded from local file")
       this.config = config
       return config
     }
 
     config = await this.loadFromDatabase(bootstrapUrl, bootstrapKey)
     if (config) {
-      console.log('📋 Config loaded from database')
+      console.log("📋 Config loaded from database")
       this.config = config
       return config
     }
 
-    console.warn('⚠️ No configuration found')
+    console.warn("⚠️ No configuration found")
     return null
   }
 
   async getSupabaseClient(bootstrapUrl?: string, bootstrapKey?: string): Promise<any> {
     if (this.supabaseClient) return this.supabaseClient
 
-    const config = await this.getConfig(bootstrapUrl, bootstrapKey)
-    if (!config) return null
-
-    this.supabaseClient = createClient(config.database.url, config.database.apiKey)
+    this.supabaseClient = await getSupabaseClient()
     return this.supabaseClient
   }
 }
