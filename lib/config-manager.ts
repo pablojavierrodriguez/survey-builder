@@ -36,6 +36,27 @@ export class ConfigManager {
     return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   }
 
+  async isConfigured(): Promise<boolean> {
+    // Check environment variables first (highest priority)
+    if (this.hasEnvironmentConfig()) {
+      return true
+    }
+
+    // Check local file
+    const localConfig = await this.loadFromLocalFile()
+    if (localConfig) {
+      return true
+    }
+
+    // Check database
+    const dbConfig = await this.loadFromDatabase()
+    if (dbConfig) {
+      return true
+    }
+
+    return false
+  }
+
   private loadFromEnvironment(): AppConfig | null {
     if (!this.hasEnvironmentConfig()) return null
 
