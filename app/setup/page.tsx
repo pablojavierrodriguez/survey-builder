@@ -150,7 +150,7 @@ export default function SetupPage() {
 
         setStep(3)
       } else {
-        setError(`❌ Error al guardar: ${data.error}`)
+        setError(`❌ Error al guardar: ${(data as any).message || "Error desconocido"}`)
       }
     } catch (error) {
       setError("❌ Error al guardar configuración: No se pudo conectar al servidor")
