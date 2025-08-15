@@ -53,79 +53,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (mounted) setSupabase(client)
 
+        // Clear potentially corrupted tokens
+        localStorage.removeItem("supabase.auth.token")
+        localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
+
         // Get initial session
         const {
           data: { session },
           error: sessionError,
         } = await client.auth.getSession()
 
-        if (sessionError && sessionError.message.includes("Refresh Token")) {
-          console.warn("🔐 [Auth] Refresh token error detected - clearing session")
+        if (sessionError) {
+          console.warn("🔐 [Auth] Session error - clearing all auth data:", sessionError.message)
+          await client.auth.signOut()
           if (mounted) {
             setSession(null)
             setUser(null)
             setProfile(null)
-            setLoading(false)
           }
-          return
-        }
-
-        if (mounted) {
-          if (!session?.user?.id) {
-            console.log("🔐 [Auth] No valid user found - clearing session")
-            setSession(null)
-            setUser(null)
-            setProfile(null)
-          } else {
+        } else if (session?.user?.id) {
+          if (mounted) {
             setSession(session)
             setUser(session.user)
 
             // Fetch user profile
             try {
               const { data: profileData } = await client.from("profiles").select("*").eq("id", session.user.id).limit(1)
-
               if (mounted) setProfile(profileData?.[0] || null)
             } catch (profileError) {
               console.warn("Could not fetch profile:", profileError)
               if (mounted) setProfile(null)
             }
           }
-        }
-
-        // Set up auth state listener
-        const {
-          data: { subscription },
-        } = client.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-          console.log("🔐 [Auth] Auth state change:", event, session?.user?.email)
-
+        } else {
+          console.log("🔐 [Auth] No valid session found")
           if (mounted) {
-            setSession(session)
-            setUser(session?.user || null)
-
-            if (session?.user?.id) {
-              try {
-                const { data: profileData } = await client
-                  .from("profiles")
-                  .select("*")
-                  .eq("id", session.user.id)
-                  .limit(1)
-
-                setProfile(profileData?.[0] || null)
-              } catch (error) {
-                console.warn("Could not fetch profile on auth change:", error)
-                setProfile(null)
-              }
-            } else {
-              setProfile(null)
-            }
+            setSession(null)
+            setUser(null)
+            setProfile(null)
           }
-        })
-
-        return () => {
-          subscription?.unsubscribe()
         }
-      } catch (error) {
-        console.error("Auth initialization error:", error)
+      } catch (authError: any) {
+        console.warn("🔐 [Auth] Auth error - clearing session:", authError.message)
+        // Clear all auth data on any auth error
+        const client = supabase // Declare the client variable here
+        try {
+          await client.auth.signOut()
+          localStorage.removeItem("supabase.auth.token")
+          localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
+        } catch (clearError) {
+          console.warn("Error clearing auth data:", clearError)
+        }
+
+        if (mounted) {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+        }
       } finally {
         if (mounted) setLoading(false)
       }
