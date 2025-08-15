@@ -40,26 +40,42 @@ export async function GET(request: NextRequest) {
     }
 
     const transformedRecords =
-  surveyData?.map((record: any) => {
-    // Handle both survey_data format (with response_data) and direct format
-    if (record.response_data) {
-      return {
-        id: record.id,
-        ...record.response_data,
-        created_at: record.created_at,
+      surveyData?.map((record: any) => {
+        // Handle both survey_data format (with response_data) and direct format
+        if (record.response_data) {
+          return {
+            id: record.id,
+            ...record.response_data,
+            created_at: record.created_at,
+          }
+        }
+        return record
+      }) || []
+
+    let tables: string[] = []
+    try {
+      const { data: tablesData, error: tablesError } = await supabase.rpc("get_public_tables")
+
+      if (tablesError) {
+        // Fallback: try direct SQL query
+        const { data: fallbackTables, error: fallbackError } = await supabase
+          .from("pg_tables")
+          .select("tablename")
+          .eq("schemaname", "public")
+
+        if (!fallbackError && fallbackTables) {
+          tables = fallbackTables.map((t: { tablename: string }) => t.tablename)
+        } else {
+          // If all else fails, return known tables
+          tables = ["survey_data", "app_settings", "profiles"]
+        }
+      } else {
+        tables = tablesData || []
       }
-    }
-    return record
-  }) || []
-
-    // Get database info
-    const { data: tables, error: tablesError } = await supabase
-      .from("information_schema.tables")
-      .select("table_name")
-      .eq("table_schema", "public")
-
-    if (tablesError) {
-      console.error("Error fetching tables:", tablesError)
+    } catch (error) {
+      console.error("Error fetching tables:", error)
+      // Return known tables as fallback
+      tables = ["survey_data", "app_settings", "profiles"]
     }
 
     return NextResponse.json({
@@ -68,7 +84,7 @@ export async function GET(request: NextRequest) {
         url: config.database?.url,
         environment: config.database?.environment,
         tableName: tableName,
-        tables: tables?.map((t: { table_name: string }) => t.table_name) || [],
+        tables: tables,
         records: transformedRecords,
       },
     })
