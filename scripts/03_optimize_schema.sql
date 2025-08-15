@@ -218,10 +218,10 @@ CREATE TRIGGER update_app_config_updated_at BEFORE UPDATE ON public.app_config F
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 7. DATA MIGRATION FROM OLD SCHEMA
+-- 7. DATA MIGRATION FROM OLD SCHEMA (CORRECTED MAPPING)
 -- ============================================================================
 
--- Migrate existing data if any real responses exist
+-- Corregido el mapeo de valores para evitar constraint violations
 DO $$
 BEGIN
     -- Only migrate if there are real survey responses (not test data)
@@ -230,7 +230,7 @@ BEGIN
         WHERE response_data::text NOT LIKE '%"test"%' 
         AND response_data::text NOT LIKE '%"timestamp": "2024-01-01"%'
     ) THEN
-        -- Migrate real survey responses
+        -- Migrate real survey responses with proper value mapping
         INSERT INTO public.survey_responses (
             session_id, user_agent, ip_address, 
             role, seniority, company_size, industry,
@@ -240,13 +240,39 @@ BEGIN
             COALESCE(session_id, 'migrated-' || id::text),
             user_agent,
             ip_address::inet,
-            COALESCE(response_data->>'role', 'other'),
-            COALESCE(response_data->>'seniority', 'mid'),
-            COALESCE(response_data->>'company_size', 'medium'),
-            COALESCE(response_data->>'industry', 'technology'),
+            -- Map role values
+            CASE 
+                WHEN LOWER(response_data->>'role') LIKE '%product%' THEN 'product_manager'
+                WHEN LOWER(response_data->>'role') LIKE '%design%' THEN 'designer'
+                WHEN LOWER(response_data->>'role') LIKE '%develop%' THEN 'developer'
+                WHEN LOWER(response_data->>'role') LIKE '%analy%' THEN 'analyst'
+                ELSE 'other'
+            END,
+            -- Map seniority values
+            CASE 
+                WHEN LOWER(response_data->>'seniority') LIKE '%junior%' THEN 'junior'
+                WHEN LOWER(response_data->>'seniority') LIKE '%senior%' THEN 'senior'
+                WHEN LOWER(response_data->>'seniority') LIKE '%lead%' THEN 'lead'
+                WHEN LOWER(response_data->>'seniority') LIKE '%director%' THEN 'director'
+                WHEN LOWER(response_data->>'seniority') LIKE '%vp%' THEN 'vp'
+                WHEN LOWER(response_data->>'seniority') LIKE '%c-level%' OR LOWER(response_data->>'seniority') LIKE '%founder%' THEN 'vp'
+                ELSE 'mid'
+            END,
+            -- Map company_size values
+            CASE 
+                WHEN LOWER(response_data->>'company_size') LIKE '%freelance%' OR LOWER(response_data->>'company_size') LIKE '%independent%' THEN 'startup'
+                WHEN LOWER(response_data->>'company_size') LIKE '%startup%' OR LOWER(response_data->>'company_size') LIKE '%1-10%' THEN 'startup'
+                WHEN LOWER(response_data->>'company_size') LIKE '%small%' OR LOWER(response_data->>'company_size') LIKE '%11-50%' THEN 'small'
+                WHEN LOWER(response_data->>'company_size') LIKE '%medium%' OR LOWER(response_data->>'company_size') LIKE '%51-200%' THEN 'medium'
+                WHEN LOWER(response_data->>'company_size') LIKE '%large%' OR LOWER(response_data->>'company_size') LIKE '%201-1000%' THEN 'large'
+                WHEN LOWER(response_data->>'company_size') LIKE '%enterprise%' OR LOWER(response_data->>'company_size') LIKE '%1000%' THEN 'enterprise'
+                ELSE 'medium'
+            END,
+            COALESCE(response_data->>'industry', 'Technology'),
             created_at
         FROM public.survey_data
-        WHERE response_data::text NOT LIKE '%"test"%';
+        WHERE response_data::text NOT LIKE '%"test"%'
+        AND response_data::text NOT LIKE '%"timestamp": "2024-01-01"%';
     END IF;
 END $$;
 
@@ -274,14 +300,4 @@ VALUES (
 
 -- ============================================================================
 -- OPTIMIZATION COMPLETE! 🚀
--- 
--- Benefits:
--- ✅ Normalized data structure (no more JSON blobs)
--- ✅ Proper indexes for fast queries
--- ✅ Simplified configuration management
--- ✅ Enhanced security with RLS
--- ✅ Auto-updating timestamps
--- ✅ Data integrity with constraints
--- ✅ Scalable analytics pre-calculation
--- ✅ World-class database design
 -- ============================================================================
