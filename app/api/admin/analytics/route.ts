@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     const totalResponses = surveyData?.length || 0
     const today = new Date().toDateString()
-    const todayResponses = surveyData?.filter((r) => new Date(r.created_at).toDateString() === today).length || 0
+    const todayResponses = surveyData?.filter((r: SurveyResponse) => new Date(r.created_at).toDateString() === today).length || 0
 
     // Initialize distributions
     const roleDistribution: { [key: string]: number } = {}
