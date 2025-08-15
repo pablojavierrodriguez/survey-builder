@@ -37,24 +37,29 @@ export class ConfigManager {
   }
 
   async isConfigured(): Promise<boolean> {
-    // Check environment variables first (highest priority)
-    if (this.hasEnvironmentConfig()) {
-      return true
-    }
+    try {
+      // Check environment variables first (highest priority)
+      if (this.hasEnvironmentConfig()) {
+        return true
+      }
 
-    // Check local file
-    const localConfig = await this.loadFromLocalFile()
-    if (localConfig) {
-      return true
-    }
+      // Check local file
+      const localConfig = await this.loadFromLocalFile()
+      if (localConfig) {
+        return true
+      }
 
-    // Check database
-    const dbConfig = await this.loadFromDatabase()
-    if (dbConfig) {
-      return true
-    }
+      // Check database
+      const dbConfig = await this.loadFromDatabase()
+      if (dbConfig) {
+        return true
+      }
 
-    return false
+      return false
+    } catch (error) {
+      console.error("Error checking configuration:", error)
+      return false
+    }
   }
 
   private loadFromEnvironment(): AppConfig | null {
@@ -112,18 +117,15 @@ export class ConfigManager {
     }
   }
 
-
   async saveConfig(config: AppConfig): Promise<{ success: boolean; savedTo: string }> {
     try {
       const supabase = await this.getSupabaseClient()
       if (!supabase) throw new Error("Supabase client not available")
 
-      const { error } = await supabase
-        .from("app_settings")
-        .upsert({
-          environment: config.database.environment,
-          settings: config,
-        })
+      const { error } = await supabase.from("app_settings").upsert({
+        environment: config.database.environment,
+        settings: config,
+      })
 
       if (error) {
         console.error("Error saving config to database:", error)
@@ -199,5 +201,16 @@ export class ConfigManager {
   }
 }
 
-// Export singleton instance
-export const configManager = ConfigManager.getInstance()
+let configManagerInstance: ConfigManager | null = null
+
+export const configManager = (() => {
+  try {
+    if (!configManagerInstance) {
+      configManagerInstance = ConfigManager.getInstance()
+    }
+    return configManagerInstance
+  } catch (error) {
+    console.error("Error initializing ConfigManager:", error)
+    throw error
+  }
+})()
