@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
     }
 
-    // Parse request body
+    // Parse request body - expecting normalized data now
     const body = await request.json()
     const { response_data, session_id, user_agent, ip_address } = body
 
@@ -33,17 +33,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Response data is required" }, { status: 400 })
     }
 
-    // Save survey response
-    const { data, error } = await supabase
-      .from("survey_data")
-      .insert({
-        response_data,
-        session_id,
-        user_agent,
-        ip_address,
-      })
-      .select()
-      .single()
+    // Extract normalized fields from response_data
+    const normalizedData = {
+      session_id: session_id || `session-${Date.now()}`,
+      user_agent,
+      ip_address,
+      role: response_data.role || "other",
+      seniority: response_data.seniority || "mid",
+      company_size: response_data.company_size || "medium",
+      industry: response_data.industry || "technology",
+      tools_used: response_data.tools_used || [],
+      learning_methods: response_data.learning_methods || [],
+      satisfaction_score: response_data.satisfaction_score ? Number.parseInt(response_data.satisfaction_score) : null,
+      feedback: response_data.feedback || null,
+    }
+
+    // Save to normalized survey_responses table
+    const { data, error } = await supabase.from("survey_responses").insert(normalizedData).select().single()
 
     if (error) {
       console.error("❌ Database insert error:", error)
@@ -64,22 +70,20 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Supabase client
     const supabase = await getSupabaseClient()
     if (!supabase) {
       console.error("❌ Could not create Supabase client")
       return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
     }
 
-    // Get query parameters
     const { searchParams } = new URL(request.url)
     const page = Number.parseInt(searchParams.get("page") || "1")
     const limit = Number.parseInt(searchParams.get("limit") || "50")
     const offset = (page - 1) * limit
 
-    // Get survey responses
+    // Get from normalized survey_responses table
     const { data, error, count } = await supabase
-      .from("survey_data")
+      .from("survey_responses")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)

@@ -1,33 +1,41 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
 interface SurveyResponse {
-  id: number
+  id: string
   created_at: string
   updated_at: string
-  response_data: any
-  session_id?: string
+  session_id: string
   user_agent?: string
   ip_address?: string
+  role: string
+  seniority: string
+  company_size: string
+  industry: string
+  tools_used: string[]
+  learning_methods: string[]
+  satisfaction_score?: number
+  feedback?: string
 }
 
 export async function GET(request: NextRequest) {
   try {
     console.log("[v0] Analytics API called")
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseKey) {
+    if (!isSupabaseConfigured) {
       console.log("[v0] Missing Supabase configuration")
       return NextResponse.json({ success: false, error: "Supabase not configured" }, { status: 500 })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = await getSupabaseClient()
+    if (!supabase) {
+      console.log("[v0] Could not create Supabase client")
+      return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
+    }
 
-    // Get analytics data
+    // Get analytics data from normalized survey_responses table
     const { data: surveyData, error: surveyError } = await supabase
-      .from("survey_data")
+      .from("survey_responses")
       .select("*")
       .order("created_at", { ascending: false })
 
@@ -53,34 +61,31 @@ export async function GET(request: NextRequest) {
     const toolsUsage: { [key: string]: number } = {}
     const learningMethods: { [key: string]: number } = {}
 
-    // Process each survey response
+    // Process each survey response - now using normalized fields
     surveyData?.forEach((response: SurveyResponse) => {
-      const data = response.response_data || {}
-
       // Role distribution
-      if (data.role) {
-        roleDistribution[data.role] = (roleDistribution[data.role] || 0) + 1
+      if (response.role) {
+        roleDistribution[response.role] = (roleDistribution[response.role] || 0) + 1
       }
 
       // Seniority distribution
-      if (data.seniority) {
-        seniorityDistribution[data.seniority] = (seniorityDistribution[data.seniority] || 0) + 1
+      if (response.seniority) {
+        seniorityDistribution[response.seniority] = (seniorityDistribution[response.seniority] || 0) + 1
       }
 
       // Industry distribution
-      if (data.industry) {
-        industryDistribution[data.industry] = (industryDistribution[data.industry] || 0) + 1
+      if (response.industry) {
+        industryDistribution[response.industry] = (industryDistribution[response.industry] || 0) + 1
       }
 
       // Company size distribution
-      if (data.company_size) {
-        companyDistribution[data.company_size] = (companyDistribution[data.company_size] || 0) + 1
+      if (response.company_size) {
+        companyDistribution[response.company_size] = (companyDistribution[response.company_size] || 0) + 1
       }
 
       // Tools usage
-      if (data.tools) {
-        const tools = Array.isArray(data.tools) ? data.tools : [data.tools]
-        tools.forEach((tool: string) => {
+      if (response.tools_used && Array.isArray(response.tools_used)) {
+        response.tools_used.forEach((tool: string) => {
           if (tool) {
             toolsUsage[tool] = (toolsUsage[tool] || 0) + 1
           }
@@ -88,9 +93,8 @@ export async function GET(request: NextRequest) {
       }
 
       // Learning methods
-      if (data.learning_methods) {
-        const methods = Array.isArray(data.learning_methods) ? data.learning_methods : [data.learning_methods]
-        methods.forEach((method: string) => {
+      if (response.learning_methods && Array.isArray(response.learning_methods)) {
+        response.learning_methods.forEach((method: string) => {
           if (method) {
             learningMethods[method] = (learningMethods[method] || 0) + 1
           }
@@ -100,9 +104,12 @@ export async function GET(request: NextRequest) {
 
     const recentResponses =
       surveyData?.slice(0, 10).map((response) => ({
-        ...response.response_data,
-        created_at: response.created_at,
         id: response.id,
+        role: response.role,
+        seniority: response.seniority,
+        company_size: response.company_size,
+        industry: response.industry,
+        created_at: response.created_at,
       })) || []
 
     return NextResponse.json({

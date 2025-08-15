@@ -1,24 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { configManager } from "@/lib/config-manager"
+import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
-    // Get configuration from ConfigManager
-    const config = await configManager.getConfig()
-
-    if (!config) {
-      return NextResponse.json({ success: false, error: "System not configured" }, { status: 404 })
+    if (!isSupabaseConfigured) {
+      return NextResponse.json({ success: false, error: "System not configured" }, { status: 503 })
     }
 
     // Get Supabase client
-    const supabase = await configManager.getSupabaseClient()
+    const supabase = await getSupabaseClient()
     if (!supabase) {
       return NextResponse.json({ success: false, error: "Could not initialize Supabase client" }, { status: 500 })
     }
 
-    const tableName = config.database?.tableName || "survey_data"
+    const tableName = "survey_responses" // Using new normalized table
 
-    // Fetch survey responses
+    // Fetch survey responses from normalized table
     const { data: surveyData, error: surveyError } = await supabase
       .from(tableName)
       .select("*")
@@ -26,12 +23,11 @@ export async function GET(request: NextRequest) {
 
     if (surveyError) {
       console.error("Error fetching survey data:", surveyError)
-      // If table doesn't exist or other error, still return success but with empty records
       return NextResponse.json({
         success: true,
         data: {
-          url: config.database?.url,
-          environment: config.database?.environment,
+          url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          environment: process.env.NODE_ENV || "development",
           tableName: tableName,
           records: [],
           error: `Error fetching data: ${surveyError.message}`,
@@ -39,50 +35,34 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const transformedRecords =
-      surveyData?.map((record: any) => {
-        // Handle both survey_data format (with response_data) and direct format
-        if (record.response_data) {
-          return {
-            id: record.id,
-            ...record.response_data,
-            created_at: record.created_at,
-          }
-        }
-        return record
-      }) || []
+    // Data is already normalized, no transformation needed
+    const transformedRecords = surveyData || []
 
     let tables: string[] = []
     try {
-      const { data: tablesData, error: tablesError } = await supabase.rpc("get_public_tables")
+      // Try to get table list
+      const { data: tablesData, error: tablesError } = await supabase
+        .from("information_schema.tables")
+        .select("table_name")
+        .eq("table_schema", "public")
 
       if (tablesError) {
-        // Fallback: try direct SQL query
-        const { data: fallbackTables, error: fallbackError } = await supabase
-          .from("pg_tables")
-          .select("tablename")
-          .eq("schemaname", "public")
-
-        if (!fallbackError && fallbackTables) {
-          tables = fallbackTables.map((t: { tablename: string }) => t.tablename)
-        } else {
-          // If all else fails, return known tables
-          tables = ["survey_data", "app_settings", "profiles"]
-        }
+        // Fallback to known tables
+        tables = ["survey_responses", "app_config", "profiles", "analytics_cache"]
       } else {
-        tables = tablesData || []
+        tables = tablesData?.map((t: { table_name: string }) => t.table_name) || []
       }
     } catch (error) {
       console.error("Error fetching tables:", error)
       // Return known tables as fallback
-      tables = ["survey_data", "app_settings", "profiles"]
+      tables = ["survey_responses", "app_config", "profiles", "analytics_cache"]
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        url: config.database?.url,
-        environment: config.database?.environment,
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        environment: process.env.NODE_ENV || "development",
         tableName: tableName,
         tables: tables,
         records: transformedRecords,
