@@ -1,10 +1,9 @@
--- 🚀 WORLD-CLASS SURVEY BUILDER SCHEMA OPTIMIZATION
+-- 🚀 WORLD-CLASS SURVEY BUILDER - CLEAN INITIALIZATION
 -- Escalable, Simple, y Optimizado para Performance
 
 -- ============================================================================
 -- 1. OPTIMIZED SURVEY RESPONSES TABLE
 -- ============================================================================
--- Normalizing survey_data with specific fields instead of JSON blob
 DROP TABLE IF EXISTS public.survey_responses CASCADE;
 CREATE TABLE public.survey_responses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -42,7 +41,6 @@ CREATE INDEX idx_survey_responses_session ON public.survey_responses(session_id)
 -- ============================================================================
 -- 2. SIMPLIFIED APP CONFIGURATION
 -- ============================================================================
--- Single global configuration instead of environment-specific
 DROP TABLE IF EXISTS public.app_config CASCADE;
 CREATE TABLE public.app_config (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -62,7 +60,7 @@ CREATE TABLE public.app_config (
     
     -- Limits & Performance
     max_responses_per_session INTEGER DEFAULT 1,
-    response_rate_limit INTEGER DEFAULT 100, -- per hour
+    response_rate_limit INTEGER DEFAULT 100,
     
     -- Metadata
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -76,7 +74,6 @@ VALUES ('Survey Builder', 'https://survey-builder.vercel.app', 'production');
 -- ============================================================================
 -- 3. OPTIMIZED USER PROFILES
 -- ============================================================================
--- Enhanced profiles with proper role management
 DROP TABLE IF EXISTS public.profiles CASCADE;
 CREATE TABLE public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -105,39 +102,7 @@ CREATE INDEX idx_profiles_role ON public.profiles(role);
 CREATE INDEX idx_profiles_active ON public.profiles(is_active);
 
 -- ============================================================================
--- 4. ANALYTICS & INSIGHTS TABLE
--- ============================================================================
--- Dedicated analytics table for performance
-CREATE TABLE public.survey_analytics (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    
-    -- Time Period
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    hour INTEGER CHECK (hour >= 0 AND hour <= 23),
-    
-    -- Metrics
-    total_responses INTEGER DEFAULT 0,
-    unique_sessions INTEGER DEFAULT 0,
-    completion_rate DECIMAL(5,2) DEFAULT 0.00,
-    
-    -- Distributions (Pre-calculated for performance)
-    role_distribution JSONB DEFAULT '{}',
-    seniority_distribution JSONB DEFAULT '{}',
-    industry_distribution JSONB DEFAULT '{}',
-    
-    -- Metadata
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    UNIQUE(date, hour)
-);
-
--- Performance Indexes
-CREATE INDEX idx_analytics_date ON public.survey_analytics(date DESC);
-CREATE INDEX idx_analytics_hour ON public.survey_analytics(date, hour);
-
--- ============================================================================
--- 5. ROW LEVEL SECURITY (RLS) POLICIES
+-- 4. ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
 
 -- Survey Responses: Public read/write for survey submission
@@ -187,24 +152,10 @@ CREATE POLICY "Admins can view all profiles" ON public.profiles
         )
     );
 
--- Analytics: Admin only
-ALTER TABLE public.survey_analytics ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admins can view analytics" ON public.survey_analytics
-    FOR SELECT TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.role IN ('admin', 'super_admin')
-        )
-    );
-
 -- ============================================================================
--- 6. TRIGGERS FOR AUTO-UPDATES
+-- 5. TRIGGERS FOR AUTO-UPDATES
 -- ============================================================================
 
--- Auto-update timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -218,77 +169,9 @@ CREATE TRIGGER update_app_config_updated_at BEFORE UPDATE ON public.app_config F
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- 7. DATA MIGRATION FROM OLD SCHEMA (CORRECTED MAPPING)
+-- 6. CREATE ADMIN USER
 -- ============================================================================
 
--- Corregido el mapeo de valores para evitar constraint violations
-DO $$
-BEGIN
-    -- Only migrate if there are real survey responses (not test data)
-    IF EXISTS (
-        SELECT 1 FROM public.survey_data 
-        WHERE response_data::text NOT LIKE '%"test"%' 
-        AND response_data::text NOT LIKE '%"timestamp": "2024-01-01"%'
-    ) THEN
-        -- Migrate real survey responses with proper value mapping
-        INSERT INTO public.survey_responses (
-            session_id, user_agent, ip_address, 
-            role, seniority, company_size, industry,
-            created_at
-        )
-        SELECT 
-            COALESCE(session_id, 'migrated-' || id::text),
-            user_agent,
-            ip_address::inet,
-            -- Map role values
-            CASE 
-                WHEN LOWER(response_data->>'role') LIKE '%product%' THEN 'product_manager'
-                WHEN LOWER(response_data->>'role') LIKE '%design%' THEN 'designer'
-                WHEN LOWER(response_data->>'role') LIKE '%develop%' THEN 'developer'
-                WHEN LOWER(response_data->>'role') LIKE '%analy%' THEN 'analyst'
-                ELSE 'other'
-            END,
-            -- Map seniority values
-            CASE 
-                WHEN LOWER(response_data->>'seniority') LIKE '%junior%' THEN 'junior'
-                WHEN LOWER(response_data->>'seniority') LIKE '%senior%' THEN 'senior'
-                WHEN LOWER(response_data->>'seniority') LIKE '%lead%' THEN 'lead'
-                WHEN LOWER(response_data->>'seniority') LIKE '%director%' THEN 'director'
-                WHEN LOWER(response_data->>'seniority') LIKE '%vp%' THEN 'vp'
-                WHEN LOWER(response_data->>'seniority') LIKE '%c-level%' OR LOWER(response_data->>'seniority') LIKE '%founder%' THEN 'vp'
-                ELSE 'mid'
-            END,
-            -- Map company_size values
-            CASE 
-                WHEN LOWER(response_data->>'company_size') LIKE '%freelance%' OR LOWER(response_data->>'company_size') LIKE '%independent%' THEN 'startup'
-                WHEN LOWER(response_data->>'company_size') LIKE '%startup%' OR LOWER(response_data->>'company_size') LIKE '%1-10%' THEN 'startup'
-                WHEN LOWER(response_data->>'company_size') LIKE '%small%' OR LOWER(response_data->>'company_size') LIKE '%11-50%' THEN 'small'
-                WHEN LOWER(response_data->>'company_size') LIKE '%medium%' OR LOWER(response_data->>'company_size') LIKE '%51-200%' THEN 'medium'
-                WHEN LOWER(response_data->>'company_size') LIKE '%large%' OR LOWER(response_data->>'company_size') LIKE '%201-1000%' THEN 'large'
-                WHEN LOWER(response_data->>'company_size') LIKE '%enterprise%' OR LOWER(response_data->>'company_size') LIKE '%1000%' THEN 'enterprise'
-                ELSE 'medium'
-            END,
-            COALESCE(response_data->>'industry', 'Technology'),
-            created_at
-        FROM public.survey_data
-        WHERE response_data::text NOT LIKE '%"test"%'
-        AND response_data::text NOT LIKE '%"timestamp": "2024-01-01"%';
-    END IF;
-END $$;
-
--- ============================================================================
--- 8. CLEANUP OLD TABLES
--- ============================================================================
-
--- Remove old inefficient tables
-DROP TABLE IF EXISTS public.survey_data CASCADE;
-DROP TABLE IF EXISTS public.app_settings CASCADE;
-
--- ============================================================================
--- 9. CREATE ADMIN USER
--- ============================================================================
-
--- Create default admin profile for immediate access
 INSERT INTO public.profiles (id, email, full_name, role, permissions)
 VALUES (
     gen_random_uuid(),
@@ -299,5 +182,5 @@ VALUES (
 ) ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================================
--- OPTIMIZATION COMPLETE! 🚀
+-- CLEAN INITIALIZATION COMPLETE! 🚀
 -- ============================================================================
