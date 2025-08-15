@@ -12,7 +12,7 @@ interface SurveyResponse {
   seniority: string
   company_size: string
   industry: string
-  tools_used: string[]
+  daily_tools: string[]
   learning_methods: string[]
   satisfaction_score?: number
   feedback?: string
@@ -84,8 +84,8 @@ export async function GET(request: NextRequest) {
       }
 
       // Tools usage
-      if (response.tools_used && Array.isArray(response.tools_used)) {
-        response.tools_used.forEach((tool: string) => {
+      if (response.daily_tools && Array.isArray(response.daily_tools)) {
+        response.daily_tools.forEach((tool: string) => {
           if (tool) {
             toolsUsage[tool] = (toolsUsage[tool] || 0) + 1
           }
