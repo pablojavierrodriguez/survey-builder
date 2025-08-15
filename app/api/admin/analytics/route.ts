@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     })
 
     const recentResponses =
-      surveyData?.slice(0, 10).map((response) => ({
+      surveyData?.slice(0, 10).map((response: SurveyResponse) => ({
         id: response.id,
         role: response.role,
         seniority: response.seniority,
