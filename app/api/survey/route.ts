@@ -33,19 +33,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Response data is required" }, { status: 400 })
     }
 
-    // Extract normalized fields from response_data
     const normalizedData = {
       session_id: session_id || `session-${Date.now()}`,
       user_agent,
       ip_address,
       role: response_data.role || "other",
+      other_role: response_data.other_role || null,
       seniority: response_data.seniority || "mid",
+      company_type: response_data.company_type || null,
       company_size: response_data.company_size || "medium",
       industry: response_data.industry || "technology",
-      tools_used: response_data.tools_used || [],
+      product_type: response_data.product_type || null,
+      customer_segment: response_data.customer_segment || null,
+      main_challenge: response_data.main_challenge || null,
+      daily_tools: response_data.daily_tools || [],
+      other_tool: response_data.other_tool || null,
       learning_methods: response_data.learning_methods || [],
-      satisfaction_score: response_data.satisfaction_score ? Number.parseInt(response_data.satisfaction_score) : null,
-      feedback: response_data.feedback || null,
+      salary_currency: response_data.salary_currency || null,
+      salary_min: response_data.salary_min ? Number.parseInt(response_data.salary_min) : null,
+      salary_max: response_data.salary_max ? Number.parseInt(response_data.salary_max) : null,
+      salary_average: response_data.salary_average ? Number.parseInt(response_data.salary_average) : null,
+      email: response_data.email || null,
     }
 
     // Save to normalized survey_responses table
