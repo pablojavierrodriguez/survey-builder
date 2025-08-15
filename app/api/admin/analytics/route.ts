@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { configManager } from "@/lib/config-manager"
+import { createClient } from "@supabase/supabase-js"
 
 interface SurveyResponse {
   id: number
@@ -15,20 +15,15 @@ export async function GET(request: NextRequest) {
   try {
     console.log("[v0] Analytics API called")
 
-    // Get configuration from ConfigManager
-    const config = await configManager.getConfig()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!config) {
-      console.log("[v0] System not configured")
-      return NextResponse.json({ success: false, error: "System not configured" }, { status: 404 })
+    if (!supabaseUrl || !supabaseKey) {
+      console.log("[v0] Missing Supabase configuration")
+      return NextResponse.json({ success: false, error: "Supabase not configured" }, { status: 500 })
     }
 
-    // Get Supabase client
-    const supabase = await configManager.getSupabaseClient()
-    if (!supabase) {
-      console.log("[v0] Could not initialize Supabase client")
-      return NextResponse.json({ success: false, error: "Could not initialize Supabase client" }, { status: 500 })
-    }
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Get analytics data
     const { data: surveyData, error: surveyError } = await supabase
@@ -47,6 +42,8 @@ export async function GET(request: NextRequest) {
     console.log("[v0] Survey data fetched:", surveyData?.length || 0, "records")
 
     const totalResponses = surveyData?.length || 0
+    const today = new Date().toDateString()
+    const todayResponses = surveyData?.filter((r) => new Date(r.created_at).toDateString() === today).length || 0
 
     // Initialize distributions
     const roleDistribution: { [key: string]: number } = {}
@@ -59,7 +56,6 @@ export async function GET(request: NextRequest) {
     // Process each survey response
     surveyData?.forEach((response: SurveyResponse) => {
       const data = response.response_data || {}
-      console.log("[v0] Processing response data:", data)
 
       // Role distribution
       if (data.role) {
@@ -81,9 +77,9 @@ export async function GET(request: NextRequest) {
         companyDistribution[data.company_size] = (companyDistribution[data.company_size] || 0) + 1
       }
 
-      // Tools usage (assuming it's an array or comma-separated string)
+      // Tools usage
       if (data.tools) {
-        const tools = Array.isArray(data.tools) ? data.tools : data.tools.split(",").map((t: string) => t.trim())
+        const tools = Array.isArray(data.tools) ? data.tools : [data.tools]
         tools.forEach((tool: string) => {
           if (tool) {
             toolsUsage[tool] = (toolsUsage[tool] || 0) + 1
@@ -91,11 +87,9 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // Learning methods (assuming it's an array or comma-separated string)
+      // Learning methods
       if (data.learning_methods) {
-        const methods = Array.isArray(data.learning_methods)
-          ? data.learning_methods
-          : data.learning_methods.split(",").map((m: string) => m.trim())
+        const methods = Array.isArray(data.learning_methods) ? data.learning_methods : [data.learning_methods]
         methods.forEach((method: string) => {
           if (method) {
             learningMethods[method] = (learningMethods[method] || 0) + 1
@@ -104,25 +98,25 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    console.log("[v0] Distributions calculated:", {
-      roleDistribution,
-      seniorityDistribution,
-      industryDistribution,
-      companyDistribution,
-      toolsUsage,
-      learningMethods,
-    })
+    const recentResponses =
+      surveyData?.slice(0, 10).map((response) => ({
+        ...response.response_data,
+        created_at: response.created_at,
+        id: response.id,
+      })) || []
 
     return NextResponse.json({
       success: true,
       data: {
         totalResponses,
+        todayResponses,
         roleDistribution,
         seniorityDistribution,
         industryDistribution,
         companyDistribution,
         toolsUsage,
         learningMethods,
+        recentResponses,
       },
     })
   } catch (error) {

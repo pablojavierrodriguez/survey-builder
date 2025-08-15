@@ -73,41 +73,32 @@ export default function AdminDashboard() {
     try {
       setError(null)
 
-      let data = []
+      const response = await fetch("/api/admin/analytics", {
+        method: "GET",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      })
 
-      // Try analytics API first (faster)
-      try {
-        const response = await fetch("/api/admin/analytics", {
-          method: "GET",
-          headers: {
-            "Cache-Control": "no-cache",
-          },
-        })
-
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.data) {
-            data = result.data.recentResponses || []
-          }
-        }
-      } catch (apiError) {
-        console.warn("Dashboard - API fetch failed, using fallback")
-      }
-
-      if (data.length === 0) {
-        const localData = localStorage.getItem("survey")
-        if (localData) {
-          try {
-            const parsed = JSON.parse(localData)
-            data = Array.isArray(parsed) ? parsed : []
-          } catch (parseError) {
-            console.warn("Dashboard - Error parsing localStorage data")
-            data = []
-          }
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          const data = result.data.recentResponses || []
+          processDataInline(data)
+          setLastUpdated(new Date())
+          return
         }
       }
 
-      processDataInline(data)
+      setStats({
+        totalResponses: 0,
+        todayResponses: 0,
+        completionRate: 0,
+        avgTimeToComplete: 0,
+        topRole: "No data",
+        topIndustry: "No data",
+        recentResponses: [],
+      })
       setLastUpdated(new Date())
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
