@@ -68,6 +68,16 @@ const seniorityOptions = [
   "C-level/Founder",
 ]
 
+const companyTypeOptions = [
+  "Startup (1-50 employees)",
+  "Scale-up (51-200 employees)",
+  "Mid-size company (201-1000 employees)",
+  "Large enterprise (1000+ employees)",
+  "Freelance/Independent",
+  "Agency/Consultancy",
+  "Other",
+]
+
 const companySizeOptions = [
   "Early-stage Startup (Pre-seed/Seed)",
   "Growth-stage Startup (Series A-C)",
@@ -227,6 +237,10 @@ export default function ProductSurvey() {
     setSurveyData((prev) => ({ ...prev, seniority }))
   }
 
+  const handleCompanyTypeSelect = (company_type: string) => {
+    setSurveyData((prev) => ({ ...prev, company_type }))
+  }
+
   const handleCompanySizeSelect = (company_size: string) => {
     setSurveyData((prev) => ({ ...prev, company_size }))
   }
@@ -241,19 +255,6 @@ export default function ProductSurvey() {
 
   const handleCustomerSegmentSelect = (customer_segment: string) => {
     setSurveyData((prev) => ({ ...prev, customer_segment }))
-  }
-
-  // Manual navigation handlers
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
   }
 
   const handleOtherRoleChange = (other_role: string) => {
@@ -294,32 +295,34 @@ export default function ProductSurvey() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
-  const canProceed = () => {
-    switch (currentStep) {
+  const isStepValid = (step: number): boolean => {
+    switch (step) {
       case 1:
         return surveyData.role !== ""
       case 2:
         return surveyData.seniority !== ""
       case 3:
-        return surveyData.company_size !== ""
+        return surveyData.company_type !== ""
       case 4:
-        return surveyData.industry !== ""
+        return surveyData.company_size !== ""
       case 5:
-        return surveyData.product_type !== ""
+        return surveyData.industry !== ""
       case 6:
-        return surveyData.customer_segment !== ""
+        return surveyData.product_type !== ""
       case 7:
-        return surveyData.main_challenge.trim().length > 10
+        return surveyData.customer_segment !== ""
       case 8:
-        return surveyData.daily_tools.length > 0
+        return surveyData.main_challenge.trim().length > 10
       case 9:
-        return surveyData.learning_methods.length > 0
+        return surveyData.daily_tools.length > 0
       case 10:
-        return true // Salary is optional
+        return surveyData.learning_methods.length > 0
       case 11:
+        return true // Salary is optional
+      case 12:
         return surveyData.email === "" || isValidEmail(surveyData.email)
       default:
-        return true
+        return false
     }
   }
 
@@ -410,13 +413,23 @@ export default function ProductSurvey() {
     })
   }
 
+  const handleNext = () => {
+    if (isStepValid(currentStep)) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    setCurrentStep(currentStep - 1)
+  }
+
   // Centralized navigation logic
   const getNavigationConfig = () => {
     const hasPrevious = currentStep > 1
     const hasNext = currentStep < totalSteps
     const isRequired = currentStep !== 10 // Salary is optional
     const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
-    const canProceedResult = canProceed()
+    const canProceedResult = isStepValid(currentStep)
 
     return {
       showBack: hasPrevious,
@@ -432,15 +445,36 @@ export default function ProductSurvey() {
     switch (currentStep) {
       case 1:
         return (
-          <SingleChoiceQuestion
-            question="What's your current role?"
-            options={roleOptions}
-            selectedValue={surveyData.role}
-            onSelect={handleRoleSelect}
-            onNext={handleNext}
-            autoAdvance={true}
-            delay={500}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <SingleChoiceQuestion
+              question="What's your current role?"
+              options={roleOptions}
+              selectedValue={surveyData.role}
+              onSelect={handleRoleSelect}
+              onNext={handleNext}
+              autoAdvance={surveyData.role !== "Other"}
+              delay={500}
+            />
+
+            {surveyData.role === "Other" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Please specify your role..."
+                  value={surveyData.other_role}
+                  onChange={(e) => handleOtherRoleChange(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+                <Button onClick={handleNext} disabled={!surveyData.other_role.trim()} className="w-full">
+                  Continue <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </motion.div>
+            )}
+          </motion.div>
         )
 
       case 2:
@@ -460,6 +494,19 @@ export default function ProductSurvey() {
         return (
           <SingleChoiceQuestion
             question="What type of company do you work for?"
+            options={companyTypeOptions}
+            selectedValue={surveyData.company_type}
+            onSelect={handleCompanyTypeSelect}
+            onNext={handleNext}
+            autoAdvance={true}
+            delay={500}
+          />
+        )
+
+      case 4:
+        return (
+          <SingleChoiceQuestion
+            question="What's your company size?"
             options={companySizeOptions}
             selectedValue={surveyData.company_size}
             onSelect={handleCompanySizeSelect}
@@ -469,7 +516,7 @@ export default function ProductSurvey() {
           />
         )
 
-      case 4:
+      case 5:
         return (
           <SingleChoiceQuestion
             question="What industry do you work in?"
@@ -482,7 +529,7 @@ export default function ProductSurvey() {
           />
         )
 
-      case 5:
+      case 6:
         return (
           <SingleChoiceQuestion
             question="What type of product do you work on?"
@@ -495,20 +542,30 @@ export default function ProductSurvey() {
           />
         )
 
-      case 6:
+      case 7:
         return (
-          <SingleChoiceQuestion
-            question="What's your customer segment?"
-            options={customerSegmentOptions}
-            selectedValue={surveyData.customer_segment}
-            onSelect={handleCustomerSegmentSelect}
-            onNext={handleNext}
-            autoAdvance={true}
-            delay={500}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
+            >
+              What's your customer segment?
+            </motion.h2>
+            <Textarea
+              value={surveyData.customer_segment}
+              onChange={(e) => handleCustomerSegmentSelect(e.target.value)}
+              placeholder="Describe your customer segment..."
+              className="min-h-28 sm:min-h-32 text-sm sm:text-base md:text-lg p-3 sm:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+            />
+          </motion.div>
         )
 
-      case 7:
+      case 8:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -531,21 +588,21 @@ export default function ProductSurvey() {
           </motion.div>
         )
 
-      case 8:
+      case 9:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
+            className="w-full max-w-2xl mx-auto space-y-6"
           >
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
             >
               What tools do you use daily? (Select all that apply)
             </motion.h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {toolOptions.map((tool) => (
                 <motion.button
                   key={tool}
@@ -569,13 +626,26 @@ export default function ProductSurvey() {
                 </motion.button>
               ))}
             </div>
+
+            {surveyData.daily_tools.includes("Other") && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Please specify other tools..."
+                  value={surveyData.other_tool}
+                  onChange={(e) => handleOtherToolChange(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+              </motion.div>
+            )}
+
             <div className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
               {surveyData.daily_tools.length} selected
             </div>
           </motion.div>
         )
 
-      case 9:
+      case 10:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -619,7 +689,7 @@ export default function ProductSurvey() {
           </motion.div>
         )
 
-      case 10:
+      case 11:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -760,37 +830,6 @@ export default function ProductSurvey() {
                 </div>
               </div>
             </div>
-          </motion.div>
-        )
-
-      case 11:
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
-          >
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
-            >
-              Your email (Optional)
-            </motion.h2>
-            <Input
-              type="email"
-              value={surveyData.email}
-              onChange={(e) => handleEmailChange(e.target.value)}
-              placeholder="your@email.com"
-              className={`w-full p-4 text-lg rounded-xl border-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
-                surveyData.email && !isValidEmail(surveyData.email)
-                  ? "border-red-300 dark:border-red-600 focus:border-red-500 dark:focus:border-red-400"
-                  : "border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400"
-              }`}
-            />
-            {surveyData.email && !isValidEmail(surveyData.email) && (
-              <p className="text-red-500 dark:text-red-400 text-sm">Please enter a valid email address</p>
-            )}
           </motion.div>
         )
 
