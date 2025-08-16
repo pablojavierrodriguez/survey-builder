@@ -1,24 +1,16 @@
 // src/app/admin/layout.tsx
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
-import { getPermissions, getUserRole } from "@/lib/permissions"
+import { getPermissions, getUserRoleFromProfile } from "@/lib/permissions"
 import { useSettings } from "@/lib/use-settings"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { 
-  LayoutDashboard, 
-  BarChart3, 
-  FileText, 
-  Database, 
-  Settings, 
-  Menu, 
-  X,
-  LogOut,
-  User
-} from "lucide-react"
+import { LayoutDashboard, BarChart3, FileText, Database, Settings, Menu, X, LogOut, User } from "lucide-react"
 import Link from "next/link"
 
 interface AdminUser {
@@ -44,19 +36,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Role-based redirection logic
   useEffect(() => {
     if (!loading && user && profile) {
-      const currentUserRole = profile.full_name ? 'admin' : 'viewer'
-      
+      const currentUserRole = getUserRoleFromProfile(profile, user?.email)
+
       // If user is viewer and trying to access dashboard, redirect to analytics
-      if (currentUserRole === 'viewer' && pathname === '/admin/dashboard') {
-        console.log('[AdminLayout] Viewer accessing dashboard, redirecting to analytics')
-        router.push('/admin/analytics')
+      if (currentUserRole === "viewer" && pathname === "/admin/dashboard") {
+        console.log("[AdminLayout] Viewer accessing dashboard, redirecting to analytics")
+        router.push("/admin/analytics")
         return
       }
-      
+
       // If user is admin and accessing root admin path, redirect to dashboard
-      if (currentUserRole === 'admin' && (pathname === '/admin' || pathname === '/admin/')) {
-        console.log('[AdminLayout] Admin accessing root admin, redirecting to dashboard')
-        router.push('/admin/dashboard')
+      if (currentUserRole === "admin" && (pathname === "/admin" || pathname === "/admin/")) {
+        console.log("[AdminLayout] Admin accessing root admin, redirecting to dashboard")
+        router.push("/admin/dashboard")
         return
       }
     }
@@ -82,39 +74,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // Get current user role and permissions
-  const currentUserRole = profile?.full_name ? 'admin' : 'viewer'
+  const currentUserRole = getUserRoleFromProfile(profile, user?.email)
   const permissions = getPermissions(currentUserRole as any)
 
   const navigation = [
-    { 
-      name: "Dashboard", 
-      href: "/admin/dashboard", 
-      icon: LayoutDashboard, 
-      show: permissions.canViewDashboard 
+    {
+      name: "Dashboard",
+      href: "/admin/dashboard",
+      icon: LayoutDashboard,
+      show: permissions.canViewDashboard,
     },
-    { 
-      name: "Analytics", 
-      href: "/admin/analytics", 
-      icon: BarChart3, 
-      show: permissions.canViewAnalytics 
+    {
+      name: "Analytics",
+      href: "/admin/analytics",
+      icon: BarChart3,
+      show: permissions.canViewAnalytics,
     },
-    { 
-      name: "Survey Config", 
-      href: "/admin/survey-config", 
-      icon: FileText, 
-      show: permissions.canEditSurveys 
+    {
+      name: "Survey Config",
+      href: "/admin/survey-config",
+      icon: FileText,
+      show: permissions.canEditSurveys,
     },
-    { 
-      name: "Database", 
-      href: "/admin/database", 
-      icon: Database, 
-      show: permissions.canModifyDatabase 
+    {
+      name: "Database",
+      href: "/admin/database",
+      icon: Database,
+      show: permissions.canModifyDatabase,
     },
-    { 
-      name: "Settings", 
-      href: "/admin/settings", 
-      icon: Settings, 
-      show: permissions.canViewSettings 
+    {
+      name: "Settings",
+      href: "/admin/settings",
+      icon: Settings,
+      show: permissions.canViewSettings,
     },
   ]
 
@@ -125,18 +117,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div 
-            className="fixed inset-0 bg-black/50 dark:bg-black/70" 
-            onClick={() => setSidebarOpen(false)} 
-          />
+          <div className="fixed inset-0 bg-black/50 dark:bg-black/70" onClick={() => setSidebarOpen(false)} />
         </div>
       )}
 
       {/* Sidebar */}
-      <div className={`
+      <div
+        className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      `}
+      >
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 border-b border-border">
@@ -178,9 +169,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onClick={() => setSidebarOpen(false)}
                   className={`
                     flex items-center space-x-2.5 sm:space-x-3 px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors
-                    ${isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     }
                   `}
                 >
@@ -197,7 +189,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               variant="outline"
               onClick={handleLogout}
               size="sm"
-              className="w-full justify-start text-xs sm:text-sm"
+              className="w-full justify-start text-xs sm:text-sm bg-transparent"
             >
               <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
               Sign Out
@@ -216,10 +208,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
-          
+
           <div className="flex items-center space-x-3 sm:space-x-4">
             <div className="hidden sm:block">
-              <h1 className="text-base sm:text-lg font-semibold">{settings?.general?.surveyTitle || 'My Survey'}</h1>
+              <h1 className="text-base sm:text-lg font-semibold">{settings?.general?.surveyTitle || "My Survey"}</h1>
             </div>
             <ModeToggle />
           </div>
@@ -227,9 +219,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
-            {children}
-          </div>
+          <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

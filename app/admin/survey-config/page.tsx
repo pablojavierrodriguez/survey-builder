@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Edit, Trash2, Save, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { getUserRoleFromProfile } from "@/lib/permissions"
 
 interface SurveyQuestion {
   id: string
@@ -245,7 +246,7 @@ export default function SurveyConfigPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const { user, profile } = useAuth()
-  const userRole = profile?.full_name ? "admin" : "viewer"
+  const userRole = getUserRoleFromProfile(profile, user?.email)
 
   // Get user role from auth context
   useEffect(() => {
@@ -365,7 +366,9 @@ export default function SurveyConfigPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">Survey Configuration</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage survey settings and questions</p>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+            Manage survey settings and questions
+          </p>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <Button
@@ -435,8 +438,8 @@ export default function SurveyConfigPage() {
             </div>
             <div className="flex gap-2 sm:gap-3">
               {userRole === "admin" && (
-                <Button 
-                  onClick={addQuestion} 
+                <Button
+                  onClick={addQuestion}
                   size="sm"
                   className="dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 text-xs sm:text-sm"
                 >
@@ -470,8 +473,12 @@ export default function SurveyConfigPage() {
                         </Badge>
                       )}
                     </div>
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-50 break-words">{question.title}</h4>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 break-words mt-1">{question.description}</p>
+                    <h4 className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-50 break-words">
+                      {question.title}
+                    </h4>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 break-words mt-1">
+                      {question.description}
+                    </p>
                     {question.options && (
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{question.options.length} options</p>
                     )}
@@ -483,7 +490,11 @@ export default function SurveyConfigPage() {
                       onClick={() => toggleQuestionVisibility(question.id)}
                       className="dark:text-gray-50 dark:hover:bg-gray-700 h-8 w-8 p-0"
                     >
-                      {question.isVisible ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                      {question.isVisible ? (
+                        <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      ) : (
+                        <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"

@@ -1,58 +1,39 @@
-import { createClient } from '@supabase/supabase-js'
-import { configManager } from './config-manager'
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
-// Dynamic Supabase client that uses ConfigManager
-let supabaseClient: any = null
-let isInitialized = false
+// Check if Supabase environment variables are available
+export const isSupabaseConfigured =
+  typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
+  typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
 
-// Initialize Supabase client
-async function initializeSupabase() {
-  if (isInitialized) return supabaseClient
+// Create a singleton instance of the Supabase client for Client Components
+export const supabase = createClientComponentClient<Database>()
 
-  try {
-    supabaseClient = await configManager.getSupabaseClient()
-    isInitialized = true
-    return supabaseClient
-  } catch (error) {
-    console.error('Failed to initialize Supabase client:', error)
+// Legacy function for backward compatibility
+export async function getSupabaseClient() {
+  if (!isSupabaseConfigured) {
+    console.warn(
+      "⚠️ Supabase environment variables are not set. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    )
     return null
   }
+  return supabase
 }
 
-// Get Supabase client (async)
-export async function getSupabaseClient() {
-  return await initializeSupabase()
-}
-
-// Get Supabase client (sync - returns null if not ready)
 export function getSupabaseClientSync() {
-  return supabaseClient
+  return isSupabaseConfigured ? supabase : null
 }
 
-// Check if Supabase is configured
-export async function isSupabaseConfigured() {
-  return await configManager.isConfigured()
-}
-
-// Clear cache and reinitialize
 export async function clearSupabaseCache() {
-  configManager.clearCache()
-  supabaseClient = null
-  isInitialized = false
-  console.log('🗑️ Supabase cache cleared')
-}
-
-// Legacy exports for backward compatibility
-export const supabase = {
-  get: async () => await getSupabaseClient(),
-  getSync: () => getSupabaseClientSync()
+  console.log("🗑️ Supabase cache cleared")
 }
 
 export async function requireSupabase() {
-  return await isSupabaseConfigured()
+  return isSupabaseConfigured
 }
 
-// Database types
+// Database types - updated to match new schema
 export interface Database {
   public: {
     Tables: {
@@ -61,6 +42,7 @@ export interface Database {
           id: string
           email: string
           full_name?: string
+          role?: string
           created_at: string
           updated_at: string
         }
@@ -68,6 +50,7 @@ export interface Database {
           id: string
           email: string
           full_name?: string
+          role?: string
           created_at?: string
           updated_at?: string
         }
@@ -75,6 +58,7 @@ export interface Database {
           id?: string
           email?: string
           full_name?: string
+          role?: string
           created_at?: string
           updated_at?: string
         }
@@ -108,33 +92,81 @@ export interface Database {
           settings?: any
         }
       }
-      survey_data: {
+      survey_responses: {
         Row: {
-          id: number
+          id: string
+          session_id: string
+          user_agent?: string
+          ip_address?: string
+          role?: string
+          other_role?: string
+          seniority?: string
+          company_type?: string
+          company_size?: string
+          industry?: string
+          product_type?: string
+          customer_segment?: string
+          main_challenge?: string
+          daily_tools?: string[]
+          other_tool?: string
+          learning_methods?: string[]
+          salary_currency?: string
+          salary_min?: string
+          salary_max?: string
+          salary_average?: string
+          email?: string
           created_at: string
           updated_at: string
-          response_data: any
-          session_id?: string
-          user_agent?: string
-          ip_address?: string
         }
         Insert: {
-          id?: number
-          created_at?: string
-          updated_at?: string
-          response_data: any
-          session_id?: string
+          id?: string
+          session_id: string
           user_agent?: string
           ip_address?: string
+          role?: string
+          other_role?: string
+          seniority?: string
+          company_type?: string
+          company_size?: string
+          industry?: string
+          product_type?: string
+          customer_segment?: string
+          main_challenge?: string
+          daily_tools?: string[]
+          other_tool?: string
+          learning_methods?: string[]
+          salary_currency?: string
+          salary_min?: string
+          salary_max?: string
+          salary_average?: string
+          email?: string
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          id?: number
-          created_at?: string
-          updated_at?: string
-          response_data?: any
+          id?: string
           session_id?: string
           user_agent?: string
           ip_address?: string
+          role?: string
+          other_role?: string
+          seniority?: string
+          company_type?: string
+          company_size?: string
+          industry?: string
+          product_type?: string
+          customer_segment?: string
+          main_challenge?: string
+          daily_tools?: string[]
+          other_tool?: string
+          learning_methods?: string[]
+          salary_currency?: string
+          salary_min?: string
+          salary_max?: string
+          salary_average?: string
+          email?: string
+          created_at?: string
+          updated_at?: string
         }
       }
     }

@@ -1,66 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { configManager, AppConfig } from '@/lib/config-manager'
+import { NextResponse } from "next/server";
+import { configManager, AppConfig } from "@/lib/config-manager";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { adminEmail, adminPassword, publicUrl, appName } = await request.json()
+    const body = await request.json();
+    const updatedConfig: AppConfig = body.config;
 
-    if (!adminEmail || !adminPassword) {
-      return NextResponse.json(
-        { success: false, error: 'Email y contraseña de admin son requeridos' },
-        { status: 400 }
-      )
+    if (!updatedConfig) {
+      return NextResponse.json({ success: false, message: "No configuration provided" });
     }
 
-    // For admin login method, we need to get the Supabase URL from environment or use a default
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    if (!supabaseUrl) {
-      return NextResponse.json(
-        { success: false, error: 'NEXT_PUBLIC_SUPABASE_URL no está configurado' },
-        { status: 400 }
-      )
-    }
+    // Guardar localmente
+    const savedTo: string | string[] = await configManager.saveToLocalFile(updatedConfig)
+      ? "local file"
+      : "not saved";
 
-    // Create configuration object
-    const config: AppConfig = {
-      database: {
-        url: supabaseUrl,
-        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-        tableName: 'survey_data',
-        environment: 'development'
-      },
-      general: {
-        appName: appName || 'Survey App',
-        publicUrl: publicUrl || 'http://localhost:3000',
-        maintenanceMode: false,
-        analyticsEnabled: true
-      }
-    }
-
-    // Save configuration using ConfigManager
-    const { success, savedTo } = await configManager.saveConfig(config)
-
-    if (!success) {
-      return NextResponse.json(
-        { success: false, error: 'Error al guardar configuración' },
-        { status: 500 }
-      )
-    }
-
-    console.log(`✅ Configuration saved to: ${savedTo.join(', ')}`)
+    // Log seguro
+    const targets = Array.isArray(savedTo) ? savedTo : [savedTo];
+    console.log(`✅ Configuration saved to: ${targets.join(", ")}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Configuración guardada exitosamente',
-      savedTo,
-      clearCache: true
-    })
-
+      savedTo: targets,
+    });
   } catch (error) {
-    console.error('Setup error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
-    )
+    console.error("❌ Error saving configuration:", error);
+    return NextResponse.json({
+      success: false,
+      message: "An unexpected error occurred",
+    });
   }
 }

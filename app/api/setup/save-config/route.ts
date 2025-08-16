@@ -38,8 +38,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log(`✅ Configuration saved to: ${savedTo.join(', ')}`)
+    
+    // Log seguro
+    const targets = Array.isArray(savedTo) ? savedTo : [savedTo];
+    console.log(`✅ Configuration saved to: ${targets.join(', ')}`);
 
     return NextResponse.json({
       success: true,

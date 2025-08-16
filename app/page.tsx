@@ -68,6 +68,16 @@ const seniorityOptions = [
   "C-level/Founder",
 ]
 
+const companyTypeOptions = [
+  "Startup (1-50 employees)",
+  "Scale-up (51-200 employees)",
+  "Mid-size company (201-1000 employees)",
+  "Large enterprise (1000+ employees)",
+  "Freelance/Independent",
+  "Agency/Consultancy",
+  "Other",
+]
+
 const companySizeOptions = [
   "Early-stage Startup (Pre-seed/Seed)",
   "Growth-stage Startup (Series A-C)",
@@ -185,6 +195,15 @@ export default function ProductSurvey() {
   useEffect(() => {
     setIsMounted(true)
 
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const surveyCompleted = window.sessionStorage.getItem("survey_completed")
+      if (surveyCompleted === "true") {
+        setCurrentStep(totalSteps + 1) // Show completion step
+        setIsLoading(false)
+        return
+      }
+    }
+
     // Check configuration status
     const checkConfig = async () => {
       try {
@@ -207,6 +226,13 @@ export default function ProductSurvey() {
     checkConfig()
   }, [])
 
+  useEffect(() => {
+    const completed = sessionStorage.getItem("survey-completed")
+    if (completed === "true") {
+      setCurrentStep(totalSteps + 1)
+    }
+  }, [])
+
   // Settings loading removed - not needed for basic functionality
 
   // Handlers for single choice questions (no auto-advance)
@@ -216,6 +242,10 @@ export default function ProductSurvey() {
 
   const handleSenioritySelect = (seniority: string) => {
     setSurveyData((prev) => ({ ...prev, seniority }))
+  }
+
+  const handleCompanyTypeSelect = (company_type: string) => {
+    setSurveyData((prev) => ({ ...prev, company_type }))
   }
 
   const handleCompanySizeSelect = (company_size: string) => {
@@ -232,19 +262,6 @@ export default function ProductSurvey() {
 
   const handleCustomerSegmentSelect = (customer_segment: string) => {
     setSurveyData((prev) => ({ ...prev, customer_segment }))
-  }
-
-  // Manual navigation handlers
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
   }
 
   const handleOtherRoleChange = (other_role: string) => {
@@ -285,32 +302,34 @@ export default function ProductSurvey() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
-  const canProceed = () => {
-    switch (currentStep) {
+  const isStepValid = (step: number): boolean => {
+    switch (step) {
       case 1:
         return surveyData.role !== ""
       case 2:
         return surveyData.seniority !== ""
       case 3:
-        return surveyData.company_size !== ""
+        return surveyData.company_type !== ""
       case 4:
-        return surveyData.industry !== ""
+        return surveyData.company_size !== ""
       case 5:
-        return surveyData.product_type !== ""
+        return surveyData.industry !== ""
       case 6:
-        return surveyData.customer_segment !== ""
+        return surveyData.product_type !== ""
       case 7:
-        return surveyData.main_challenge.trim().length > 10
+        return surveyData.customer_segment !== ""
       case 8:
-        return surveyData.daily_tools.length > 0
+        return surveyData.main_challenge.trim().length > 10
       case 9:
-        return surveyData.learning_methods.length > 0
+        return surveyData.daily_tools.length > 0
       case 10:
-        return true // Salary is optional
+        return surveyData.learning_methods.length > 0
       case 11:
+        return true // Salary is optional
+      case 12:
         return surveyData.email === "" || isValidEmail(surveyData.email)
       default:
-        return true
+        return false
     }
   }
 
@@ -319,6 +338,9 @@ export default function ProductSurvey() {
     setError(null)
 
     try {
+      console.log("🚀 Starting survey submission...")
+      console.log("📊 Survey data:", surveyData)
+
       const payload = {
         response_data: surveyData,
         session_id:
@@ -328,6 +350,8 @@ export default function ProductSurvey() {
         user_agent: typeof window !== "undefined" ? window.navigator?.userAgent : "Unknown",
         ip_address: null, // Will be handled server-side if needed
       }
+
+      console.log("📤 Sending payload:", payload)
 
       // Store session ID for future reference
       if (typeof window !== "undefined" && window.sessionStorage) {
@@ -342,20 +366,74 @@ export default function ProductSurvey() {
         body: JSON.stringify(payload),
       })
 
+      console.log("📥 Response status:", response.status)
+      console.log("📥 Response ok:", response.ok)
+
       const result = await response.json()
+      console.log("📥 Response data:", result)
 
       if (response.ok && result.success) {
-        // Success - show completion message
+        console.log("✅ Survey submitted successfully!")
         setCurrentStep(totalSteps + 1) // Show completion step
+        // Store success state for better UX
+        if (typeof window !== "undefined" && window.sessionStorage) {
+          window.sessionStorage.setItem("survey_completed", "true")
+          window.sessionStorage.setItem("survey-completed", "true")
+        }
       } else {
-        setError(result.error || "Error submitting survey")
+        const errorMessage = result.error || result.message || "Error submitting survey"
+        console.error("❌ Submission failed:", errorMessage)
+        setError(`Submission failed: ${errorMessage}`)
+        console.error("Survey submission error:", result)
       }
     } catch (error) {
-      console.error("Error submitting survey:", error)
-      setError("Network error. Please try again.")
+      console.error("❌ Error submitting survey:", error)
+      setError("Network error. Please check your connection and try again.")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const restartSurvey = () => {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      window.sessionStorage.removeItem("survey_completed")
+      window.sessionStorage.removeItem("survey-completed")
+      window.sessionStorage.removeItem("survey_session_id")
+    }
+    setCurrentStep(1)
+    setSurveyData({
+      role: "",
+      other_role: "",
+      seniority: "",
+      company_type: "",
+      company_size: "",
+      industry: "",
+      product_type: "",
+      customer_segment: "",
+      main_challenge: "",
+      daily_tools: [],
+      other_tool: "",
+      learning_methods: [],
+      salary_currency: "ARS",
+      salary_min: "",
+      salary_max: "",
+      salary_average: "",
+      email: "",
+    })
+  }
+
+  const handleNext = () => {
+    if (isStepValid(currentStep)) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handleAutoNext = () => {
+    setCurrentStep(currentStep + 1)
+  }
+
+  const handlePrevious = () => {
+    setCurrentStep(currentStep - 1)
   }
 
   // Centralized navigation logic
@@ -364,7 +442,7 @@ export default function ProductSurvey() {
     const hasNext = currentStep < totalSteps
     const isRequired = currentStep !== 10 // Salary is optional
     const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
-    const canProceedResult = canProceed()
+    const canProceedResult = isStepValid(currentStep)
 
     return {
       showBack: hasPrevious,
@@ -380,15 +458,36 @@ export default function ProductSurvey() {
     switch (currentStep) {
       case 1:
         return (
-          <SingleChoiceQuestion
-            question="What's your current role?"
-            options={roleOptions}
-            selectedValue={surveyData.role}
-            onSelect={handleRoleSelect}
-            onNext={handleNext}
-            autoAdvance={true}
-            delay={500}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <SingleChoiceQuestion
+              question="What's your current role?"
+              options={roleOptions}
+              selectedValue={surveyData.role}
+              onSelect={handleRoleSelect}
+              onNext={handleAutoNext}
+              autoAdvance={surveyData.role !== "Other"}
+              delay={500}
+            />
+
+            {surveyData.role === "Other" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Please specify your role..."
+                  value={surveyData.other_role}
+                  onChange={(e) => handleOtherRoleChange(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+                <Button onClick={handleNext} disabled={!surveyData.other_role.trim()} className="w-full">
+                  Continue <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </motion.div>
+            )}
+          </motion.div>
         )
 
       case 2:
@@ -398,7 +497,7 @@ export default function ProductSurvey() {
             options={seniorityOptions}
             selectedValue={surveyData.seniority}
             onSelect={handleSenioritySelect}
-            onNext={handleNext}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -408,10 +507,10 @@ export default function ProductSurvey() {
         return (
           <SingleChoiceQuestion
             question="What type of company do you work for?"
-            options={companySizeOptions}
-            selectedValue={surveyData.company_size}
-            onSelect={handleCompanySizeSelect}
-            onNext={handleNext}
+            options={companyTypeOptions}
+            selectedValue={surveyData.company_type}
+            onSelect={handleCompanyTypeSelect}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -420,11 +519,11 @@ export default function ProductSurvey() {
       case 4:
         return (
           <SingleChoiceQuestion
-            question="What industry do you work in?"
-            options={industryOptions}
-            selectedValue={surveyData.industry}
-            onSelect={handleIndustrySelect}
-            onNext={handleNext}
+            question="What's your company size?"
+            options={companySizeOptions}
+            selectedValue={surveyData.company_size}
+            onSelect={handleCompanySizeSelect}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -433,11 +532,11 @@ export default function ProductSurvey() {
       case 5:
         return (
           <SingleChoiceQuestion
-            question="What type of product do you work on?"
-            options={productTypeOptions}
-            selectedValue={surveyData.product_type}
-            onSelect={handleProductTypeSelect}
-            onNext={handleNext}
+            question="What industry do you work in?"
+            options={industryOptions}
+            selectedValue={surveyData.industry}
+            onSelect={handleIndustrySelect}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -446,17 +545,41 @@ export default function ProductSurvey() {
       case 6:
         return (
           <SingleChoiceQuestion
-            question="What's your customer segment?"
-            options={customerSegmentOptions}
-            selectedValue={surveyData.customer_segment}
-            onSelect={handleCustomerSegmentSelect}
-            onNext={handleNext}
+            question="What type of product do you work on?"
+            options={productTypeOptions}
+            selectedValue={surveyData.product_type}
+            onSelect={handleProductTypeSelect}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
         )
 
       case 7:
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
+            >
+              What's your customer segment?
+            </motion.h2>
+            <SingleChoiceQuestion
+              options={customerSegmentOptions}
+              selectedOption={surveyData.customer_segment}
+              onSelect={handleCustomerSegmentSelect}
+              onNext={handleAutoNext}
+              autoAdvance={true}
+            />
+          </motion.div>
+        )
+
+      case 8:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -479,21 +602,21 @@ export default function ProductSurvey() {
           </motion.div>
         )
 
-      case 8:
+      case 9:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
+            className="w-full max-w-2xl mx-auto space-y-6"
           >
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
             >
               What tools do you use daily? (Select all that apply)
             </motion.h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {toolOptions.map((tool) => (
                 <motion.button
                   key={tool}
@@ -517,13 +640,26 @@ export default function ProductSurvey() {
                 </motion.button>
               ))}
             </div>
+
+            {surveyData.daily_tools.includes("Other") && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Please specify other tools..."
+                  value={surveyData.other_tool}
+                  onChange={(e) => handleOtherToolChange(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+              </motion.div>
+            )}
+
             <div className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
               {surveyData.daily_tools.length} selected
             </div>
           </motion.div>
         )
 
-      case 9:
+      case 10:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -567,7 +703,7 @@ export default function ProductSurvey() {
           </motion.div>
         )
 
-      case 10:
+      case 11:
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -711,37 +847,6 @@ export default function ProductSurvey() {
           </motion.div>
         )
 
-      case 11:
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-6"
-          >
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
-            >
-              Your email (Optional)
-            </motion.h2>
-            <Input
-              type="email"
-              value={surveyData.email}
-              onChange={(e) => handleEmailChange(e.target.value)}
-              placeholder="your@email.com"
-              className={`w-full p-4 text-lg rounded-xl border-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
-                surveyData.email && !isValidEmail(surveyData.email)
-                  ? "border-red-300 dark:border-red-600 focus:border-red-500 dark:focus:border-red-400"
-                  : "border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400"
-              }`}
-            />
-            {surveyData.email && !isValidEmail(surveyData.email) && (
-              <p className="text-red-500 dark:text-red-400 text-sm">Please enter a valid email address</p>
-            )}
-          </motion.div>
-        )
-
       case 12:
         return (
           <motion.div
@@ -749,20 +854,33 @@ export default function ProductSurvey() {
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-2xl mx-auto text-center space-y-6"
           >
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto">
-              <Check className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <Check className="w-12 h-12 text-green-600 dark:text-green-400" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Thank you!</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Your responses help us build better products and create more valuable content for the product community.
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Survey Completed!</h2>
+              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-green-800 dark:text-green-200 font-medium">
+                  ✅ Your responses have been successfully saved
+                </p>
+              </div>
+            </div>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              Thank you for participating! Your responses help us build better products and create more valuable content
+              for the product community.
               {surveyData.email && " We'll follow up with you soon."}
             </p>
-            {userIsAdmin && (
-              <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
-                View Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {userIsAdmin && (
+                <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
+                  View Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              <Button variant="outline" onClick={restartSurvey} className="px-8 py-3 bg-transparent">
+                Take Survey Again
               </Button>
-            )}
+            </div>
           </motion.div>
         )
 
@@ -946,6 +1064,38 @@ export default function ProductSurvey() {
                   </>
                 )
               })()}
+            </div>
+          )}
+
+          {/* Submit Button for Final Step */}
+          {currentStep === totalSteps && (
+            <div className="mt-8 text-center">
+              <Button
+                onClick={submitSurvey}
+                disabled={isSubmitting}
+                size="lg"
+                className="px-12 py-4 text-lg font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    Submitting Survey...
+                  </>
+                ) : (
+                  <>
+                    Submit Survey
+                    <Check className="ml-2 h-5 w-5" />
+                  </>
+                )}
+              </Button>
+              {error && (
+                <div className="mt-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <p className="text-red-800 dark:text-red-200 font-medium">❌ {error}</p>
+                  <Button variant="outline" size="sm" onClick={() => setError(null)} className="mt-2">
+                    Try Again
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
