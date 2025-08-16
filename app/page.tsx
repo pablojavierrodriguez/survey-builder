@@ -571,7 +571,7 @@ export default function ProductSurvey() {
             </motion.h2>
             <SingleChoiceQuestion
               options={customerSegmentOptions}
-              selectedValues={surveyData.customer_segment}
+              selectedValue={surveyData.customer_segment}
               onSelect={handleCustomerSegmentSelect}
               onNext={handleAutoNext}
               autoAdvance={true}
