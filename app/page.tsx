@@ -419,6 +419,10 @@ export default function ProductSurvey() {
     }
   }
 
+  const handleAutoNext = () => {
+    setCurrentStep(currentStep + 1)
+  }
+
   const handlePrevious = () => {
     setCurrentStep(currentStep - 1)
   }
@@ -455,7 +459,7 @@ export default function ProductSurvey() {
               options={roleOptions}
               selectedValue={surveyData.role}
               onSelect={handleRoleSelect}
-              onNext={handleNext}
+              onNext={handleAutoNext}
               autoAdvance={surveyData.role !== "Other"}
               delay={500}
             />
@@ -484,7 +488,7 @@ export default function ProductSurvey() {
             options={seniorityOptions}
             selectedValue={surveyData.seniority}
             onSelect={handleSenioritySelect}
-            onNext={handleNext}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -497,7 +501,7 @@ export default function ProductSurvey() {
             options={companyTypeOptions}
             selectedValue={surveyData.company_type}
             onSelect={handleCompanyTypeSelect}
-            onNext={handleNext}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -510,7 +514,7 @@ export default function ProductSurvey() {
             options={companySizeOptions}
             selectedValue={surveyData.company_size}
             onSelect={handleCompanySizeSelect}
-            onNext={handleNext}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -523,7 +527,7 @@ export default function ProductSurvey() {
             options={industryOptions}
             selectedValue={surveyData.industry}
             onSelect={handleIndustrySelect}
-            onNext={handleNext}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
@@ -536,7 +540,7 @@ export default function ProductSurvey() {
             options={productTypeOptions}
             selectedValue={surveyData.product_type}
             onSelect={handleProductTypeSelect}
-            onNext={handleNext}
+            onNext={handleAutoNext}
             autoAdvance={true}
             delay={500}
           />
