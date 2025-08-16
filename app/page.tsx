@@ -555,44 +555,37 @@ export default function ProductSurvey() {
           />
         )
 
-      case 7:
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
-          >
-            <SingleChoiceQuestion
-              question="What's your customer segment?"
-              options={customerSegmentOptions}
-              selectedValue={surveyData.customer_segment}
-              onSelect={handleCustomerSegmentSelect}
-              onNext={handleAutoNext}
-              autoAdvance={surveyData.customer_segment !== "Other"}
-            />
+      case 7: {
+        const selectedValue = surveyData.customer_segment;
+        const otherValue = surveyData.customer_segment === "Other" ? surveyData.other_customer_segment : "";
       
-            {surveyData.customer_segment === "Other" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Please specify your customer segment..."
-                  value={surveyData.other_customer_segment}
-                  onChange={(e) =>
-                    setSurveyData((prev) => ({ ...prev, other_customer_segment: e.target.value }))
-                  }
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-                />
-                <Button
-                  onClick={handleNext}
-                  disabled={!surveyData.other_customer_segment.trim()}
-                  className="w-full"
-                >
-                  Continue <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </motion.div>
-            )}
-          </motion.div>
-        )
+        return (
+          <SingleChoiceQuestion
+            question="What's your customer segment?"
+            options={customerSegmentOptions}
+            selectedValue={selectedValue}
+            onSelect={(value) => {
+              // Si eligen otra opción que no sea "Other", borramos el input
+              setSurveyData(prev => ({
+                ...prev,
+                customer_segment: value,
+                other_customer_segment: value === "Other" ? prev.other_customer_segment : "",
+              }));
+            }}
+            onNext={() => {
+              const finalValue = selectedValue === "Other" ? otherValue : selectedValue;
+              // Guardás finalValue en DB más adelante
+              handleAutoNext(finalValue);
+            }}
+            autoAdvance={true}
+            showOther={true} // nuevo prop para mostrar input
+            otherValue={otherValue}
+            onOtherChange={(val: string) =>
+              setSurveyData(prev => ({ ...prev, other_customer_segment: val }))
+            }
+          />
+        );
+      }
 
       case 8:
         return (
