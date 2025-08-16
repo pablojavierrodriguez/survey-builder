@@ -562,20 +562,35 @@ export default function ProductSurvey() {
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
           >
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
-            >
-              What's your customer segment?
-            </motion.h2>
             <SingleChoiceQuestion
+              question="What's your customer segment?"
               options={customerSegmentOptions}
               selectedValue={surveyData.customer_segment}
               onSelect={handleCustomerSegmentSelect}
               onNext={handleAutoNext}
-              autoAdvance={true}
+              autoAdvance={surveyData.customer_segment !== "Other"}
             />
+      
+            {surveyData.customer_segment === "Other" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Please specify your customer segment..."
+                  value={surveyData.other_customer_segment}
+                  onChange={(e) =>
+                    setSurveyData((prev) => ({ ...prev, other_customer_segment: e.target.value }))
+                  }
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+                <Button
+                  onClick={handleNext}
+                  disabled={!surveyData.other_customer_segment.trim()}
+                  className="w-full"
+                >
+                  Continue <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </motion.div>
+            )}
           </motion.div>
         )
 
