@@ -22,6 +22,7 @@ interface SurveyData {
   industry: string
   product_type: string
   customer_segment: string
+  other_customer_segment: string
   main_challenge: string
   daily_tools: string[]
   other_tool: string
@@ -557,32 +558,29 @@ export default function ProductSurvey() {
 
       case 7: {
         const selectedValue = surveyData.customer_segment;
-        const otherValue = surveyData.customer_segment === "Other" ? surveyData.other_customer_segment : "";
-      
+        const otherValue = selectedValue === "Other" ? surveyData.other_customer_segment || "" : "";
+        const isOtherSelected = selectedValue === "Other";
+
         return (
           <SingleChoiceQuestion
             question="What's your customer segment?"
             options={customerSegmentOptions}
             selectedValue={selectedValue}
             onSelect={(value) => {
-              // Si eligen otra opción que no sea "Other", borramos el input
-              setSurveyData(prev => ({
+              setSurveyData((prev) => ({
                 ...prev,
                 customer_segment: value,
                 other_customer_segment: value === "Other" ? prev.other_customer_segment : "",
               }));
             }}
-            onNext={() => {
-              const finalValue = selectedValue === "Other" ? otherValue : selectedValue;
-              // Guardás finalValue en DB más adelante
-              handleAutoNext(finalValue);
+            other={{
+              value: otherValue,
+              placeholder: "Please specify your customer segment...",
+              onChange: (val) =>
+                setSurveyData((prev) => ({ ...prev, other_customer_segment: val })),
             }}
-            autoAdvance={true}
-            showOther={true} // nuevo prop para mostrar input
-            otherValue={otherValue}
-            onOtherChange={(val: string) =>
-              setSurveyData(prev => ({ ...prev, other_customer_segment: val }))
-            }
+            autoAdvance={!isOtherSelected}  // solo auto avanza si NO es Other
+            onNext={handleAutoNext}
           />
         );
       }
