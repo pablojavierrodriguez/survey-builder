@@ -226,6 +226,13 @@ export default function ProductSurvey() {
     checkConfig()
   }, [])
 
+  useEffect(() => {
+    const completed = sessionStorage.getItem("survey-completed")
+    if (completed === "true") {
+      setCurrentStep(totalSteps + 1)
+    }
+  }, [])
+
   // Settings loading removed - not needed for basic functionality
 
   // Handlers for single choice questions (no auto-advance)
@@ -371,6 +378,7 @@ export default function ProductSurvey() {
         // Store success state for better UX
         if (typeof window !== "undefined" && window.sessionStorage) {
           window.sessionStorage.setItem("survey_completed", "true")
+          window.sessionStorage.setItem("survey-completed", "true")
         }
       } else {
         const errorMessage = result.error || result.message || "Error submitting survey"
@@ -389,6 +397,7 @@ export default function ProductSurvey() {
   const restartSurvey = () => {
     if (typeof window !== "undefined" && window.sessionStorage) {
       window.sessionStorage.removeItem("survey_completed")
+      window.sessionStorage.removeItem("survey-completed")
       window.sessionStorage.removeItem("survey_session_id")
     }
     setCurrentStep(1)
@@ -560,11 +569,12 @@ export default function ProductSurvey() {
             >
               What's your customer segment?
             </motion.h2>
-            <Textarea
-              value={surveyData.customer_segment}
-              onChange={(e) => handleCustomerSegmentSelect(e.target.value)}
-              placeholder="Describe your customer segment..."
-              className="min-h-28 sm:min-h-32 text-sm sm:text-base md:text-lg p-3 sm:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+            <SingleChoiceQuestion
+              options={customerSegmentOptions}
+              selectedOption={surveyData.customer_segment}
+              onSelect={handleCustomerSegmentSelect}
+              onNext={handleAutoNext}
+              autoAdvance={true}
             />
           </motion.div>
         )
