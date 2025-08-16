@@ -22,7 +22,6 @@ interface SurveyData {
   industry: string
   product_type: string
   customer_segment: string
-  other_customer_segment: string
   main_challenge: string
   daily_tools: string[]
   other_tool: string
@@ -556,34 +555,20 @@ export default function ProductSurvey() {
           />
         )
 
-      case 7: {
-        const selectedValue = surveyData.customer_segment;
-        const otherValue = selectedValue === "Other" ? surveyData.other_customer_segment || "" : "";
-        const isOtherSelected = selectedValue === "Other";
-
+      case 7:
         return (
           <SingleChoiceQuestion
             question="What's your customer segment?"
             options={customerSegmentOptions}
-            selectedValue={selectedValue}
-            onSelect={(value) => {
-              setSurveyData((prev) => ({
-                ...prev,
-                customer_segment: value,
-                other_customer_segment: value === "Other" ? prev.other_customer_segment : "",
-              }));
-            }}
-            other={{
-              value: otherValue,
-              placeholder: "Please specify your customer segment...",
-              onChange: (val) =>
-                setSurveyData((prev) => ({ ...prev, other_customer_segment: val })),
-            }}
-            autoAdvance={!isOtherSelected}  // solo auto avanza si NO es Other
+            selectedValue={surveyData.customer_segment}
+            onSelect={(value) =>
+              setSurveyData((prev) => ({ ...prev, customer_segment: value }))
+            }
             onNext={handleAutoNext}
+            autoAdvance={true}
+            delay={500}
           />
         );
-      }
 
       case 8:
         return (
