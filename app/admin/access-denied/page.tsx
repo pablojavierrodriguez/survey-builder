@@ -1,52 +1,80 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Shield, ArrowLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Shield, AlertTriangle } from "lucide-react"
 
 export default function AccessDeniedPage() {
+  const [loading, setLoading] = useState(true)
+  const { user, signOut } = useAuth()
   const router = useRouter()
 
-  const goBack = () => {
-    const authStr = localStorage.getItem("survey_auth")
-    if (authStr) {
-      try {
-        const auth = JSON.parse(authStr)
-        const defaultPath = auth.role === "admin" ? "/admin/dashboard" : "/admin/analytics"
-        router.push(defaultPath)
-      } catch (error) {
-        router.push("/admin/analytics")
-      }
+  useEffect(() => {
+    // If user is authenticated, redirect to appropriate page
+    if (user) {
+      router.push("/admin/dashboard")
     } else {
-      router.push("/auth/login")
+      setLoading(false)
     }
+  }, [user, router])
+
+  const handleLogout = async () => {
+    await signOut()
+    router.push("/auth/login")
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm border-0 shadow-xl rounded-3xl">
-        <CardHeader className="text-center pb-8">
-          <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950 dark:to-orange-950 p-4">
+      <Card className="w-full max-w-md shadow-xl border-red-200 dark:border-red-800">
+        <CardHeader className="text-center pb-6">
+          <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mb-4">
+            <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">Access Denied</CardTitle>
-          <p className="text-gray-600">You don't have permission to access this page</p>
+          <CardTitle className="text-2xl font-bold text-red-900 dark:text-red-100">
+            Access Denied
+          </CardTitle>
+          <p className="text-red-700 dark:text-red-300 mt-2">
+            You don't have permission to access this page
+          </p>
         </CardHeader>
-
-        <CardContent className="text-center">
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Your current role doesn't allow access to this section. Please contact an administrator if you need
-              additional permissions.
+        <CardContent className="space-y-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <span className="text-sm font-medium text-red-800 dark:text-red-200">
+                Insufficient Permissions
+              </span>
+            </div>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+              Your current role doesn't have access to this section. Please contact an administrator if you believe this is an error.
             </p>
-
+          </div>
+          
+          <div className="flex space-x-3">
             <Button
-              onClick={goBack}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+              variant="outline"
+              onClick={() => router.push("/admin/dashboard")}
+              className="flex-1"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Go Back
+              Go to Dashboard
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="flex-1"
+            >
+              Sign Out
             </Button>
           </div>
         </CardContent>

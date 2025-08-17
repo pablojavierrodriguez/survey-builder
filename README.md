@@ -1,168 +1,74 @@
-# Product Community Survey Builder
+# Survey Builder App
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-blue?style=for-the-badge&logo=typescript)](https://typescriptlang.org)
+Una aplicación simple y escalable para crear y gestionar encuestas con Supabase.
 
-## 📊 Overview
+## 🚀 Configuración Inicial
 
-A modern, responsive survey platform designed for product and community feedback collection. Built with Next.js 14, TypeScript, and Supabase, featuring a clean admin dashboard and real-time analytics.
-
-## ✨ Features
-
-### 🔐 **Authentication & User Management**
-- **Demo Access**: Pre-configured demo accounts for testing
-- **Google OAuth**: One-click sign-in with Google
-- **Email/Password**: Traditional authentication support
-- **Role-based Access**: Admin, Collaborator, and Viewer roles
-
-### 📝 **Survey Management**
-- Interactive survey builder with drag-and-drop interface
-- Real-time form validation and preview
-- Support for multiple question types
-- Conditional logic and branching
-
-### 📈 **Analytics Dashboard**
-- Real-time response tracking
-- Visual charts and statistics
-- Export capabilities (CSV, PDF)
-- Response filtering and search
-
-### 🎨 **Modern UI/UX**
-- Responsive design for all devices
-- Dark/Light theme support
-- Clean, professional interface
-- Accessible components (WCAG compliant)
-
-## 🚀 Quick Start
-
-### Option 1: Demo Mode (No Setup Required)
-The application works immediately in demo mode using localStorage:
-
-1. **Clone and run**
-   ```bash
-   git clone https://github.com/your-username/product-survey-builder.git
-   cd product-survey-builder
-   npm install
-   npm run dev
-   ```
-
-2. **Access the application**
-   - Survey Form: `http://localhost:3000`
-   - Admin Login: `http://localhost:3000/auth/login`
-   - Setup Wizard: `http://localhost:3000/setup`
-
-### Option 2: Full Supabase Setup
-
-### Demo Access
-Try the application with these demo accounts:
-
-- **Viewer Access**: `viewer` / `viewer123` (Read-only analytics)
-- **Admin Demo**: `admin-demo` / `demo123` (Read-only admin interface)
-
-### Supabase Configuration
-
-1. **Create Supabase project**
-   - Go to [supabase.com](https://supabase.com)
-   - Create a new project
-   - Note your Project URL and anon key
-
-2. **Configure environment variables**
-   \`\`\`bash
-   # Create .env.local file (optional - can also use setup wizard)
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   \`\`\`
-
-3. **Set up database**
-   - Run the migration: `supabase/migrations/001_create_survey_tables.sql`
-   - Configure authentication providers in Supabase dashboard
-
-4. **Alternative: Use Setup Wizard**
-   - Visit `/setup` in your running application
-   - Enter your Supabase credentials
-   - Test connection and complete setup
-
-5. **Run the application**
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-
-## 🏗️ Tech Stack
-
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth + Google OAuth
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui
-- **Charts**: Recharts
-- **Deployment**: Vercel
-
-## 📱 Application Structure
-
-\`\`\`
-app/
-├── auth/login/          # Authentication pages
-├── admin/               # Admin dashboard
-│   ├── dashboard/       # Main analytics
-│   ├── settings/        # User & system management
-│   └── surveys/         # Survey builder (planned)
-├── survey/              # Public survey interface
-└── globals.css          # Global styles
-
-components/
-├── ui/                  # Reusable UI components
-├── charts/              # Chart components
-└── survey/              # Survey-specific components
-
-lib/
-├── auth-context.tsx     # Authentication logic
-├── supabase.ts          # Database client
-└── utils.ts             # Utility functions
+### Paso 1: Clonar el repositorio
+\`\`\`bash
+git clone https://github.com/pablojavierrodriguez/survey-builder.git
+cd survey-builder
+npm install
 \`\`\`
 
-## 🔒 Security Features
+### Paso 2: Crear proyecto Supabase
+1. Ve a [supabase.com](https://supabase.com)
+2. Crea un nuevo proyecto
+3. Guarda la URL del proyecto y las API keys
 
-- Row Level Security (RLS) policies
-- Environment variable protection
-- Secure authentication flows
-- Input validation and sanitization
-- Rate limiting protection
+### Paso 3: Inicializar base de datos
+1. Ve a Supabase Dashboard → SQL Editor
+2. Ejecuta el script `INITIALIZATION.sql` (incluido en este repo)
+3. Esto crea las tablas necesarias y configura RLS
 
-## 📊 Database Schema
+### Paso 4: Configurar la aplicación
+1. Ejecuta `npm run dev`
+2. Accede a la aplicación
+3. Completa el wizard de configuración con:
+   - URL de Supabase
+   - Service Role Key
+   - Nombre de la aplicación
 
-The application uses a PostgreSQL database with the following main tables:
+### Paso 5: ¡Listo!
+La aplicación está configurada y lista para usar.
 
-- `pc_survey_data`: Survey responses and analytics
-- `profiles`: User profiles and role management
-- `auth.users`: Supabase authentication (managed)
+## 🛠️ Tecnologías
 
-## 🌐 Deployment
+- **Frontend:** Next.js 15, React, TypeScript
+- **Backend:** Supabase (PostgreSQL, Auth, RLS)
+- **UI:** Tailwind CSS, shadcn/ui
+- **Deploy:** Vercel
 
-This application is configured for easy deployment on Vercel:
+## 📁 Estructura del Proyecto
 
-1. Connect your GitHub repository to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy automatically on every push to main branch
+\`\`\`
+├── app/                    # Next.js App Router
+│   ├── admin/             # Panel de administración
+│   ├── auth/              # Páginas de autenticación
+│   ├── api/               # API Routes
+│   └── setup/             # Wizard de configuración
+├── components/            # Componentes React
+├── lib/                   # Utilidades y configuración
+└── INITIALIZATION.sql     # Script de inicialización
+\`\`\`
 
-## 🤝 Contributing
+## 🔧 Características
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- ✅ Configuración inicial automática
+- ✅ Autenticación con Supabase
+- ✅ Panel de administración
+- ✅ Gestión de encuestas
+- ✅ Análisis de respuestas
+- ✅ Arquitectura escalable
+- ✅ Multi-admin support
+- ✅ Multi-survey support
 
-## 📄 License
+## 🚀 Deploy
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+1. Conecta tu repositorio a Vercel
+2. Configura las variables de entorno en Vercel
+3. Deploy automático
 
-## 🆘 Support
+## 📝 Licencia
 
-For support, please contact the development team or create an issue in this repository.
-
----
-
-**Built with ❤️ using [v0.dev](https://v0.dev) and modern web technologies**
+MIT

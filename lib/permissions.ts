@@ -2,29 +2,54 @@
 // PERMISSIONS SYSTEM - Controls what each role can access and do
 // =====================================================================================
 
-export type UserRole = 'viewer' | 'admin-demo' | 'collaborator' | 'admin'
+import type { Database } from "./supabase"
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"]
+
+export type UserRole = "viewer" | "admin-demo" | "collaborator" | "admin"
 
 export interface UserPermissions {
   // Dashboard access
   canViewDashboard: boolean
   canViewAnalytics: boolean
   canViewSettings: boolean
-  
+
   // Data permissions
   canViewSurveyData: boolean
   canExportData: boolean
   canViewUsers: boolean
-  
+
   // Modification permissions
   canEditSurveys: boolean
   canEditSettings: boolean
   canManageUsers: boolean
   canDeleteData: boolean
-  
+
   // System permissions
   canAccessSystemLogs: boolean
   canModifyDatabase: boolean
   canViewSensitiveData: boolean
+}
+
+export function getUserRoleFromProfile(profile: Profile | null, userEmail?: string): "admin" | "viewer" {
+  if (!profile && !userEmail) return "viewer"
+
+  // Check by email for admin access
+  const email = profile?.email || userEmail
+  if (email === "admin@demo.com" || email === "admin@example.com") {
+    return "admin"
+  }
+
+  // Check by full_name as fallback (if user has full_name, they're admin)
+  if (profile?.full_name) {
+    return "admin"
+  }
+
+  return "viewer"
+}
+
+export function isUserAdmin(profile: Profile | null, userEmail?: string): boolean {
+  return getUserRoleFromProfile(profile, userEmail) === "admin"
 }
 
 // Define permissions for each role
@@ -43,11 +68,11 @@ const ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canDeleteData: false,
     canAccessSystemLogs: false,
     canModifyDatabase: false,
-    canViewSensitiveData: false
+    canViewSensitiveData: false,
   },
 
   // Read-only admin panel demo (public safe)
-  'admin-demo': {
+  "admin-demo": {
     canViewDashboard: true,
     canViewAnalytics: true,
     canViewSettings: true,
@@ -60,7 +85,7 @@ const ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canDeleteData: false,
     canAccessSystemLogs: false,
     canModifyDatabase: false,
-    canViewSensitiveData: false // No sensitive data shown
+    canViewSensitiveData: false, // No sensitive data shown
   },
 
   // Survey editing + viewer permissions (private)
@@ -77,7 +102,7 @@ const ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canDeleteData: false,
     canAccessSystemLogs: false,
     canModifyDatabase: false,
-    canViewSensitiveData: false
+    canViewSensitiveData: false,
   },
 
   // Full administrative access (private)
@@ -94,8 +119,8 @@ const ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canDeleteData: true,
     canAccessSystemLogs: true,
     canModifyDatabase: true,
-    canViewSensitiveData: true
-  }
+    canViewSensitiveData: true,
+  },
 }
 
 // Get permissions for a specific role
@@ -109,75 +134,71 @@ export function hasPermission(role: UserRole, permission: keyof UserPermissions)
 }
 
 // Get user role from auth data
-export function getUserRole(): UserRole {
-  if (typeof window === 'undefined') return 'viewer'
-  
-  try {
-    const authData = localStorage.getItem('survey_auth')
-    if (!authData) return 'viewer'
-    
-    const parsed = JSON.parse(authData)
-    return parsed.role || 'viewer'
-  } catch {
-    return 'viewer'
-  }
+export function getUserRole(role?: UserRole): UserRole {
+  if (typeof window === "undefined") return "viewer"
+
+  // If role is provided, use it (from Supabase Auth)
+  if (role) return role
+
+  // Fallback to viewer if no role provided
+  return "viewer"
 }
 
 // Get current user permissions
-export function getCurrentUserPermissions(): UserPermissions {
-  return getPermissions(getUserRole())
+export function getCurrentUserPermissions(role?: UserRole): UserPermissions {
+  return getPermissions(getUserRole(role))
 }
 
 // Role display helpers
 export function getRoleDisplayName(role: UserRole): string {
   const roleNames: Record<UserRole, string> = {
-    viewer: 'Viewer',
-    'admin-demo': 'Admin Demo',
-    collaborator: 'Collaborator', 
-    admin: 'Administrator'
+    viewer: "Viewer",
+    "admin-demo": "Admin Demo",
+    collaborator: "Collaborator",
+    admin: "Administrator",
   }
-  return roleNames[role] || 'Viewer'
+  return roleNames[role] || "Viewer"
 }
 
 export function getRoleDescription(role: UserRole): string {
   const descriptions: Record<UserRole, string> = {
-    viewer: 'Read-only access to analytics and survey data',
-    'admin-demo': 'Demo access to admin interface (read-only)',
-    collaborator: 'Analytics access + survey editing capabilities',
-    admin: 'Full administrative access to all features'
+    viewer: "Read-only access to analytics and survey data",
+    "admin-demo": "Demo access to admin interface (read-only)",
+    collaborator: "Analytics access + survey editing capabilities",
+    admin: "Full administrative access to all features",
   }
-  return descriptions[role] || 'Basic access'
+  return descriptions[role] || "Basic access"
 }
 
 // Security helpers
 export function isPublicRole(role: UserRole): boolean {
-  return role === 'viewer' || role === 'admin-demo'
+  return role === "viewer" || role === "admin-demo"
 }
 
 export function isPrivateRole(role: UserRole): boolean {
-  return role === 'collaborator' || role === 'admin'
+  return role === "collaborator" || role === "admin"
 }
 
 export function canAccessRoute(role: UserRole, route: string): boolean {
   const permissions = getPermissions(role)
-  
+
   // Route-based access control
-  if (route.includes('/admin/settings')) {
+  if (route.includes("/admin/settings")) {
     return permissions.canViewSettings
   }
-  
-  if (route.includes('/admin/dashboard')) {
+
+  if (route.includes("/admin/dashboard")) {
     return permissions.canViewDashboard
   }
-  
-  if (route.includes('/admin/analytics')) {
+
+  if (route.includes("/admin/analytics")) {
     return permissions.canViewAnalytics
   }
-  
-  if (route.includes('/admin/users')) {
+
+  if (route.includes("/admin/users")) {
     return permissions.canViewUsers
   }
-  
+
   // Default: allow if not restricted
   return true
 }

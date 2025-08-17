@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+.yarn/install-state.gz
 
 # testing
 /coverage
@@ -94,4 +95,10 @@ CHANGELOG_TEMP.md
 # local development
 .local/
 local/
-.env
+
+# Supabase local configuration (temporary bootstrap file)
+.supabase-config.json
+
+# Local configuration files
+.app-config.json
+.temp-supabase-config.json

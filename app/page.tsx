@@ -4,9 +4,14 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, ArrowLeft, Check, Shield, Wrench, AlertTriangle, Settings } from "lucide-react"
+import { ArrowRight, ArrowLeft, Check, Shield, Wrench, Settings } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
+import { useAuth } from "@/lib/auth-context"
+import { useDebugMode } from "@/lib/use-debug-mode"
+import { SurveyProgress } from "@/components/ui/survey-progress"
+import { SingleChoiceQuestion } from "@/components/ui/single-choice-question"
+import { SurveySkeleton, ProgressIndicator, ErrorDisplay, LoadingOverlay } from "@/components/ui/loading-states"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface SurveyData {
   role: string
@@ -61,6 +66,16 @@ const seniorityOptions = [
   "Manager/Lead",
   "Director/VP",
   "C-level/Founder",
+]
+
+const companyTypeOptions = [
+  "Startup (1-50 employees)",
+  "Scale-up (51-200 employees)",
+  "Mid-size company (201-1000 employees)",
+  "Large enterprise (1000+ employees)",
+  "Freelance/Independent",
+  "Agency/Consultancy",
+  "Other",
 ]
 
 const companySizeOptions = [
@@ -144,11 +159,9 @@ const toolOptions = [
 const learningOptions = ["Books", "Podcasts", "Courses", "Community", "Mentors", "Other"]
 
 export default function ProductSurvey() {
-  const [currentStep, setCurrentStep] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [surveyConfig, setSurveyConfig] = useState<any>(null)
+  const { user, userIsAdmin, clearCorruptedSession } = useAuth()
+  const { debugMode } = useDebugMode()
+  const [currentStep, setCurrentStep] = useState(1)
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -169,507 +182,574 @@ export default function ProductSurvey() {
     email: "",
   })
 
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [databaseStatus, setDatabaseStatus] = useState<"checking" | "configured" | "not-configured">("checking")
+  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const [hasCheckedConfig, setHasCheckedConfig] = useState(false)
+
   const totalSteps = 12
 
-  // Check maintenance mode on component mount
   useEffect(() => {
-    const loadSettings = async () => {
+    setIsMounted(true)
+
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      const surveyCompleted = window.sessionStorage.getItem("survey_completed")
+      if (surveyCompleted === "true") {
+        setCurrentStep(totalSteps + 1) // Show completion step
+        setIsLoading(false)
+        return
+      }
+    }
+
+    // Check configuration status
+    const checkConfig = async () => {
       try {
-        const savedSettings = localStorage.getItem("app_settings")
-        if (savedSettings) {
-          const settings: AppSettings = JSON.parse(savedSettings)
-          setIsMaintenanceMode(settings.general?.maintenanceMode || false)
-        }
-        
-        // Also check for survey configuration
-        const surveyConfig = localStorage.getItem("survey_config")
-        if (surveyConfig) {
-          const config = JSON.parse(surveyConfig)
-          setSurveyConfig(config)
-          // You can add survey config checks here if needed
-          console.log("Survey config loaded:", config)
+        const response = await fetch("/api/config/check")
+        const data = await response.json()
+
+        if (data.success) {
+          setDatabaseStatus(data.configured ? "configured" : "not-configured")
+        } else {
+          setDatabaseStatus("not-configured")
         }
       } catch (error) {
-        console.error("Error checking settings:", error)
+        console.error("Error checking config:", error)
+        setDatabaseStatus("not-configured")
       } finally {
         setIsLoading(false)
       }
     }
-    
-    loadSettings()
+
+    checkConfig()
   }, [])
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+  useEffect(() => {
+    const completed = sessionStorage.getItem("survey-completed")
+    if (completed === "true") {
+      setCurrentStep(totalSteps + 1)
+    }
+  }, [])
+
+  // Settings loading removed - not needed for basic functionality
+
+  // Handlers for single choice questions (no auto-advance)
+  const handleRoleSelect = (role: string) => {
+    setSurveyData((prev) => ({ ...prev, role }))
   }
 
-  // Show maintenance mode screen
-  if (isMaintenanceMode) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 p-4">
-        {/* Theme toggle */}
-        <div className="absolute top-4 right-4">
-          <ModeToggle />
-        </div>
-        
-        {/* Admin Login Button */}
-        <div className="absolute top-4 left-4">
-          <Button
-            onClick={() => window.open("/auth/login", "_blank")}
-            variant="outline"
-            size="sm"
-            className="bg-white/80 backdrop-blur-sm border-slate-200 hover:bg-white/90 text-slate-600 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-300"
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Admin Login
-          </Button>
-        </div>
+  const handleSenioritySelect = (seniority: string) => {
+    setSurveyData((prev) => ({ ...prev, seniority }))
+  }
 
-        <div className="text-center max-w-md mx-auto">
-          <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Wrench className="w-10 h-10 text-amber-600 dark:text-amber-400" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-4">
-            Under Maintenance
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">
-            We're currently performing scheduled maintenance on our survey system. 
-            Please check back later or contact the administrator if you need immediate assistance.
-          </p>
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              This maintenance mode can be disabled by administrators in the settings panel.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
+  const handleCompanyTypeSelect = (company_type: string) => {
+    setSurveyData((prev) => ({ ...prev, company_type }))
+  }
+
+  const handleCompanySizeSelect = (company_size: string) => {
+    setSurveyData((prev) => ({ ...prev, company_size }))
+  }
+
+  const handleIndustrySelect = (industry: string) => {
+    setSurveyData((prev) => ({ ...prev, industry }))
+  }
+
+  const handleProductTypeSelect = (product_type: string) => {
+    setSurveyData((prev) => ({ ...prev, product_type }))
+  }
+
+  const handleCustomerSegmentSelect = (customer_segment: string) => {
+    setSurveyData((prev) => ({ ...prev, customer_segment }))
+  }
+
+  const handleOtherRoleChange = (other_role: string) => {
+    setSurveyData((prev) => ({ ...prev, other_role }))
+  }
+
+  const handleChallengeChange = (main_challenge: string) => {
+    setSurveyData((prev) => ({ ...prev, main_challenge }))
+  }
+
+  const handleToolToggle = (tool: string) => {
+    setSurveyData((prev) => ({
+      ...prev,
+      daily_tools: prev.daily_tools.includes(tool)
+        ? prev.daily_tools.filter((t) => t !== tool)
+        : [...prev.daily_tools, tool],
+    }))
+  }
+
+  const handleLearningToggle = (method: string) => {
+    setSurveyData((prev) => ({
+      ...prev,
+      learning_methods: prev.learning_methods.includes(method)
+        ? prev.learning_methods.filter((m) => m !== method)
+        : [...prev.learning_methods, method],
+    }))
+  }
+
+  const handleEmailChange = (email: string) => {
+    setSurveyData((prev) => ({ ...prev, email }))
+  }
+
+  const handleOtherToolChange = (other_tool: string) => {
+    setSurveyData((prev) => ({ ...prev, other_tool }))
+  }
+
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  const isStepValid = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        return surveyData.role !== ""
+      case 2:
+        return surveyData.seniority !== ""
+      case 3:
+        return surveyData.company_type !== ""
+      case 4:
+        return surveyData.company_size !== ""
+      case 5:
+        return surveyData.industry !== ""
+      case 6:
+        return surveyData.product_type !== ""
+      case 7:
+        return surveyData.customer_segment !== ""
+      case 8:
+        return surveyData.main_challenge.trim().length > 10
+      case 9:
+        return surveyData.daily_tools.length > 0
+      case 10:
+        return surveyData.learning_methods.length > 0
+      case 11:
+        return true // Salary is optional
+      case 12:
+        return surveyData.email === "" || isValidEmail(surveyData.email)
+      default:
+        return false
+    }
+  }
+
+  const submitSurvey = async () => {
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      console.log("🚀 Starting survey submission...")
+      console.log("📊 Survey data:", surveyData)
+
+      const payload = {
+        response_data: surveyData,
+        session_id:
+          typeof window !== "undefined"
+            ? window.sessionStorage?.getItem("survey_session_id") || crypto.randomUUID()
+            : crypto.randomUUID(),
+        user_agent: typeof window !== "undefined" ? window.navigator?.userAgent : "Unknown",
+        ip_address: null, // Will be handled server-side if needed
+      }
+
+      console.log("📤 Sending payload:", payload)
+
+      // Store session ID for future reference
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        window.sessionStorage.setItem("survey_session_id", payload.session_id)
+      }
+
+      const response = await fetch("/api/survey", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      console.log("📥 Response status:", response.status)
+      console.log("📥 Response ok:", response.ok)
+
+      const result = await response.json()
+      console.log("📥 Response data:", result)
+
+      if (response.ok && result.success) {
+        console.log("✅ Survey submitted successfully!")
+        setCurrentStep(totalSteps + 1) // Show completion step
+        // Store success state for better UX
+        if (typeof window !== "undefined" && window.sessionStorage) {
+          window.sessionStorage.setItem("survey_completed", "true")
+          window.sessionStorage.setItem("survey-completed", "true")
+        }
+      } else {
+        const errorMessage = result.error || result.message || "Error submitting survey"
+        console.error("❌ Submission failed:", errorMessage)
+        setError(`Submission failed: ${errorMessage}`)
+        console.error("Survey submission error:", result)
+      }
+    } catch (error) {
+      console.error("❌ Error submitting survey:", error)
+      setError("Network error. Please check your connection and try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const restartSurvey = () => {
+    if (typeof window !== "undefined" && window.sessionStorage) {
+      window.sessionStorage.removeItem("survey_completed")
+      window.sessionStorage.removeItem("survey-completed")
+      window.sessionStorage.removeItem("survey_session_id")
+    }
+    setCurrentStep(1)
+    setSurveyData({
+      role: "",
+      other_role: "",
+      seniority: "",
+      company_type: "",
+      company_size: "",
+      industry: "",
+      product_type: "",
+      customer_segment: "",
+      main_challenge: "",
+      daily_tools: [],
+      other_tool: "",
+      learning_methods: [],
+      salary_currency: "ARS",
+      salary_min: "",
+      salary_max: "",
+      salary_average: "",
+      email: "",
+    })
   }
 
   const handleNext = () => {
-    if (currentStep < totalSteps - 1) {
+    if (isStepValid(currentStep)) {
       setCurrentStep(currentStep + 1)
     }
   }
 
+  const handleAutoNext = () => {
+    setCurrentStep(currentStep + 1)
+  }
+
   const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
-    }
+    setCurrentStep(currentStep - 1)
   }
 
-  const handleRoleSelect = (role: string) => {
-    setSurveyData({ ...surveyData, role })
-  }
+  // Centralized navigation logic
+  const getNavigationConfig = () => {
+    const hasPrevious = currentStep > 1
+    const hasNext = currentStep < totalSteps
+    const isRequired = currentStep !== 10 // Salary is optional
+    const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
+    const canProceedResult = isStepValid(currentStep)
 
-  const handleSenioritySelect = (seniority: string) => {
-    setSurveyData({ ...surveyData, seniority })
-  }
-
-  const handleChallengeChange = (main_challenge: string) => {
-    setSurveyData({ ...surveyData, main_challenge })
-  }
-
-  const handleToolToggle = (tool: string) => {
-    const updatedTools = surveyData.daily_tools.includes(tool)
-      ? surveyData.daily_tools.filter((t) => t !== tool)
-      : [...surveyData.daily_tools, tool]
-    setSurveyData({ ...surveyData, daily_tools: updatedTools })
-  }
-
-  const handleLearningToggle = (method: string) => {
-    const updatedMethods = surveyData.learning_methods.includes(method)
-      ? surveyData.learning_methods.filter((m) => m !== method)
-      : [...surveyData.learning_methods, method]
-    setSurveyData({ ...surveyData, learning_methods: updatedMethods })
-  }
-
-  const handleEmailChange = (email: string) => {
-    setSurveyData({ ...surveyData, email })
-  }
-
-  const handleOtherRoleChange = (other_role: string) => {
-    setSurveyData({ ...surveyData, other_role })
-  }
-
-  const handleCompanySizeSelect = (company_size: string) => {
-    setSurveyData({ ...surveyData, company_size })
-  }
-
-  const handleIndustrySelect = (industry: string) => {
-    setSurveyData({ ...surveyData, industry })
-  }
-
-  const handleProductTypeSelect = (product_type: string) => {
-    setSurveyData({ ...surveyData, product_type })
-  }
-
-  const handleCustomerSegmentSelect = (customer_segment: string) => {
-    setSurveyData({ ...surveyData, customer_segment })
-  }
-
-  const handleOtherToolChange = (other_tool: string) => {
-    setSurveyData({ ...surveyData, other_tool })
-  }
-
-  const isValidEmail = (email: string) => {
-    if (!email) return true // Email is optional
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
-
-  const canProceed = () => {
-    switch (currentStep) {
-      case 0:
-        return surveyData.role !== ""
-      case 1:
-        return surveyData.seniority !== ""
-      case 2:
-        return surveyData.company_size !== ""
-      case 3:
-        return surveyData.industry !== ""
-      case 4:
-        return surveyData.product_type !== ""
-      case 5:
-        return surveyData.customer_segment !== ""
-      case 6:
-        return surveyData.main_challenge.trim().length > 10
-      case 7:
-        return surveyData.daily_tools.length > 0
-      case 8:
-        return surveyData.learning_methods.length > 0
-      case 9:
-        return isValidEmail(surveyData.email)
-      default:
-        return true
-    }
-  }
-
-  const submitSurvey = () => {
-    try {
-      // Save to localStorage first (always works)
-      const existing = JSON.parse(localStorage.getItem("survey") || "[]")
-      const updated = [...existing, { ...surveyData, created_at: new Date().toISOString() }]
-      localStorage.setItem("survey", JSON.stringify(updated))
-      console.log("✅ Survey saved to localStorage:", updated)
-
-      // Try to save to Supabase if configured
-      saveSurveyToSupabase(surveyData)
-
-      handleNext()
-    } catch (error) {
-      console.error("❌ Error saving to localStorage:", error)
-      alert("Error saving survey locally.")
-    }
-  }
-
-  const saveSurveyToSupabase = async (data: SurveyData) => {
-    try {
-      // Get dynamic database configuration
-      const { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders } = await import('@/lib/database-config')
-      
-      const response = await fetch(getDatabaseEndpoint(), {
-        method: 'POST',
-        headers: getDatabaseHeaders(),
-        body: JSON.stringify({
-          ...data,
-          created_at: new Date().toISOString()
-        })
-      })
-
-      if (response.ok) {
-        console.log("✅ Survey also saved to Supabase")
-      } else {
-        console.warn("⚠️ Supabase save failed, but localStorage succeeded")
-      }
-    } catch (error) {
-      console.warn("⚠️ Supabase not available, using localStorage only:", error)
+    return {
+      showBack: hasPrevious,
+      showContinue: hasNext,
+      continueDisabled: isRequired && !canProceedResult,
+      isAutoAdvance,
     }
   }
 
   const renderQuestion = () => {
-    switch (currentStep) {
-      case 0:
-        return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What's your current role?</h2>
-              <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400">Help us understand your background</p>
-            </div>
-            <div className="grid gap-3 max-w-3xl mx-auto">
-              {roleOptions.map((role) => (
-                <button
-                  key={role}
-                  onClick={() => handleRoleSelect(role)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.role === role
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{role}</span>
-                </button>
-              ))}
-            </div>
-            {surveyData.role === "Other" && (
-              <div className="max-w-3xl mx-auto mt-4">
-                <Input
-                  value={surveyData.other_role}
-                  onChange={(e) => handleOtherRoleChange(e.target.value)}
-                  placeholder="Please specify your role..."
-                  className="text-lg p-4 h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
-                />
-              </div>
-            )}
-          </div>
-        )
+    const percentage = Math.round((currentStep / totalSteps) * 100)
 
+    switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your seniority level?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your experience</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {seniorityOptions.map((seniority) => (
-                <button
-                  key={seniority}
-                  onClick={() => handleSenioritySelect(seniority)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.seniority === seniority
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{seniority}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <SingleChoiceQuestion
+              question="What's your current role?"
+              options={roleOptions}
+              selectedValue={surveyData.role}
+              onSelect={handleRoleSelect}
+              onNext={handleAutoNext}
+              autoAdvance={surveyData.role !== "Other"}
+              delay={500}
+            />
+
+            {surveyData.role === "Other" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Please specify your role..."
+                  value={surveyData.other_role}
+                  onChange={(e) => handleOtherRoleChange(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+                <Button onClick={handleNext} disabled={!surveyData.other_role.trim()} className="w-full">
+                  Continue <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </motion.div>
+            )}
+          </motion.div>
         )
 
       case 2:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What type of company do you work for?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Tell us about your company size and stage</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {companySizeOptions.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => handleCompanySizeSelect(size)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.company_size === size
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{size}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="What's your seniority level?"
+            options={seniorityOptions}
+            selectedValue={surveyData.seniority}
+            onSelect={handleSenioritySelect}
+            onNext={handleAutoNext}
+            autoAdvance={true}
+            delay={500}
+          />
         )
 
       case 3:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What industry do you work in?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand your market</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {industryOptions.map((industry) => (
-                <button
-                  key={industry}
-                  onClick={() => handleIndustrySelect(industry)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.industry === industry
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{industry}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="What type of company do you work for?"
+            options={companyTypeOptions}
+            selectedValue={surveyData.company_type}
+            onSelect={handleCompanyTypeSelect}
+            onNext={handleAutoNext}
+            autoAdvance={true}
+            delay={500}
+          />
         )
 
       case 4:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What type of product do you work on?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Tell us about your product category</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {productTypeOptions.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => handleProductTypeSelect(type)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.product_type === type
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{type}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="What's your company size?"
+            options={companySizeOptions}
+            selectedValue={surveyData.company_size}
+            onSelect={handleCompanySizeSelect}
+            onNext={handleAutoNext}
+            autoAdvance={true}
+            delay={500}
+          />
         )
 
       case 5:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your customer segment?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Who do you build products for?</p>
-            </div>
-            <div className="grid gap-3 max-w-2xl mx-auto">
-              {customerSegmentOptions.map((segment) => (
-                <button
-                  key={segment}
-                  onClick={() => handleCustomerSegmentSelect(segment)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.customer_segment === segment
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <span className="font-medium">{segment}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="What industry do you work in?"
+            options={industryOptions}
+            selectedValue={surveyData.industry}
+            onSelect={handleIndustrySelect}
+            onNext={handleAutoNext}
+            autoAdvance={true}
+            delay={500}
+          />
         )
 
       case 6:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your main product-related challenge?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Share what you're struggling with most</p>
-            </div>
-            <div className="max-w-2xl mx-auto">
-              <Textarea
-                value={surveyData.main_challenge}
-                onChange={(e) => handleChallengeChange(e.target.value)}
-                placeholder="Describe your biggest challenge in product management, design, or development..."
-                className="min-h-32 text-lg p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400"
-              />
-            </div>
-          </div>
+          <SingleChoiceQuestion
+            question="What type of product do you work on?"
+            options={productTypeOptions}
+            selectedValue={surveyData.product_type}
+            onSelect={handleProductTypeSelect}
+            onNext={handleAutoNext}
+            autoAdvance={true}
+            delay={500}
+          />
         )
 
       case 7:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 dark:text-slate-50">What tools do you use daily?</h2>
-              <p className="text-lg xl:text-xl text-slate-600 dark:text-slate-400">Select all that apply</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-6xl mx-auto">
-              {toolOptions.map((tool) => (
-                <button
-                  key={tool}
-                  onClick={() => handleToolToggle(tool)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.daily_tools.includes(tool)
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{tool}</span>
-                    {surveyData.daily_tools.includes(tool) && <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-            {surveyData.daily_tools.includes("Other") && (
-              <div className="max-w-2xl mx-auto mt-4">
-                <Input
-                  value={surveyData.other_tool}
-                  onChange={(e) => handleOtherToolChange(e.target.value)}
-                  placeholder="Please specify the tool..."
-                  className="text-lg p-4 h-14 rounded-xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
-                />
-              </div>
-            )}
-          </div>
-        )
+          <SingleChoiceQuestion
+            question="What's your customer segment?"
+            options={customerSegmentOptions}
+            selectedValue={surveyData.customer_segment}
+            onSelect={(value) =>
+              setSurveyData((prev) => ({ ...prev, customer_segment: value }))
+            }
+            onNext={handleAutoNext}
+            autoAdvance={true}
+            delay={500}
+          />
+        );
 
       case 8:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">How do you learn about product?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Select all that apply</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-              {learningOptions.map((method) => (
-                <button
-                  key={method}
-                  onClick={() => handleLearningToggle(method)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 ${
-                    surveyData.learning_methods.includes(method)
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{method}</span>
-                    {surveyData.learning_methods.includes(method) && <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center leading-relaxed px-2"
+            >
+              What's your main product-related challenge?
+            </motion.h2>
+            <Textarea
+              value={surveyData.main_challenge}
+              onChange={(e) => handleChallengeChange(e.target.value)}
+              placeholder="Describe your biggest challenge in product management, design, or development..."
+              className="min-h-28 sm:min-h-32 text-sm sm:text-base md:text-lg p-3 sm:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 resize-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+            />
+          </motion.div>
         )
 
       case 9:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">What's your salary range?</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Help us understand compensation in the product community (optional)</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              What tools do you use daily? (Select all that apply)
+            </motion.h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {toolOptions.map((tool) => (
+                <motion.button
+                  key={tool}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => handleToolToggle(tool)}
+                  className={`
+                    p-3.5 sm:p-4 text-left rounded-xl border-2 transition-all duration-200
+                    min-h-[52px] sm:min-h-[56px] flex items-center justify-between
+                    ${
+                      surveyData.daily_tools.includes(tool)
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
+                    }
+                  `}
+                >
+                  <span className="text-sm sm:text-base font-medium pr-2">{tool}</span>
+                  {surveyData.daily_tools.includes(tool) && (
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  )}
+                </motion.button>
+              ))}
             </div>
+
+            {surveyData.daily_tools.includes("Other") && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Please specify other tools..."
+                  value={surveyData.other_tool}
+                  onChange={(e) => handleOtherToolChange(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                />
+              </motion.div>
+            )}
+
+            <div className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+              {surveyData.daily_tools.length} selected
+            </div>
+          </motion.div>
+        )
+
+      case 10:
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              How do you learn about product? (Select all that apply)
+            </motion.h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {learningOptions.map((method) => (
+                <motion.button
+                  key={method}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleLearningToggle(method)}
+                  className={`
+                    p-4 text-left rounded-xl border-2 transition-all duration-200
+                    min-h-[56px] flex items-center justify-between
+                    ${
+                      surveyData.learning_methods.includes(method)
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
+                    }
+                  `}
+                >
+                  <span className="text-base font-medium">{method}</span>
+                  {surveyData.learning_methods.includes(method) && (
+                    <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  )}
+                </motion.button>
+              ))}
+            </div>
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              {surveyData.learning_methods.length} selected
+            </div>
+          </motion.div>
+        )
+
+      case 11:
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl mx-auto space-y-6"
+          >
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+              What's your salary range? (Optional)
+            </motion.h2>
             <div className="max-w-lg mx-auto space-y-6">
               {/* Currency Selection */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Currency:</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Currency:</label>
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "ARS", salary_min: "", salary_max: "", salary_average: "" })}
+                    onClick={() =>
+                      setSurveyData({
+                        ...surveyData,
+                        salary_currency: "ARS",
+                        salary_min: "",
+                        salary_max: "",
+                        salary_average: "",
+                      })
+                    }
                     className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
                       surveyData.salary_currency === "ARS"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-blue-400"
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-lg">🇦🇷</span>
-                      <span className="font-medium">Pesos Argentinos</span>
+                      <span className="font-medium">Argentine Pesos</span>
                     </div>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSurveyData({ ...surveyData, salary_currency: "USD", salary_min: "", salary_max: "", salary_average: "" })}
+                    onClick={() =>
+                      setSurveyData({
+                        ...surveyData,
+                        salary_currency: "USD",
+                        salary_min: "",
+                        salary_max: "",
+                        salary_average: "",
+                      })
+                    }
                     className={`flex-1 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
                       surveyData.salary_currency === "USD"
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100"
-                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-400"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-blue-400"
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -683,117 +763,116 @@ export default function ProductSurvey() {
               {/* Salary Input */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Salary Range</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Salary Range</label>
                   <div className="flex gap-2 items-center">
                     <Input
                       type="number"
                       value={surveyData.salary_min}
                       onChange={(e) => {
-                        const min = parseInt(e.target.value) || 0
-                        const max = parseInt(surveyData.salary_max) || 0
+                        const min = Number.parseInt(e.target.value) || 0
+                        const max = Number.parseInt(surveyData.salary_max) || 0
                         const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
-                        setSurveyData({ 
-                          ...surveyData, 
+                        setSurveyData({
+                          ...surveyData,
                           salary_min: e.target.value,
-                          salary_average: avg
+                          salary_average: avg,
                         })
                       }}
                       placeholder={surveyData.salary_currency === "USD" ? "Min (e.g., 80000)" : "Min (e.g., 2000000)"}
-                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      className="text-lg p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                     />
-                    <span className="text-slate-500">-</span>
+                    <span className="text-gray-500">-</span>
                     <Input
                       type="number"
                       value={surveyData.salary_max}
                       onChange={(e) => {
-                        const min = parseInt(surveyData.salary_min) || 0
-                        const max = parseInt(e.target.value) || 0
+                        const min = Number.parseInt(surveyData.salary_min) || 0
+                        const max = Number.parseInt(e.target.value) || 0
                         const avg = min > 0 && max > 0 ? Math.round((min + max) / 2).toString() : ""
-                        setSurveyData({ 
-                          ...surveyData, 
+                        setSurveyData({
+                          ...surveyData,
                           salary_max: e.target.value,
-                          salary_average: avg
+                          salary_average: avg,
                         })
                       }}
                       placeholder={surveyData.salary_currency === "USD" ? "Max (e.g., 120000)" : "Max (e.g., 3000000)"}
-                      className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      className="text-lg p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                     />
                   </div>
                 </div>
-                
+
                 <div className="text-center">
-                  <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+                  <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
                     OR
                   </span>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Average Salary</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Average Salary</label>
                   <Input
                     type="number"
                     value={surveyData.salary_average}
                     onChange={(e) => {
-                      const avg = parseInt(e.target.value) || 0
-                      setSurveyData({ 
-                        ...surveyData, 
+                      const avg = Number.parseInt(e.target.value) || 0
+                      setSurveyData({
+                        ...surveyData,
                         salary_average: e.target.value,
                         salary_min: avg > 0 ? Math.round(avg * 0.85).toString() : "",
-                        salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : ""
+                        salary_max: avg > 0 ? Math.round(avg * 1.15).toString() : "",
                       })
                     }}
-                    placeholder={surveyData.salary_currency === "USD" ? "Average (e.g., 100000)" : "Average (e.g., 2500000)"}
-                    className="text-lg p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    placeholder={
+                      surveyData.salary_currency === "USD" ? "Average (e.g., 100000)" : "Average (e.g., 2500000)"
+                    }
+                    className="text-lg p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                   />
                   {surveyData.salary_average && surveyData.salary_min && surveyData.salary_max && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Auto-calculated range: {parseInt(surveyData.salary_min).toLocaleString()} - {parseInt(surveyData.salary_max).toLocaleString()} {surveyData.salary_currency}
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Auto-calculated range: {Number.parseInt(surveyData.salary_min).toLocaleString()} -{" "}
+                      {Number.parseInt(surveyData.salary_max).toLocaleString()} {surveyData.salary_currency}
                     </p>
                   )}
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )
 
-      case 10:
+      case 12:
         return (
-          <div className="space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Your email</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">Optional - only if you'd like us to follow up</p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-2xl mx-auto text-center space-y-6"
+          >
+            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <Check className="w-12 h-12 text-green-600 dark:text-green-400" />
             </div>
-            <div className="max-w-md mx-auto">
-              <Input
-                type="email"
-                value={surveyData.email}
-                onChange={(e) => handleEmailChange(e.target.value)}
-                placeholder="your@email.com"
-                className={`text-lg p-4 h-14 rounded-xl border-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 dark:placeholder:text-slate-400 ${
-                  !isValidEmail(surveyData.email)
-                    ? "border-red-300 dark:border-red-600 focus:border-red-500 dark:focus:border-red-400"
-                    : "border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
-                }`}
-              />
-              {!isValidEmail(surveyData.email) && (
-                <p className="text-red-500 dark:text-red-400 text-sm mt-2">Please enter a valid email address</p>
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Survey Completed!</h2>
+              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-green-800 dark:text-green-200 font-medium">
+                  ✅ Your responses have been successfully saved
+                </p>
+              </div>
+            </div>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
+              Thank you for participating! Your responses help us build better products and create more valuable content
+              for the product community.
+              {surveyData.email && " We'll follow up with you soon."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {userIsAdmin && (
+                <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
+                  View Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               )}
+              <Button variant="outline" onClick={restartSurvey} className="px-8 py-3 bg-transparent">
+                Take Survey Again
+              </Button>
             </div>
-          </div>
-        )
-
-      case 11:
-        return (
-          <div className="text-center space-y-8">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
-              <Check className="w-10 h-10 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-4">
-              <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-50">Thank you!</h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                Your responses help us build better products and create more valuable content for the product community.
-              </p>
-            </div>
-          </div>
+          </motion.div>
         )
 
       default:
@@ -801,109 +880,220 @@ export default function ProductSurvey() {
     }
   }
 
+  if (!isMounted) {
+    return <SurveySkeleton />
+  }
+
+  if (isLoading) {
+    return <ProgressIndicator message="Loading survey..." />
+  }
+
+  if (error) {
+    return (
+      <ErrorDisplay
+        error={error}
+        onRetry={() => {
+          setError(null)
+          // Reload page instead of calling loadSettings
+          window.location.reload()
+        }}
+      />
+    )
+  }
+
+  if (databaseStatus === "not-configured") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+        <div className="max-w-md mx-auto text-center space-y-6 p-8">
+          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto">
+            <Settings className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configuración Requerida</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            La aplicación necesita ser configurada antes de poder usarla.
+          </p>
+          <Button onClick={() => (window.location.href = "/setup")} className="w-full">
+            Configurar Aplicación
+            <Settings className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (settings?.general?.maintenanceMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+        <div className="max-w-md mx-auto text-center space-y-6 p-8">
+          <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto">
+            <Wrench className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Under Maintenance</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            The application is under maintenance. Please check back later.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950 flex items-center justify-center p-4 xl:p-8">
-      {/* Theme toggle */}
-      <div className="fixed top-4 right-4 z-20">
-        <ModeToggle />
-      </div>
-      
-      {/* Admin Login Button */}
-      <div className="fixed top-4 left-4 z-20">
-        <Button
-          onClick={() => window.open("/auth/login", "_blank")}
-          variant="outline"
-          size="sm"
-          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg"
-        >
-          <Shield className="w-4 h-4 mr-2" />
-          Admin Login
-        </Button>
-      </div>
-      
-      {/* Setup Button */}
-      <div className="fixed bottom-4 right-4 z-20">
-        <Button
-          onClick={() => window.open("/setup", "_blank")}
-          variant="outline"
-          size="sm"
-          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-lg"
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Setup
-        </Button>
-      </div>
-
-      <div className="w-full max-w-5xl mx-auto">
-        <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl overflow-hidden">
-          <CardContent className="p-6 sm:p-8 lg:p-12 xl:p-16">
-            {/* Progress bar */}
-            <div className="mb-8 lg:mb-12">
-              <div className="flex justify-between items-center mb-3">
-                                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    {currentStep < totalSteps - 1 ? `${currentStep + 1} of ${totalSteps - 1}` : "Complete"}
-                  </span>
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    {Math.round(((currentStep + 1) / totalSteps) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-blue-600 to-blue-500 h-2 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-                />
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+              <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">
+                {settings?.general?.surveyTitle || "My Survey"}
+              </h1>
             </div>
-
-            {/* Question content */}
-            <div className="mb-8 lg:mb-12">{renderQuestion()}</div>
-
-                          {/* Navigation buttons */}
-              {currentStep < totalSteps - 1 && (
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">
+              <ModeToggle />
+              {/* Login/Admin Panel Button */}
+              {user ? (
                 <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 0}
-                  className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 order-2 sm:order-1"
+                  onClick={() => (window.location.href = "/admin/dashboard")}
+                  size="sm"
+                  className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back
+                  <Shield className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Admin Panel</span>
+                  <span className="sm:hidden">Panel</span>
                 </Button>
+              ) : (
+                <Button
+                  onClick={() => (window.location.href = "/auth/login")}
+                  size="sm"
+                  className="px-2.5 sm:px-3 md:px-4 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
+                >
+                  <Shield className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Login</span>
+                  <span className="sm:hidden">Login</span>
+                </Button>
+              )}
 
-                {currentStep === 10 ? (
-                  <Button
-                    onClick={submitSurvey}
-                    disabled={!canProceed() || isSubmitting}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Submitting...
-                      </>
+              {/* Debug button to clear corrupted session - only visible in debug mode */}
+              {user && debugMode && (
+                <Button
+                  onClick={async () => {
+                    await clearCorruptedSession()
+                    window.location.reload()
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="ml-1 px-2 h-7 text-xs"
+                  title="Clear corrupted session (debug mode)"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 py-3 sm:py-4 md:py-6 lg:py-8 px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="max-w-3xl lg:max-w-4xl mx-auto">
+          {/* Progress Bar */}
+          {currentStep <= totalSteps && (
+            <div className="mb-4 sm:mb-5 md:mb-6 lg:mb-8">
+              <SurveyProgress
+                current={currentStep}
+                total={totalSteps}
+                percentage={Math.round((currentStep / totalSteps) * 100)}
+              />
+            </div>
+          )}
+
+          {/* Question Content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderQuestion()}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Centralized Navigation */}
+          {currentStep < totalSteps && (
+            <div className="mt-6 sm:mt-7 md:mt-8 flex justify-between items-center gap-3">
+              {(() => {
+                const navConfig = getNavigationConfig()
+                return (
+                  <>
+                    {navConfig.showBack ? (
+                      <Button
+                        onClick={handlePrevious}
+                        variant="outline"
+                        size="sm"
+                        className="px-3 sm:px-4 md:px-6 h-9 sm:h-10 md:h-11 text-sm bg-transparent"
+                      >
+                        <ArrowLeft className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        Back
+                      </Button>
                     ) : (
-                      <>
-                        Submit Survey
-                        <Check className="w-4 h-4" />
-                      </>
+                      <div />
                     )}
-                  </Button>
+
+                    {navConfig.showContinue && (
+                      <Button
+                        onClick={handleNext}
+                        disabled={navConfig.continueDisabled}
+                        size="sm"
+                        className="px-3 sm:px-4 md:px-6 h-9 sm:h-10 md:h-11 text-sm"
+                      >
+                        Continue
+                        <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      </Button>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )}
+
+          {/* Submit Button for Final Step */}
+          {currentStep === totalSteps && (
+            <div className="mt-8 text-center">
+              <Button
+                onClick={submitSurvey}
+                disabled={isSubmitting}
+                size="lg"
+                className="px-12 py-4 text-lg font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    Submitting Survey...
+                  </>
                 ) : (
-                  <Button
-                    onClick={handleNext}
-                    disabled={!canProceed()}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white px-8 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
-                  >
-                    Next
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
+                  <>
+                    Submit Survey
+                    <Check className="ml-2 h-5 w-5" />
+                  </>
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              </Button>
+              {error && (
+                <div className="mt-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <p className="text-red-800 dark:text-red-200 font-medium">❌ {error}</p>
+                  <Button variant="outline" size="sm" onClick={() => setError(null)} className="mt-2">
+                    Try Again
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Loading Overlay */}
+      <LoadingOverlay isVisible={isSubmitting} message="Submitting survey..." />
     </div>
   )
 }

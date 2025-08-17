@@ -1,20 +1,26 @@
-'use client'
+"use client"
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { supabase, requireSupabase, isSupabaseConfigured } from './supabase'
-import { Profile } from './supabase'
+import type React from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import type { User, Session } from "@supabase/supabase-js"
+import { getSupabaseClient, isSupabaseConfigured } from "./supabase"
+import type { Database } from "./supabase"
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 
 interface AuthContextType {
   user: User | null
   profile: Profile | null
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>
-  signInWithGoogle: () => Promise<{ error: any }>
-  signOut: () => Promise<{ error: any }>
-  updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>
+  userIsAdmin: boolean
+  signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
+  signOut: () => Promise<{ error: Error | null }>
+  clearCorruptedSession: () => Promise<void>
+  updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>
+  getAccessToken: () => string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,148 +30,200 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [supabase, setSupabase] = useState<any>(null)
 
   useEffect(() => {
-    // Only initialize Supabase auth if configured
-    if (!isSupabaseConfigured || !supabase) {
-      console.log('Supabase not configured - auth features disabled')
-      setLoading(false)
-      return
+    const mounted = true
+
+    const initializeAuth = async () => {
+      try {
+        if (!isSupabaseConfigured) {
+          console.warn("Supabase not configured - auth features disabled")
+          if (mounted) setLoading(false)
+          return
+        }
+
+        // Get Supabase client
+        const client = await getSupabaseClient()
+        if (!client) {
+          console.warn("Could not initialize Supabase client")
+          if (mounted) setLoading(false)
+          return
+        }
+
+        if (mounted) setSupabase(client)
+
+        // Clear potentially corrupted tokens
+        localStorage.removeItem("supabase.auth.token")
+        localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
+
+        // Get initial session
+        const {
+          data: { session },
+          error: sessionError,
+        } = await client.auth.getSession()
+
+        if (sessionError) {
+          console.warn("🔐 [Auth] Session error - clearing all auth data:", sessionError.message)
+          await client.auth.signOut()
+          if (mounted) {
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+          }
+        } else if (session?.user?.id) {
+          if (mounted) {
+            setSession(session)
+            setUser(session.user)
+
+            // Fetch user profile
+            try {
+              const { data: profileData } = await client.from("profiles").select("*").eq("id", session.user.id).limit(1)
+              if (mounted) setProfile(profileData?.[0] || null)
+            } catch (profileError) {
+              console.warn("Could not fetch profile:", profileError)
+              if (mounted) setProfile(null)
+            }
+          }
+        } else {
+          console.log("🔐 [Auth] No valid session found")
+          if (mounted) {
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+          }
+        }
+      } catch (authError: any) {
+        console.warn("🔐 [Auth] Auth error - clearing session:", authError.message)
+        // Clear all auth data on any auth error
+        const client = supabase // Declare the client variable here
+        try {
+          await client.auth.signOut()
+          localStorage.removeItem("supabase.auth.token")
+          localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
+        } catch (clearError) {
+          console.warn("Error clearing auth data:", clearError)
+        }
+
+        if (mounted) {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('Initial session:', session)
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session)
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    initializeAuth()
   }, [])
 
-  const fetchProfile = async (userId: string) => {
-    if (!requireSupabase()) return
+  const userIsAdmin = profile?.email === "admin@demo.com" || profile?.email === "admin@example.com"
 
+  const signInWithPassword = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
-      const { data, error } = await supabase!
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+      if (!supabase) return { error: new Error("Supabase not configured") }
 
-      if (error) {
-        console.error('Error fetching profile:', error)
-      } else {
-        setProfile(data)
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      return { error }
+    } catch (error) {
+      return { error: error instanceof Error ? error : new Error("Sign in failed") }
+    }
+  }
+
+  const signUp = async (email: string, password: string): Promise<{ error: Error | null }> => {
+    try {
+      if (!supabase) return { error: new Error("Supabase not configured") }
+
+      const { error } = await supabase.auth.signUp({ email, password })
+      return { error }
+    } catch (error) {
+      return { error: error instanceof Error ? error : new Error("Sign up failed") }
+    }
+  }
+
+  const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
+    try {
+      if (!supabase) return { error: new Error("Supabase not configured") }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      return { error }
+    } catch (error) {
+      return { error: error instanceof Error ? error : new Error("Google sign in failed") }
+    }
+  }
+
+  const signOut = async (): Promise<{ error: Error | null }> => {
+    try {
+      if (!supabase) return { error: new Error("Supabase not configured") }
+
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+
+      const { error } = await supabase.auth.signOut()
+
+      localStorage.removeItem("supabase.auth.token")
+      localStorage.removeItem("sb-" + window.location.hostname + "-auth-token")
+
+      return { error }
+    } catch (error) {
+      return { error: error instanceof Error ? error : new Error("Sign out failed") }
+    }
+  }
+
+  const clearCorruptedSession = async (): Promise<void> => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut()
       }
     } catch (error) {
-      console.error('Error fetching profile:', error)
-    } finally {
-      setLoading(false)
+      console.error("Error clearing session:", error)
+    }
+
+    setSession(null)
+    setUser(null)
+    setProfile(null)
+  }
+
+  const updateProfile = async (updates: Partial<Profile>): Promise<{ error: Error | null }> => {
+    try {
+      if (!supabase) return { error: new Error("Supabase not configured") }
+
+      const { error } = await supabase.from("profiles").update(updates).eq("id", user?.id)
+
+      if (!error) {
+        setProfile((prev) => (prev ? { ...prev, ...updates } : null))
+      }
+
+      return { error }
+    } catch (error) {
+      return { error: error instanceof Error ? error : new Error("Profile update failed") }
     }
   }
 
-  const signIn = async (email: string, password: string) => {
-    if (!requireSupabase()) {
-      return { error: new Error('Supabase not configured') }
-    }
-    
-    const { error } = await supabase!.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { error }
+  const getAccessToken = (): string | null => {
+    return session?.access_token || null
   }
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
-    if (!requireSupabase()) {
-      return { error: new Error('Supabase not configured') }
-    }
-    
-    const { error } = await supabase!.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    })
-    return { error }
-  }
-
-  const signInWithGoogle = async () => {
-    if (!requireSupabase()) {
-      return { error: new Error('Supabase not configured - Google OAuth not available') }
-    }
-    
-    const { error } = await supabase!.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    return { error }
-  }
-
-  const signOut = async () => {
-    if (!requireSupabase()) {
-      return { error: new Error('Supabase not configured') }
-    }
-    
-    const { error } = await supabase!.auth.signOut()
-    return { error }
-  }
-
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return { error: new Error('No user logged in') }
-    if (!requireSupabase()) {
-      return { error: new Error('Supabase not configured') }
-    }
-
-    const { error } = await supabase!
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id)
-
-    if (!error) {
-      await fetchProfile(user.id)
-    }
-
-    return { error }
-  }
-
-  const value = {
+  const value: AuthContextType = {
     user,
     profile,
     session,
     loading,
-    signIn,
+    userIsAdmin,
+    signInWithPassword,
     signUp,
     signInWithGoogle,
     signOut,
+    clearCorruptedSession,
     updateProfile,
+    getAccessToken,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -174,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }

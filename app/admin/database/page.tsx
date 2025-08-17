@@ -6,16 +6,26 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle, Loader2 } from "lucide-react"
-import { getDatabaseConfig, getDatabaseEndpoint, getDatabaseHeaders, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
+import { getSupabaseConfig, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
 
 interface SurveyResponse {
   id: string
   role: string
   other_role?: string
+  seniority: string
   company_type: string
+  company_size: string
+  industry: string
+  product_type: string
+  customer_segment: string
   main_challenge: string
   daily_tools: string[]
+  other_tool?: string
   learning_methods: string[]
+  salary_currency: string
+  salary_min?: string
+  salary_max?: string
+  salary_average?: string
   email?: string
   created_at: string
 }
@@ -29,6 +39,7 @@ export default function DatabasePage() {
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "testing">("testing")
   const [setupLoading, setSetupLoading] = useState(false)
   const [devTableExists, setDevTableExists] = useState(false)
+  const [config, setConfig] = useState<any>(null)
 
   useEffect(() => {
     testConnection()
@@ -39,107 +50,94 @@ export default function DatabasePage() {
     filterResponses()
   }, [responses, searchTerm, selectedRole])
 
+  useEffect(() => {
+    const handleSettingsChange = () => {
+      console.log('Settings changed, refreshing database info...')
+      testConnection()
+      fetchResponses()
+    }
+
+    window.addEventListener('app_settings_changed', handleSettingsChange)
+    window.addEventListener('settingsUpdated', handleSettingsChange)
+    
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'survey_settings' || e.key === 'app_settings') {
+        handleSettingsChange()
+      }
+    })
+
+    return () => {
+      window.removeEventListener('app_settings_changed', handleSettingsChange)
+      window.removeEventListener('settingsUpdated', handleSettingsChange)
+    }
+  }, [])
+
   const testConnection = async () => {
     try {
       setConnectionStatus("testing")
       
-      // Get environment-specific config
-      const config = getDatabaseConfig()
+      const dbConfig = await getSupabaseConfig()
+      setConfig(dbConfig)
       
-      // Check if configured table exists
-      const tableExists = await ensureTableExists(config.tableName)
-      setDevTableExists(tableExists)
-      if (!tableExists) {
+      if (!dbConfig.supabaseUrl || !dbConfig.anonKey) {
         setConnectionStatus("disconnected")
         return
       }
-      
-      // Test connection to the appropriate table
-      const response = await fetch(getDatabaseEndpoint("?limit=1"), {
-        headers: getDatabaseHeaders()
+
+      const response = await fetch('/api/admin/database/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tableName: dbConfig.tableName })
       })
-      
+
       if (response.ok) {
         setConnectionStatus("connected")
+        const tableExists = await ensureTableExists(dbConfig.tableName)
+        setDevTableExists(tableExists)
       } else {
-        // Fallback to localStorage for demo
-        const localData = localStorage.getItem("survey")
-        setConnectionStatus(localData ? "connected" : "disconnected")
+        setConnectionStatus("disconnected")
       }
     } catch (error) {
-      console.warn("Database connection failed, using localStorage")
-      // Check if we have local data
-      const localData = localStorage.getItem("survey")
-      setConnectionStatus(localData ? "connected" : "disconnected")
+      console.error('Connection test failed:', error)
+      setConnectionStatus("disconnected")
     }
   }
 
   const fetchResponses = async () => {
     setIsLoading(true)
     try {
-      let responses = []
-      
-      try {
-        // Try Supabase first if configured
-        const config = getDatabaseConfig()
-        
-        if (config.isConfigured) {
-          const response = await fetch(
-            getDatabaseEndpoint("?select=*&order=created_at.desc"),
-            {
-              headers: getDatabaseHeaders()
-            }
-          )
-
-          if (response.ok) {
-            const data = await response.json()
-            responses = data || []
-            console.log('Database - Loaded from Supabase:', responses.length)
-          }
+      const response = await fetch('/api/admin/database')
+      if (response.ok) {
+        const result = await response.json()
+        if (result?.success && result?.data?.records) {
+          setResponses(result.data.records)
+          setConnectionStatus("connected")
+        } else {
+          setResponses([])
+          setConnectionStatus("disconnected")
         }
-      } catch (supabaseError) {
-        console.warn('Database - Supabase failed, using localStorage:', supabaseError)
+      } else {
+        setResponses([])
+        setConnectionStatus("disconnected")
       }
-      
-      // Fallback to localStorage if Supabase failed or not configured
-      if (responses.length === 0) {
-        const localData = localStorage.getItem("survey")
-        if (localData) {
-          const parsedData = JSON.parse(localData)
-          // Transform local data to match expected format
-          responses = parsedData.map((item: any, index: number) => ({
-            id: item.id || `local-${index}`,
-            role: item.role || 'Unknown',
-            other_role: item.other_role,
-            company_type: item.company_type || item.company_size || 'Unknown',
-            main_challenge: item.main_challenge || 'No challenge provided',
-            daily_tools: Array.isArray(item.daily_tools) ? item.daily_tools : [],
-            learning_methods: Array.isArray(item.learning_methods) ? item.learning_methods : [],
-            email: item.email,
-            created_at: item.created_at || new Date().toISOString(),
-          }))
-          console.log('Database - Loaded from localStorage:', responses.length)
-        }
-      }
-      
-      setResponses(responses)
     } catch (error) {
       console.error("Error fetching responses:", error)
       setResponses([])
+      setConnectionStatus("disconnected")
     } finally {
       setIsLoading(false)
     }
   }
 
   const filterResponses = () => {
-    let filtered = responses
+    let filtered = responses || []
 
     if (searchTerm) {
       filtered = filtered.filter(
         (response) =>
-          response.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          response.main_challenge.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          response.company_type.toLowerCase().includes(searchTerm.toLowerCase()),
+          response.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          response.main_challenge?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          response.company_type?.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
 
@@ -152,32 +150,20 @@ export default function DatabasePage() {
 
   const exportData = () => {
     const csvContent = [
-      // Headers
       [
-        "ID",
-        "Role",
-        "Other Role",
-        "Company Type",
-        "Main Challenge",
-        "Daily Tools",
-        "Learning Methods",
-        "Email",
-        "Created At",
+        "ID","Role","Other Role","Company Type","Main Challenge","Daily Tools","Learning Methods","Email","Created At"
       ].join(","),
-      // Data
-      ...filteredResponses.map((response) =>
-        [
-          response.id,
-          `"${response.role}"`,
-          `"${response.other_role || ""}"`,
-          `"${response.company_type}"`,
-          `"${response.main_challenge.replace(/"/g, '""')}"`,
-          `"${response.daily_tools.join("; ")}"`,
-          `"${response.learning_methods.join("; ")}"`,
-          `"${response.email || ""}"`,
-          response.created_at,
-        ].join(","),
-      ),
+      ...filteredResponses.map((response) => [
+        response.id,
+        `"${response.role || ""}"`,
+        `"${response.other_role || ""}"`,
+        `"${response.company_type || ""}"`,
+        `"${(response.main_challenge || "").replace(/"/g, '""')}"`,
+        `"${(response.daily_tools || []).join("; ")}"`,
+        `"${(response.learning_methods || []).join("; ")}"`,
+        `"${response.email || ""}"`,
+        response.created_at
+      ].join(","))
     ].join("\n")
 
     const blob = new Blob([csvContent], { type: "text/csv" })
@@ -191,122 +177,82 @@ export default function DatabasePage() {
 
   const deleteResponse = async (id: string) => {
     if (!confirm("Are you sure you want to delete this response?")) return
+    if (connectionStatus !== "connected") { alert("❌ Cannot delete response: Not connected"); return }
 
     try {
-      const response = await fetch(`https://qaauhwulohxeeacexrav.supabase.co/rest/v1/pc_survey_data?id=eq.${id}`, {
+      const config = await getSupabaseConfig()
+      if (!config.supabaseUrl || !config.anonKey) { alert("❌ No valid DB config"); return }
+
+      const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}?id=eq.${id}`, {
         method: "DELETE",
         headers: {
-          apikey:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYXVod3Vsb2h4ZWVhY2V4cmF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MDMzMzMsImV4cCI6MjA2ODM3OTMzM30.T25Pz98qNu94FZzCYmGGEuA5xQ71sGHHfjppHuXuNy8",
+          'apikey': config.anonKey,
+          'Authorization': `Bearer ${config.anonKey}`,
+          'Content-Type': 'application/json'
         },
       })
 
-      if (response.ok) {
-        fetchResponses()
-      }
-    } catch (error) {
-      console.error("Error deleting response:", error)
-    }
+      if (response.ok) { fetchResponses(); alert("✅ Response deleted") }
+      else { alert(`❌ Failed to delete: ${response.status} ${response.statusText}`) }
+    } catch (error) { console.error(error); alert("❌ Network error") }
   }
 
   const handleAutoSetup = async () => {
     setSetupLoading(true)
     try {
-      const config = getDatabaseConfig()
-      const environment = config.environment
-      
-      const response = await fetch('/api/admin/setup-environment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ environment })
-      })
+      const config = await getSupabaseConfig()
+      const manualInstructions = `📋 MANUAL SETUP REQUIRED:
 
-      const result = await response.json()
+Current Configuration:
+- Environment: ${config.environment}
+- Table Name: ${config.tableName}
+- Supabase URL: ${config.supabaseUrl}
 
-      if (result.success) {
-        setDevTableExists(true)
-        setConnectionStatus("connected")
-        // Refetch responses after setup
-        await fetchResponses()
-        alert(`✅ ${result.environment.toUpperCase()} environment setup completed successfully!\n\nTable: ${result.details.tableName}\nSample Data: ${result.details.sampleData}\nFeatures: ${result.details.features.join(', ')}`)
-      } else {
-        console.error('Setup failed:', result.error)
-        
-        // Show detailed instructions for manual setup
-        const manualInstructions = `❌ Auto-setup failed: ${result.error}
-
-📋 MANUAL SETUP REQUIRED:
-
+Steps:
 1. Go to your Supabase Dashboard
-2. Open the SQL Editor
-3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
-4. The script will create all necessary tables and sample data
+2. Open SQL Editor
+3. Copy & run schema script
+4. Script creates tables and sample data
 
-🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
+🔗 Link: ${config.supabaseUrl}/project/default/sql
 
-After running the SQL script, refresh this page to see your data.`
-        
-        alert(manualInstructions)
-      }
-    } catch (error) {
-      console.error('Auto-setup error:', error)
-      
-      const networkErrorInstructions = `❌ Auto-setup failed: Network or API error
-
-📋 MANUAL SETUP REQUIRED:
-
-1. Go to your Supabase Dashboard: https://qaauhwulohxeeacexrav.supabase.co
-2. Open the SQL Editor
-3. Copy and run the MANUAL_SUPABASE_SETUP.sql script from the project root
-4. The script will create all necessary tables and sample data
-
-🔗 Direct link: https://qaauhwulohxeeacexrav.supabase.co/project/default/sql
-
-The auto-setup feature requires custom SQL functions that may not be enabled.
-Manual setup is the recommended approach for production environments.`
-      
-      alert(networkErrorInstructions)
-    } finally {
-      setSetupLoading(false)
-    }
+Note: Auto-setup is not available.`
+      alert(manualInstructions)
+    } catch (error) { console.error(error); alert('Error during setup.') }
+    finally { setSetupLoading(false) }
   }
 
-  const uniqueRoles = [...new Set(responses.map((r) => r.role))].sort()
+  const uniqueRoles = [...new Set((responses || []).map((r) => r.role))].sort()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Database Management</h1>
-        <div className="flex items-center gap-2">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Database Management</h1>
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
-            {connectionStatus === "connected" ? (
-              <CheckCircle className="w-5 h-5 text-green-500" />
-            ) : connectionStatus === "disconnected" ? (
-              <XCircle className="w-5 h-5 text-red-500" />
-            ) : (
-              <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />
-            )}
-            <span className="text-sm text-muted-foreground capitalize">{connectionStatus}</span>
+            {connectionStatus === "connected" ? <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" /> :
+             connectionStatus === "disconnected" ? <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" /> :
+             <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 animate-spin" />}
+            <span className="text-xs sm:text-sm text-muted-foreground capitalize">{connectionStatus}</span>
           </div>
-          <Button onClick={fetchResponses} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+          <Button onClick={() => { testConnection(); fetchResponses() }} variant="outline" size="sm" className="text-xs sm:text-sm">
+            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> Refresh
           </Button>
         </div>
       </div>
 
-      {/* Environment Info */}
+      {/* Config Info */}
       <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Environment</p>
+              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Current Configuration</p>
               <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                {getDatabaseConfig().environment.toUpperCase()} - Table: {getDatabaseConfig().tableName}
+                {config?.environment?.toUpperCase() || 'UNKNOWN'} - Table: {config?.tableName || 'unknown'}
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                URL: {config?.supabaseUrl?.substring(0, 30) || 'Not configured'}...
               </p>
             </div>
             <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -314,42 +260,20 @@ Manual setup is the recommended approach for production environments.`
         </CardContent>
       </Card>
 
-      {/* Auto-Setup for Missing Table */}
+      {/* Auto Setup */}
       {connectionStatus === "disconnected" && (
         <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
           <CardContent className="p-4">
-            <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-              🚀 Auto-Setup Available
-            </h3>
-                          <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                The table `{getDatabaseConfig().tableName}` doesn't exist yet. 
-                You can create it automatically or manually using SQL.
-              </p>
+            <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">🚀 Auto-Setup Available</h3>
+            <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+              Table `{config?.tableName || 'unknown'}` doesn't exist. Create it automatically or manually using SQL.
+            </p>
             <div className="flex gap-2">
-                             <Button
-                 size="sm"
-                 onClick={handleAutoSetup}
-                 disabled={setupLoading}
-                 className="bg-green-600 hover:bg-green-700 text-white"
-               >
-                 {setupLoading ? (
-                   <>
-                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                     Setting up...
-                   </>
-                 ) : (
-                   <>
-                     <Database className="w-4 h-4 mr-2" />
-                     Auto-Setup {getDatabaseConfig().environment.toUpperCase()} Environment
-                   </>
-                 )}
-               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open('/setup_dev_database.sql', '_blank')}
-                className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-600 dark:hover:bg-amber-900/30"
-              >
+              <Button size="sm" onClick={handleAutoSetup} disabled={setupLoading} className="bg-green-600 hover:bg-green-700 text-white">
+                {setupLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Setting up...</> :
+                 <><Database className="w-4 h-4 mr-2" />Auto-Setup</>}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.open('/setup_dev_database.sql', '_blank')} className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-600 dark:hover:bg-amber-900/30">
                 📄 Manual SQL Script
               </Button>
             </div>
@@ -357,7 +281,7 @@ Manual setup is the recommended approach for production environments.`
         </Card>
       )}
 
-      {/* Database Stats */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-card text-card-foreground border-border">
           <CardContent className="p-6">
@@ -370,7 +294,6 @@ Manual setup is the recommended approach for production environments.`
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-card text-card-foreground border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -382,7 +305,6 @@ Manual setup is the recommended approach for production environments.`
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-card text-card-foreground border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -396,41 +318,23 @@ Manual setup is the recommended approach for production environments.`
         </Card>
       </div>
 
-      {/* Filters and Actions */}
+      {/* Filters & Actions */}
       <Card className="bg-card text-card-foreground border-border">
         <CardHeader>
           <CardTitle className="text-foreground">Filters & Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search responses..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Input placeholder="Search responses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 sm:pl-10 text-sm" />
             </div>
-
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-3 py-2 border bg-input text-input-foreground border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-background"
-            >
-              <option value="" className="bg-popover text-popover-foreground">All Roles</option>
-              {uniqueRoles.map((role) => (
-                <option key={role} value={role} className="bg-popover text-popover-foreground">
-                  {role}
-                </option>
-              ))}
+            <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="px-3 py-2 border bg-input text-input-foreground border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-background text-sm">
+              <option value="">All Roles</option>
+              {uniqueRoles.map((role) => <option key={role} value={role}>{role}</option>)}
             </select>
-
-            <Button onClick={exportData} disabled={filteredResponses.length === 0}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
+            <Button onClick={exportData} disabled={filteredResponses.length === 0} size="sm" className="text-xs sm:text-sm">
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> Export CSV
             </Button>
           </div>
         </CardContent>
@@ -452,46 +356,29 @@ Manual setup is the recommended approach for production environments.`
               ))}
             </div>
           ) : filteredResponses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No responses found matching your criteria.</div>
+            <div className="text-center py-8 text-muted-foreground">No responses found.</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {filteredResponses.map((response) => (
-                <div key={response.id} className="border border-border rounded-lg p-4 bg-card text-card-foreground">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{response.role}</Badge>
-                        <Badge variant="secondary">{response.company_type}</Badge>
-                        <span className="text-xs text-muted-foreground">{new Date(response.created_at).toLocaleString()}</span>
+                <div key={response.id} className="border border-border rounded-lg p-3 sm:p-4 bg-card text-card-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
+                        {response.role && <Badge variant="outline" className="text-xs">{response.role}</Badge>}
+                        {response.company_type && <Badge variant="secondary" className="text-xs">{response.company_type}</Badge>}
+                        {response.created_at && <span className="text-xs text-muted-foreground">{new Date(response.created_at).toLocaleString()}</span>}
                       </div>
-
-                      <p className="text-sm text-foreground mb-2">
-                        <strong>Challenge:</strong> {response.main_challenge}
+                      <p className="text-xs sm:text-sm text-foreground mb-2 break-words">
+                        <strong>Challenge:</strong> {response.main_challenge || "-"}
                       </p>
-
                       <div className="flex flex-wrap gap-1 mb-2">
                         <span className="text-xs text-muted-foreground">Tools:</span>
-                        {response.daily_tools.map((tool, i) => (
-                          <Badge key={i} variant="outline" className="text-xs">
-                            {tool}
-                          </Badge>
-                        ))}
+                        {(response.daily_tools || []).map((tool, i) => <Badge key={i} variant="outline" className="text-xs">{tool}</Badge>)}
                       </div>
-
-                      {response.email && (
-                        <p className="text-xs text-muted-foreground">
-                          <strong>Email:</strong> {response.email}
-                        </p>
-                      )}
+                      {response.email && <p className="text-xs text-muted-foreground break-all"><strong>Email:</strong> {response.email}</p>}
                     </div>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => deleteResponse(response.id)}
-                      className="text-destructive hover:text-destructive-foreground hover:bg-destructive/10"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                    <Button size="sm" variant="ghost" onClick={() => deleteResponse(response.id)} className="text-destructive hover:text-destructive-foreground hover:bg-destructive/10 h-8 w-8 p-0 flex-shrink-0">
+                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </Button>
                   </div>
                 </div>
