@@ -46,10 +46,14 @@ function LoginForm() {
         setError(result.error)
         console.error("🔧 [Login] Login failed:", result.error)
       } else {
-        // Login successful, redirecting to:
-        console.log("🔧 [Login] Login successful, redirecting to:", redirectTo)
-        router.push(redirectTo)
-        router.refresh() // Refresh to update server components
+        console.log("🔧 [Login] Login successful, waiting for auth state update...")
+
+        // Small delay to allow AuthProvider to update
+        setTimeout(() => {
+          console.log("🔧 [Login] Redirecting to:", redirectTo)
+          router.push(redirectTo)
+          router.refresh()
+        }, 500)
       }
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")

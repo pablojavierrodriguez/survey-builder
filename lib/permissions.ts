@@ -34,7 +34,17 @@ export interface UserPermissions {
 export function getUserRoleFromProfile(profile: Profile | null, userEmail?: string): "admin" | "viewer" {
   if (!profile && !userEmail) return "viewer"
 
-  // Check by email for admin access
+  if (profile?.role) {
+    // Map database roles to our role system
+    if (profile.role === "admin" || profile.role === "administrator") {
+      return "admin"
+    }
+    if (profile.role === "viewer") {
+      return "viewer"
+    }
+  }
+
+  // Check by email for admin access (fallback)
   const email = profile?.email || userEmail
   if (email === "admin@demo.com" || email === "admin@example.com") {
     return "admin"

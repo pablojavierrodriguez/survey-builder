@@ -53,6 +53,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (mounted) setSupabase(client)
 
+        const {
+          data: { subscription },
+        } = client.auth.onAuthStateChange(async (event, session) => {
+          console.log("🔐 [Auth] State change:", event, session?.user?.email)
+
+          if (session?.user?.id) {
+            if (mounted) {
+              setSession(session)
+              setUser(session.user)
+
+              // Fetch user profile
+              try {
+                const { data: profileData } = await client
+                  .from("profiles")
+                  .select("*")
+                  .eq("id", session.user.id)
+                  .limit(1)
+                console.log("🔐 [Auth] Profile loaded:", profileData?.[0])
+                if (mounted) setProfile(profileData?.[0] || null)
+              } catch (profileError) {
+                console.warn("Could not fetch profile:", profileError)
+                if (mounted) setProfile(null)
+              }
+            }
+          } else {
+            console.log("🔐 [Auth] No valid session found")
+            if (mounted) {
+              setSession(null)
+              setUser(null)
+              setProfile(null)
+            }
+          }
+        })
+
         // Clear potentially corrupted tokens
         localStorage.removeItem("supabase.auth.token")
         localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
@@ -79,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Fetch user profile
             try {
               const { data: profileData } = await client.from("profiles").select("*").eq("id", session.user.id).limit(1)
+              console.log("🔐 [Auth] Initial profile loaded:", profileData?.[0])
               if (mounted) setProfile(profileData?.[0] || null)
             } catch (profileError) {
               console.warn("Could not fetch profile:", profileError)
@@ -92,6 +127,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null)
             setProfile(null)
           }
+        }
+
+        return () => {
+          subscription.unsubscribe()
         }
       } catch (authError: any) {
         console.warn("🔐 [Auth] Auth error - clearing session:", authError.message)
