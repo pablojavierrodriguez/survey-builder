@@ -127,7 +127,7 @@ export default function SetupPage() {
         setSuccess(`✅ ${data.message}`)
 
         // Show where config was saved
-        if (data.savedTo && data.savedTo.length > 0) {
+        if (data.savedTo && Array.isArray(data.savedTo) && data.savedTo.length > 0) {
           const savedToText = data.savedTo
             .map((source) => {
               switch (source) {
@@ -141,6 +141,10 @@ export default function SetupPage() {
             })
             .join(" y ")
           setSuccess((prev) => `${prev}\n📁 Configuración guardada en: ${savedToText}`)
+        } else if (data.savedTo && !Array.isArray(data.savedTo)) {
+          const source =
+            data.savedTo === "local" ? "archivo local" : data.savedTo === "database" ? "base de datos" : data.savedTo
+          setSuccess((prev) => `${prev}\n📁 Configuración guardada en: ${source}`)
         }
 
         // Clear cache if needed
