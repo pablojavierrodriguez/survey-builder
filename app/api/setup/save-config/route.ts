@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { configManager, AppConfig } from '@/lib/config-manager'
+import { type NextRequest, NextResponse } from "next/server"
+import { configManager, type AppConfig } from "@/lib/config-manager"
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
 
     if (!supabaseUrl || !supabaseKey || !serviceRoleKey) {
       return NextResponse.json(
-        { success: false, error: 'URL, Anon Key y Service Role Key son requeridos' },
-        { status: 400 }
+        { success: false, error: "URL, Anon Key y Service Role Key son requeridos" },
+        { status: 400 },
       )
     }
 
@@ -18,43 +18,36 @@ export async function POST(request: NextRequest) {
         url: supabaseUrl,
         apiKey: supabaseKey,
         serviceRoleKey: serviceRoleKey,
-        tableName: 'survey_data',
-        environment: 'development'
+        tableName: "survey_responses", // Using correct table name that exists in database
+        environment: "development",
       },
       general: {
-        appName: appName || 'Survey App',
-        publicUrl: publicUrl || 'http://localhost:3000',
+        appName: appName || "Survey App",
+        publicUrl: publicUrl || "http://localhost:3000",
         maintenanceMode: false,
-        analyticsEnabled: true
-      }
+        analyticsEnabled: true,
+      },
     }
 
     // Save configuration using ConfigManager
     const { success, savedTo } = await configManager.saveConfig(config)
 
     if (!success) {
-      return NextResponse.json(
-        { success: false, error: 'Error al guardar configuración' },
-        { status: 500 }
-      )
+      return NextResponse.json({ success: false, error: "Error al guardar configuración" }, { status: 500 })
     }
-    
+
     // Log seguro
-    const targets = Array.isArray(savedTo) ? savedTo : [savedTo];
-    console.log(`✅ Configuration saved to: ${targets.join(', ')}`);
+    const targets = Array.isArray(savedTo) ? savedTo : [savedTo]
+    console.log(`✅ Configuration saved to: ${targets.join(", ")}`)
 
     return NextResponse.json({
       success: true,
-      message: 'Configuración guardada exitosamente',
+      message: "Configuración guardada exitosamente",
       savedTo,
-      clearCache: true
+      clearCache: true,
     })
-
   } catch (error) {
-    console.error('Setup error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
-    )
+    console.error("Setup error:", error)
+    return NextResponse.json({ success: false, error: "Error interno del servidor" }, { status: 500 })
   }
 }
