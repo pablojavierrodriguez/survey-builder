@@ -58,6 +58,10 @@ export async function requireSupabase() {
   return isSupabaseConfigured
 }
 
+export function createClient() {
+  return supabase
+}
+
 // Database types - updated to match new schema
 export interface Database {
   public: {
