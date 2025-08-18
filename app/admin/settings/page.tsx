@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getRoleDisplayName, type UserRole } from "@/lib/permissions"
+import { getRoleDisplayName, getUserRoleFromProfile, type UserRole } from "@/lib/permissions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -78,11 +78,12 @@ export default function SettingsPage() {
 
   const { user, profile } = useAuth()
 
-  const isAdmin = profile?.full_name || user?.email === "admin@demo.com" || user?.email === "admin@example.com"
-  const userRole = isAdmin ? "admin" : "viewer"
-  const canEditSettings = isAdmin
-  const canManageUsers = isAdmin
+  const userRole = getUserRoleFromProfile(profile, user?.email)
+  const canEditSettings = userRole === "admin"
+  const canManageUsers = userRole === "admin"
   const canViewUsers = true
+
+  console.log("[v0] Settings page - User role determined:", userRole, "Profile:", profile, "User email:", user?.email)
 
   useEffect(() => {
     loadSettings()
