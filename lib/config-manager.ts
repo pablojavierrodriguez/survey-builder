@@ -123,8 +123,8 @@ export class ConfigManager {
       if (!supabase) throw new Error("Supabase client not available")
 
       const { error } = await supabase.from("app_settings").upsert({
-        environment: config.database.environment,
-        settings: config,
+        key: "app_config",
+        value: config,
       })
 
       if (error) {
@@ -151,14 +151,14 @@ export class ConfigManager {
 
       const { data, error } = await supabase
         .from("app_settings")
-        .select("settings")
-        .eq("environment", "dev")
+        .select("value")
+        .eq("key", "app_config")
         .limit(1)
         .single()
 
       if (error || !data) return null
 
-      return data.settings
+      return data.value
     } catch (error) {
       console.warn("Could not load config from database:", error)
       return null
