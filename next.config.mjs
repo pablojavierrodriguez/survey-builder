@@ -5,7 +5,7 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
-          ...(process.env.VERCEL_ENV === "production"
+          ...(process.env.NEXT_PUBLIC_NODE_ENV === "production"
             ? [
                 // Producción: bloquear iframes completamente
                 { key: "X-Frame-Options", value: "DENY" },
