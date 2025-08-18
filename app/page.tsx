@@ -457,37 +457,53 @@ export default function ProductSurvey() {
 
     switch (currentStep) {
       case 1:
+        const [otherRole, setOtherRole] = useState("")
+
         return (
-          <motion.div
+            <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-2xl mx-auto space-y-6"
-          >
+            >
             <SingleChoiceQuestion
-              question="What's your current role?"
-              options={roleOptions}
-              selectedValue={surveyData.role}
-              onSelect={handleRoleSelect}
-              onNext={handleAutoNext}
-              autoAdvance={surveyData.role !== "Other"}
-              delay={500}
+                question="What's your current role?"
+                options={roleOptions}
+                selectedValue={surveyData.role}
+                onSelect={handleRoleSelect}
+                onNext={handleAutoNext}
+                autoAdvance={surveyData.role !== "Other"}
+                delay={500}
             />
 
             {surveyData.role === "Other" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+                >
                 <input
-                  type="text"
-                  placeholder="Please specify your role..."
-                  value={surveyData.other_role}
-                  onChange={(e) => handleOtherRoleChange(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                    type="text"
+                    placeholder="Please specify your role..."
+                    value={otherRole}
+                    onChange={(e) => setOtherRole(e.target.value)}
+                    className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                    placeholder-gray-500 dark:placeholder-gray-400
+                    focus:border-blue-500 focus:outline-none"
                 />
-                <Button onClick={handleNext} disabled={!surveyData.other_role.trim()} className="w-full">
-                  Continue <ArrowRight className="w-4 h-4 ml-2" />
+                <Button
+                    onClick={() => {
+                    handleRoleSelect(otherRole) // lo guardás como valor en el mismo campo role
+                    handleNext()
+                    }}
+                    disabled={!otherRole.trim()}
+                    className="w-full"
+                >
+                    Continue <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-              </motion.div>
+                </motion.div>
             )}
-          </motion.div>
+            </motion.div>
         )
 
       case 2:
@@ -594,60 +610,89 @@ export default function ProductSurvey() {
         )
 
       case 9:
+        const [otherTool, setOtherTool] = useState("")
+
+        const handleFinalNext = () => {
+            let tools = [...surveyData.daily_tools]
+            if (tools.includes("Other")) {
+            tools = tools.map(t => (t === "Other" ? otherTool : t))
+            }
+            setSurveyData(prev => ({ ...prev, daily_tools: tools }))
+            handleNext()
+        }
+
         return (
-          <motion.div
+            <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-2xl mx-auto space-y-6"
-          >
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
             >
-              What tools do you use daily? (Select all that apply)
+            <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white text-center"
+            >
+                What tools do you use daily? (Select all that apply)
             </motion.h2>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {toolOptions.map((tool) => (
+                {toolOptions.map((tool) => (
                 <motion.button
-                  key={tool}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  onClick={() => handleToolToggle(tool)}
-                  className={`
+                    key={tool}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => handleToolToggle(tool)}
+                    className={`
                     p-3.5 sm:p-4 text-left rounded-xl border-2 transition-all duration-200
                     min-h-[52px] sm:min-h-[56px] flex items-center justify-between
                     ${
-                      surveyData.daily_tools.includes(tool)
+                        surveyData.daily_tools.includes(tool)
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100 shadow-sm"
                         : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-white"
                     }
-                  `}
+                    `}
                 >
-                  <span className="text-sm sm:text-base font-medium pr-2">{tool}</span>
-                  {surveyData.daily_tools.includes(tool) && (
+                    <span className="text-sm sm:text-base font-medium pr-2">{tool}</span>
+                    {surveyData.daily_tools.includes(tool) && (
                     <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                  )}
+                    )}
                 </motion.button>
-              ))}
+                ))}
             </div>
 
             {surveyData.daily_tools.includes("Other") && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+                >
                 <input
-                  type="text"
-                  placeholder="Please specify other tools..."
-                  value={surveyData.other_tool}
-                  onChange={(e) => handleOtherToolChange(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                    type="text"
+                    placeholder="Please specify other tools..."
+                    value={otherTool}
+                    onChange={(e) => setOtherTool(e.target.value)}
+                    className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
+                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                    placeholder-gray-500 dark:placeholder-gray-400
+                    focus:border-blue-500 focus:outline-none"
                 />
-              </motion.div>
+                </motion.div>
             )}
 
             <div className="text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
-              {surveyData.daily_tools.length} selected
+                {surveyData.daily_tools.length} selected
             </div>
-          </motion.div>
+
+            <Button
+                onClick={handleFinalNext}
+                disabled={
+                surveyData.daily_tools.includes("Other") && !otherTool.trim()
+                }
+                className="w-full mt-4"
+            >
+                Continue <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            </motion.div>
         )
 
       case 10:
