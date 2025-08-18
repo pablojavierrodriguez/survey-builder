@@ -5,14 +5,14 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
-          ...(process.env.NEXT_PUBLIC_NODE_ENV === "production"
+          ...(process.env.VERCEL_ENV === "production"
             ? [
-                // Producción: bloquear iframes completamente
+                // 🔒 Producción (main): bloquear iframes
                 { key: "X-Frame-Options", value: "DENY" },
                 { key: "Content-Security-Policy", value: "frame-src 'none';" },
               ]
             : [
-                // Preview/Dev: permitir Google + Vercel Live
+                // 🛠️ Preview y Dev: permitir Google + Vercel Live
                 { key: "Content-Security-Policy", value: "frame-src 'self' https://accounts.google.com https://vercel.live;" },
               ]),
           { key: "X-Content-Type-Options", value: "nosniff" },
