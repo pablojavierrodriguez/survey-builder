@@ -1,30 +1,15 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 export const isSupabaseConfigured = (() => {
-  // Check standard variables first
-  const standardUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const standardKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  // Check POSTGRES_ prefixed variables as fallback
-  const postgresUrl = process.env.NEXT_PUBLIC_POSTGRES_SUPABASE_URL || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL
-  const postgresKey =
-    process.env.NEXT_PUBLIC_POSTGRES_SUPABASE_ANON_KEY || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  const url = standardUrl || postgresUrl
-  const key = standardKey || postgresKey
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   return typeof url === "string" && url.length > 0 && typeof key === "string" && key.length > 0
 })()
 
 export const supabase = (() => {
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_POSTGRES_SUPABASE_URL ||
-    process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_POSTGRES_SUPABASE_ANON_KEY ||
-    process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!url || !key) {
     console.warn("⚠️ Supabase environment variables are not set. Please configure Supabase variables")
