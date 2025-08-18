@@ -150,10 +150,15 @@ export default function SetupPage() {
 
         setStep(3)
       } else {
-        setError(`❌ Error al guardar: ${(data as any).message || "Error desconocido"}`)
+        setError(`❌ Error al guardar: ${data.message || "Error desconocido"}`)
       }
     } catch (error) {
-      setError("❌ Error al guardar configuración: No se pudo conectar al servidor")
+      console.error("Error saving configuration:", error)
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        setError("❌ Error de conexión: No se pudo conectar al servidor")
+      } else {
+        setError(`❌ Error al guardar configuración: ${error instanceof Error ? error.message : "Error desconocido"}`)
+      }
     } finally {
       setIsLoading(false)
     }
