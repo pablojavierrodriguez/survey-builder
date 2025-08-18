@@ -11,10 +11,6 @@ const nextConfig = {
         source: '/(.*)',
         headers: [
           {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
@@ -22,6 +18,10 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
+          {
+            key: "Content-Security-Policy",
+            value: "frame-src 'self' https://accounts.google.com https://vercel.live;",
+        },
         ],
       },
     ]
