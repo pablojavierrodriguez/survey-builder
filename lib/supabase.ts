@@ -65,31 +65,25 @@ export interface Database {
       }
       app_settings: {
         Row: {
-          id: number
+          id: string
+          key: string
+          value: any
           created_at: string
           updated_at: string
-          environment: string
-          survey_table_name: string
-          app_name: string
-          settings: any
         }
         Insert: {
-          id?: number
+          id?: string
+          key: string
+          value: any
           created_at?: string
           updated_at?: string
-          environment: string
-          survey_table_name: string
-          app_name: string
-          settings?: any
         }
         Update: {
-          id?: number
+          id?: string
+          key?: string
+          value?: any
           created_at?: string
           updated_at?: string
-          environment?: string
-          survey_table_name?: string
-          app_name?: string
-          settings?: any
         }
       }
       survey_responses: {
