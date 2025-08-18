@@ -3,13 +3,19 @@ import { configManager } from "@/lib/config-manager"
 
 export async function GET(request: NextRequest) {
   try {
+    const hasEnvUrl = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL)
+    const hasEnvKey = !!(
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
+    )
+    const hasServiceRole = !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.POSTGRES_SUPABASE_SERVICE_ROLE_KEY)
+
     // Check if configuration is available
     const configured = await configManager.isConfigured()
 
     const envStatus = {
-      hasEnvUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasEnvUrl,
+      hasEnvKey,
+      hasServiceRole,
       configured,
       canConnect: configured,
     }
@@ -22,6 +28,11 @@ export async function GET(request: NextRequest) {
         priority: "Environment variables > Local file > Database",
         currentSource: configured ? "Environment variables" : "Not configured",
         wizardNeeded: !configured,
+        debug: {
+          envUrl: hasEnvUrl ? "✓" : "✗",
+          envKey: hasEnvKey ? "✓" : "✗",
+          serviceRole: hasServiceRole ? "✓" : "✗",
+        },
       },
     })
   } catch (error) {

@@ -33,7 +33,11 @@ export class ConfigManager {
   }
 
   private hasEnvironmentConfig(): boolean {
-    return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    const hasStandardVars = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    const hasPostgresVars = !!(
+      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL && process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
+    )
+    return hasStandardVars || hasPostgresVars
   }
 
   async isConfigured(): Promise<boolean> {
@@ -65,12 +69,16 @@ export class ConfigManager {
   private loadFromEnvironment(): AppConfig | null {
     if (!this.hasEnvironmentConfig()) return null
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.POSTGRES_SUPABASE_SERVICE_ROLE_KEY
+
     return {
       database: {
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        apiKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        tableName: "survey_data",
+        url: supabaseUrl!,
+        apiKey: supabaseKey!,
+        serviceRoleKey,
+        tableName: "survey_responses",
         environment: process.env.NODE_ENV || "development",
       },
       general: {
@@ -122,10 +130,15 @@ export class ConfigManager {
       const supabase = await this.getSupabaseClient()
       if (!supabase) throw new Error("Supabase client not available")
 
-      const { error } = await supabase.from("app_settings").upsert({
-        key: "app_config",
-        value: config,
-      })
+      const { error } = await supabase.from("app_settings").upsert(
+        {
+          key: "app_config",
+          value: config,
+        },
+        {
+          onConflict: "key",
+        },
+      )
 
       if (error) {
         console.error("Error saving config to database:", error)
