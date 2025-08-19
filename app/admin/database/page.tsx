@@ -76,19 +76,21 @@ export default function DatabasePage() {
   const testConnection = async () => {
     try {
       setConnectionStatus("testing")
-      // Fetch settings from admin API; if unauthorized or not configured, hide config card
+      // Determine effective configuration (prefer admin settings)
+      let effectiveConfig = null as null | { supabaseUrl: string; anonKey: string; tableName: string; environment: string }
       try {
         const resp = await fetch('/api/admin/settings')
         if (resp.ok) {
           const json = await resp.json()
           if (json?.success && json?.data?.database) {
-            setConfig({
+            effectiveConfig = {
               supabaseUrl: json.data.database.url || '',
               anonKey: json.data.database.apiKey || '',
               tableName: json.data.database.tableName || 'survey_responses',
-              environment: json.data.database.environment || 'production'
-            })
-            setHasConfig(true)
+              environment: json.data.database.environment || 'production',
+            }
+            setConfig(effectiveConfig)
+            setHasConfig(!!effectiveConfig.supabaseUrl)
           } else {
             setHasConfig(false)
           }
@@ -98,13 +100,14 @@ export default function DatabasePage() {
       } catch {
         setHasConfig(false)
       }
-      
-      const dbConfig = hasConfig ? config : await getSupabaseConfig()
-      if (!hasConfig) {
-        setConfig(dbConfig)
+
+      if (!effectiveConfig) {
+        const fallback = await getSupabaseConfig()
+        effectiveConfig = fallback
+        setConfig(fallback)
       }
       
-      if (!dbConfig.supabaseUrl || !dbConfig.anonKey) {
+      if (!effectiveConfig.supabaseUrl || !effectiveConfig.anonKey) {
         setConnectionStatus("disconnected")
         return
       }
@@ -112,7 +115,7 @@ export default function DatabasePage() {
       const response = await fetch('/api/admin/database/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tableName: dbConfig.tableName })
+        body: JSON.stringify({ tableName: effectiveConfig.tableName })
       })
 
       if (response.ok) {
