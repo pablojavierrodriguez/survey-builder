@@ -40,6 +40,7 @@ export default function DatabasePage() {
   const [setupLoading, setSetupLoading] = useState(false)
   const [devTableExists, setDevTableExists] = useState(false)
   const [config, setConfig] = useState<any>(null)
+  const [hasConfig, setHasConfig] = useState(false)
 
   useEffect(() => {
     testConnection()
@@ -75,9 +76,33 @@ export default function DatabasePage() {
   const testConnection = async () => {
     try {
       setConnectionStatus("testing")
+      // Fetch settings from admin API; if unauthorized or not configured, hide config card
+      try {
+        const resp = await fetch('/api/admin/settings')
+        if (resp.ok) {
+          const json = await resp.json()
+          if (json?.success && json?.data?.database) {
+            setConfig({
+              supabaseUrl: json.data.database.url || '',
+              anonKey: json.data.database.apiKey || '',
+              tableName: json.data.database.tableName || 'survey_responses',
+              environment: json.data.database.environment || 'production'
+            })
+            setHasConfig(true)
+          } else {
+            setHasConfig(false)
+          }
+        } else {
+          setHasConfig(false)
+        }
+      } catch {
+        setHasConfig(false)
+      }
       
-      const dbConfig = await getSupabaseConfig()
-      setConfig(dbConfig)
+      const dbConfig = hasConfig ? config : await getSupabaseConfig()
+      if (!hasConfig) {
+        setConfig(dbConfig)
+      }
       
       if (!dbConfig.supabaseUrl || !dbConfig.anonKey) {
         setConnectionStatus("disconnected")
@@ -242,23 +267,25 @@ Note: Auto-setup is not available.`
         </div>
       </div>
 
-      {/* Config Info */}
-      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Current Configuration</p>
-              <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                {config?.environment?.toUpperCase() || 'UNKNOWN'} - Table: {config?.tableName || 'unknown'}
-              </p>
-              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                URL: {config?.supabaseUrl?.substring(0, 30) || 'Not configured'}...
-              </p>
+      {/* Config Info (only if configured) */}
+      {hasConfig && config?.supabaseUrl && (
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Current Configuration</p>
+                <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                  {config?.environment?.toUpperCase()} - Table: {config?.tableName}
+                </p>
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                  URL: {config?.supabaseUrl?.substring(0, 30)}...
+                </p>
+              </div>
+              <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Auto Setup */}
       {connectionStatus === "disconnected" && (

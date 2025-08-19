@@ -7,15 +7,25 @@ export function useDebugMode() {
   useEffect(() => {
     const fetchDebugMode = async () => {
       try {
-        const response = await fetch('/api/admin/settings')
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.data?.general?.debugMode) {
-            setDebugMode(result.data.general.debugMode)
+        // Prefer local settings if available to avoid protected admin endpoints
+        try {
+          const local = typeof window !== 'undefined' ? localStorage.getItem('app_settings') : null
+          if (local) {
+            const parsed = JSON.parse(local)
+            if (parsed?.general?.debugMode === true) {
+              setDebugMode(true)
+            }
           }
+        } catch {}
+
+        // Public status endpoint; do not require auth and ignore failures
+        const response = await fetch('/api/config/check')
+        if (response.ok) {
+          // We intentionally do not elevate debug mode from here
+          // keep debugMode as-is (possibly set by local settings)
         }
       } catch (error) {
-        console.error('Error fetching debug mode:', error)
+        // Degrade silently in public pages
       } finally {
         setLoading(false)
       }

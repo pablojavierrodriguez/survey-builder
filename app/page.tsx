@@ -377,7 +377,7 @@ export default function ProductSurvey() {
 
       if (response.ok && result.success) {
         console.log("✅ Survey submitted successfully!")
-        setCurrentStep(totalSteps + 1) // Show completion step
+        setCurrentStep(totalSteps) // Render the success screen on the final step
         // Store success state for better UX
         if (typeof window !== "undefined" && window.sessionStorage) {
           window.sessionStorage.setItem("survey_completed", "true")
@@ -472,9 +472,13 @@ export default function ProductSurvey() {
                 question="What's your current role?"
                 options={roleOptions}
                 selectedValue={surveyData.role}
-                onSelect={handleRoleSelect}
-                onNext={handleAutoNext}
-                autoAdvance={surveyData.role !== "Other"}
+                onSelect={(value) => {
+                  handleRoleSelect(value)
+                  if (value !== "Other") {
+                    handleAutoNext()
+                  }
+                }}
+                autoAdvance={false}
                 delay={500}
             />
 
