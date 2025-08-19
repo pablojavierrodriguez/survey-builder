@@ -187,6 +187,7 @@ export default function ProductSurvey() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [databaseStatus, setDatabaseStatus] = useState<"checking" | "configured" | "not-configured">("checking")
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -377,7 +378,7 @@ export default function ProductSurvey() {
 
       if (response.ok && result.success) {
         console.log("✅ Survey submitted successfully!")
-        setCurrentStep(totalSteps) // Render the success screen on the final step
+        setSubmitted(true)
         // Store success state for better UX
         if (typeof window !== "undefined" && window.sessionStorage) {
           window.sessionStorage.setItem("survey_completed", "true")
@@ -937,6 +938,55 @@ export default function ProductSurvey() {
   if (isLoading) {
     return <ProgressIndicator message="Loading survey..." />
   }
+  // Show success screen once submitted
+  if (submitted || (typeof window !== "undefined" && window.sessionStorage?.getItem("survey_completed") === "true")) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-950 dark:to-blue-950">
+        <header className="sticky top-0 z-50 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-sm">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
+              <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+                <h1 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-white truncate">
+                  {settings?.general?.surveyTitle || "My Survey"}
+                </h1>
+              </div>
+              <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">
+                <ModeToggle />
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 py-6 px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-2xl mx-auto text-center space-y-6"
+          >
+            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <Check className="w-12 h-12 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Survey Completed!</h2>
+              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-green-800 dark:text-green-200 font-medium">✅ Your responses have been successfully saved</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {userIsAdmin && (
+                <Button onClick={() => (window.location.href = "/admin/dashboard")} className="px-8 py-3">
+                  View Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+              <Button variant="outline" onClick={restartSurvey} className="px-8 py-3 bg-transparent">
+                Take Survey Again
+              </Button>
+            </div>
+          </motion.div>
+        </main>
+      </div>
+    )
+  }
 
   if (error) {
     return (
@@ -1113,7 +1163,7 @@ export default function ProductSurvey() {
             <div className="mt-8 text-center">
               <Button
                 onClick={submitSurvey}
-                disabled={isSubmitting}
+                disabled={isSubmitting || submitted}
                 size="lg"
                 className="px-12 py-4 text-lg font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
               >

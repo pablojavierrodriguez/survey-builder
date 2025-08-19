@@ -67,3 +67,39 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .limit(1)
+      .maybeSingle()
+    const role = getUserRoleFromProfile(profile || null, session.user.email)
+    if (role !== "admin") {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Missing id" }, { status: 400 })
+    }
+
+    const { error } = await supabase.from("survey_responses").delete().eq("id", id)
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+  }
+}

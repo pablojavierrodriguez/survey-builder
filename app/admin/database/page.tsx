@@ -202,23 +202,13 @@ export default function DatabasePage() {
 
   const deleteResponse = async (id: string) => {
     if (!confirm("Are you sure you want to delete this response?")) return
-    if (connectionStatus !== "connected") { alert("❌ Cannot delete response: Not connected"); return }
-
     try {
-      const config = await getSupabaseConfig()
-      if (!config.supabaseUrl || !config.anonKey) { alert("❌ No valid DB config"); return }
-
-      const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}?id=eq.${id}`, {
-        method: "DELETE",
-        headers: {
-          'apikey': config.anonKey,
-          'Authorization': `Bearer ${config.anonKey}`,
-          'Content-Type': 'application/json'
-        },
-      })
-
+      const response = await fetch(`/api/admin/database?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
       if (response.ok) { fetchResponses(); alert("✅ Response deleted") }
-      else { alert(`❌ Failed to delete: ${response.status} ${response.statusText}`) }
+      else {
+        const err = await response.json().catch(() => ({} as any))
+        alert(`❌ Failed to delete: ${err.error || response.statusText}`)
+      }
     } catch (error) { console.error(error); alert("❌ Network error") }
   }
 
