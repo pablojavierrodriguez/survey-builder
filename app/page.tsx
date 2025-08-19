@@ -162,6 +162,9 @@ export default function ProductSurvey() {
   const { user, userIsAdmin, clearCorruptedSession } = useAuth()
   const { debugMode } = useDebugMode()
   const [currentStep, setCurrentStep] = useState(1)
+  // State for conditional inputs that were previously declared inside render
+  const [otherRole, setOtherRole] = useState("")
+  const [otherTool, setOtherTool] = useState("")
   const [surveyData, setSurveyData] = useState<SurveyData>({
     role: "",
     other_role: "",
@@ -400,6 +403,8 @@ export default function ProductSurvey() {
       window.sessionStorage.removeItem("survey-completed")
       window.sessionStorage.removeItem("survey_session_id")
     }
+    setOtherRole("")
+    setOtherTool("")
     setCurrentStep(1)
     setSurveyData({
       role: "",
@@ -440,7 +445,7 @@ export default function ProductSurvey() {
   const getNavigationConfig = () => {
     const hasPrevious = currentStep > 1
     const hasNext = currentStep < totalSteps
-    const isRequired = currentStep !== 10 // Salary is optional
+    const isRequired = currentStep !== 11 // Salary is optional (step 11)
     const isAutoAdvance = currentStep >= 1 && currentStep <= 6 // Single-choice questions
     const canProceedResult = isStepValid(currentStep)
 
@@ -457,8 +462,6 @@ export default function ProductSurvey() {
 
     switch (currentStep) {
       case 1:
-        const [otherRole, setOtherRole] = useState("")
-
         return (
             <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -493,7 +496,7 @@ export default function ProductSurvey() {
                 />
                 <Button
                     onClick={() => {
-                    handleRoleSelect(otherRole) // lo guardás como valor en el mismo campo role
+                    handleRoleSelect(otherRole)
                     handleNext()
                     }}
                     disabled={!otherRole.trim()}
@@ -610,8 +613,6 @@ export default function ProductSurvey() {
         )
 
       case 9:
-        const [otherTool, setOtherTool] = useState("")
-
         const handleFinalNext = () => {
             let tools = [...surveyData.daily_tools]
             if (tools.includes("Other")) {

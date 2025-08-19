@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [supabase, setSupabase] = useState<any>(null)
 
   useEffect(() => {
-    const mounted = true
+    let mounted = true
 
     const initializeAuth = async () => {
       try {
@@ -137,7 +137,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         return () => {
-          subscription.unsubscribe()
+          mounted = false
+          try {
+            subscription.unsubscribe()
+          } catch (e) {}
         }
       } catch (authError: any) {
         console.warn("🔐 [Auth] Auth error - clearing session:", authError.message)

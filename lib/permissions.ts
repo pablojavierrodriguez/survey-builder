@@ -44,16 +44,7 @@ export function getUserRoleFromProfile(profile: Profile | null, userEmail?: stri
     }
   }
 
-  // Check by email for admin access (fallback)
-  const email = profile?.email || userEmail
-  if (email === "admin@demo.com" || email === "admin@example.com") {
-    return "admin"
-  }
-
-  // Check by full_name as fallback (if user has full_name, they're admin)
-  if (profile?.full_name) {
-    return "admin"
-  }
+  // Do not elevate privileges based on email or full_name
 
   return "viewer"
 }
