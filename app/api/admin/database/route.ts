@@ -1,16 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
+import { cookies } from "next/headers"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import type { Database } from "@/lib/supabase"
+import { getUserRoleFromProfile } from "@/lib/permissions"
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isSupabaseConfigured) {
-      return NextResponse.json({ success: false, error: "System not configured" }, { status: 503 })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
-
-    // Get Supabase client
-    const supabase = await getSupabaseClient()
-    if (!supabase) {
-      return NextResponse.json({ success: false, error: "Could not initialize Supabase client" }, { status: 500 })
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .limit(1)
+      .maybeSingle()
+    const role = getUserRoleFromProfile(profile || null, session.user.email)
+    if (role !== "admin") {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
     }
 
     const tableName = "survey_responses" // Using new normalized table
@@ -38,25 +49,8 @@ export async function GET(request: NextRequest) {
     // Data is already normalized, no transformation needed
     const transformedRecords = surveyData || []
 
-    let tables: string[] = []
-    try {
-      // Try to get table list
-      const { data: tablesData, error: tablesError } = await supabase
-        .from("information_schema.tables")
-        .select("table_name")
-        .eq("table_schema", "public")
-
-      if (tablesError) {
-        // Fallback to known tables
-        tables = ["survey_responses", "app_config", "profiles", "analytics_cache"]
-      } else {
-        tables = tablesData?.map((t: { table_name: string }) => t.table_name) || []
-      }
-    } catch (error) {
-      console.error("Error fetching tables:", error)
-      // Return known tables as fallback
-      tables = ["survey_responses", "app_config", "profiles", "analytics_cache"]
-    }
+    // Avoid querying information_schema with RLS; provide a safe static list relevant to app
+    const tables: string[] = ["survey_responses", "app_settings", "profiles"]
 
     return NextResponse.json({
       success: true,
@@ -64,7 +58,7 @@ export async function GET(request: NextRequest) {
         url: process.env.NEXT_PUBLIC_SUPABASE_URL,
         environment: process.env.NODE_ENV || "development",
         tableName: tableName,
-        tables: tables,
+        tables,
         records: transformedRecords,
       },
     })

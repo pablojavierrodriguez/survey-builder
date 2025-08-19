@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase"
+import { cookies } from "next/headers"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import type { Database } from "@/lib/supabase"
+import { getUserRoleFromProfile } from "@/lib/permissions"
 
 interface SurveyResponse {
   id: string
@@ -20,17 +23,25 @@ interface SurveyResponse {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("[v0] Analytics API called")
-
-    if (!isSupabaseConfigured) {
-      console.log("[v0] Missing Supabase configuration")
-      return NextResponse.json({ success: false, error: "Supabase not configured" }, { status: 500 })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
-    const supabase = await getSupabaseClient()
-    if (!supabase) {
-      console.log("[v0] Could not create Supabase client")
-      return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
+    // Determine user role from profiles
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .limit(1)
+      .maybeSingle()
+    const role = getUserRoleFromProfile(profile || null, session.user.email)
+    // Allow authenticated users (viewer/collaborator/admin) to view analytics
+    if (!role) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
     }
 
     // Get analytics data from normalized survey_responses table
