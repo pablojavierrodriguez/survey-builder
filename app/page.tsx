@@ -199,14 +199,15 @@ export default function ProductSurvey() {
   useEffect(() => {
     setIsMounted(true)
 
-    if (typeof window !== "undefined" && window.sessionStorage) {
-      const surveyCompleted = window.sessionStorage.getItem("survey_completed")
-      if (surveyCompleted === "true") {
-        setCurrentStep(totalSteps + 1) // Show completion step
-        setIsLoading(false)
-        return
+    // If user already completed, mark as submitted (single source of truth)
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        const surveyCompleted = window.sessionStorage.getItem("survey_completed")
+        if (surveyCompleted === "true") {
+          setSubmitted(true)
+        }
       }
-    }
+    } catch {}
 
     // Check configuration status
     const checkConfig = async () => {
@@ -230,12 +231,7 @@ export default function ProductSurvey() {
     checkConfig()
   }, [])
 
-  useEffect(() => {
-    const completed = sessionStorage.getItem("survey-completed")
-    if (completed === "true") {
-      setCurrentStep(totalSteps + 1)
-    }
-  }, [])
+  // Removed duplicate effect that changed step based on alternate key
 
   // Settings loading removed - not needed for basic functionality
 
@@ -269,7 +265,9 @@ export default function ProductSurvey() {
   }
 
   const handleOtherRoleChange = (other_role: string) => {
-    setSurveyData((prev) => ({ ...prev, other_role }))
+    // Store in both other_role and role so the single field is used downstream
+    setOtherRole(other_role)
+    setSurveyData((prev) => ({ ...prev, other_role, role: other_role }))
   }
 
   const handleChallengeChange = (main_challenge: string) => {
@@ -308,8 +306,14 @@ export default function ProductSurvey() {
 
   const isStepValid = (step: number): boolean => {
     switch (step) {
-      case 1:
+      case 1: {
+        // If "Other" was selected, require a non-empty custom role
+        const selectedIsOther = surveyData.role === "Other"
+        if (selectedIsOther) {
+          return otherRole.trim().length > 0
+        }
         return surveyData.role !== ""
+      }
       case 2:
         return surveyData.seniority !== ""
       case 3:
@@ -429,9 +433,12 @@ export default function ProductSurvey() {
   }
 
   const handleNext = () => {
-    if (isStepValid(currentStep)) {
-      setCurrentStep(currentStep + 1)
+    if (!isStepValid(currentStep)) return
+    // Normalize role on step 1 when custom role is provided
+    if (currentStep === 1 && surveyData.role === "Other" && otherRole.trim().length > 0) {
+      setSurveyData((prev) => ({ ...prev, role: otherRole }))
     }
+    setCurrentStep(currentStep + 1)
   }
 
   const handleAutoNext = () => {
@@ -493,22 +500,12 @@ export default function ProductSurvey() {
                     type="text"
                     placeholder="Please specify your role..."
                     value={otherRole}
-                    onChange={(e) => setOtherRole(e.target.value)}
+                    onChange={(e) => handleOtherRoleChange(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl
                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                     placeholder-gray-500 dark:placeholder-gray-400
                     focus:border-blue-500 focus:outline-none"
                 />
-                <Button
-                    onClick={() => {
-                    handleRoleSelect(otherRole)
-                    handleNext()
-                    }}
-                    disabled={!otherRole.trim()}
-                    className="w-full"
-                >
-                    Continue <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
                 </motion.div>
             )}
             </motion.div>
