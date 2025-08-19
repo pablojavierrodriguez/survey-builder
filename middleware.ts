@@ -36,8 +36,9 @@ export async function middleware(request: NextRequest) {
   // Refresh session if expired - required for Server Components
   await supabase.auth.getSession()
 
-  // Protected admin routes - redirect to login if not authenticated
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin")
+  // Protected admin routes (UI and API) - redirect to login if not authenticated
+  const isAdminRoute =
+    request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname.startsWith("/api/admin")
   const isAuthRoute =
     request.nextUrl.pathname.startsWith("/auth/login") ||
     request.nextUrl.pathname.startsWith("/auth/signup") ||
