@@ -120,7 +120,7 @@ export default function DatabasePage() {
 
       if (response.ok) {
         setConnectionStatus("connected")
-        const tableExists = await ensureTableExists(dbConfig.tableName)
+        const tableExists = await ensureTableExists((config?.tableName) || 'survey_responses')
         setDevTableExists(tableExists)
       } else {
         setConnectionStatus("disconnected")
