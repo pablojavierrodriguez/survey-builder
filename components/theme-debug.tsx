@@ -1,22 +1,27 @@
 "use client";
 
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useCustomTheme } from "@/lib/use-theme";
+import { useSettings } from "@/lib/use-settings";
 
 export function ThemeDebug() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme, mounted } = useCustomTheme();
+  const { settings } = useSettings();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Only show if debug mode is enabled
+  if (!settings?.general?.debugMode) {
+    return null;
+  }
 
   if (!mounted) {
-    return <div className="p-2 text-xs bg-yellow-100 dark:bg-yellow-900">Loading theme...</div>;
+    return (
+      <div className="fixed top-4 right-4 z-50 p-2 text-xs bg-yellow-500 text-white rounded border">
+        Loading theme...
+      </div>
+    );
   }
 
   return (
-    <div className="theme-debug">
+    <div className="fixed top-4 right-4 z-50 p-2 text-xs bg-blue-500 text-white rounded border">
       <div>Theme: {theme}</div>
       <div>Resolved: {resolvedTheme}</div>
       <div>Mounted: {mounted ? "Yes" : "No"}</div>

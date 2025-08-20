@@ -220,7 +220,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="hidden sm:block">
               <h1 className="text-base sm:text-lg font-semibold">{settings?.general?.surveyTitle || "My Survey"}</h1>
             </div>
-            <ThemeDebug />
             <ModeToggle />
           </div>
         </header>
@@ -230,6 +229,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
+      
+      {/* Theme Debug - only visible when debug mode is enabled */}
+      <ThemeDebug />
     </div>
   )
 }

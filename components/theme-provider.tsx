@@ -20,6 +20,7 @@ export function ThemeProvider({
       enableSystem 
       disableTransitionOnChange
       storageKey="survey-theme"
+      themes={["light", "dark", "system"]}
       {...props}
     >
       {children}

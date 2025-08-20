@@ -4,7 +4,7 @@
 import * as React from "react"
 import { useState, useEffect } from "react"
 import { Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes" // Importa useTheme de next-themes
+import { useCustomTheme } from "@/lib/use-theme"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,13 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ModeToggle() {
-  const [mounted, setMounted] = useState(false)
-  const { theme, setTheme } = useTheme()
-
-  // Ensure component is mounted to prevent hydration issues
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const { theme, setTheme, mounted } = useCustomTheme()
 
   if (!mounted) {
     return (
