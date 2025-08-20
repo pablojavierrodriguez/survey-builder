@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Progress } from '@radix-ui/react-progress'
+import { Progress } from './progress'
 
 interface SurveyProgressProps {
   current: number
