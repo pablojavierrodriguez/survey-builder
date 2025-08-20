@@ -10,6 +10,7 @@ import { getPermissions, getUserRoleFromProfile } from "@/lib/permissions"
 import { useSettings } from "@/lib/use-settings"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
+import { ThemeDebug } from "@/components/theme-debug"
 import { LayoutDashboard, BarChart3, FileText, Database, Settings, Menu, X, LogOut, User } from "lucide-react"
 import Link from "next/link"
 
@@ -219,6 +220,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="hidden sm:block">
               <h1 className="text-base sm:text-lg font-semibold">{settings?.general?.surveyTitle || "My Survey"}</h1>
             </div>
+            <ThemeDebug />
             <ModeToggle />
           </div>
         </header>

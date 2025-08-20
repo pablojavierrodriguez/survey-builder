@@ -13,9 +13,16 @@ export function ThemeProvider({
     setMounted(true);
   }, []);
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+  return (
+    <NextThemesProvider 
+      attribute="class" 
+      defaultTheme="light" 
+      enableSystem 
+      disableTransitionOnChange
+      storageKey="survey-theme"
+      {...props}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }
