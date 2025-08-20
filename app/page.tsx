@@ -275,12 +275,22 @@ export default function ProductSurvey() {
   }
 
   const handleToolToggle = (tool: string) => {
-    setSurveyData((prev) => ({
-      ...prev,
-      daily_tools: prev.daily_tools.includes(tool)
-        ? prev.daily_tools.filter((t) => t !== tool)
-        : [...prev.daily_tools, tool],
-    }))
+    setSurveyData((prev) => {
+      const currentlySelected = prev.daily_tools
+      let next = currentlySelected.includes(tool)
+        ? currentlySelected.filter((t) => t !== tool)
+        : [...currentlySelected, tool]
+
+      // Deduplicate just in case
+      next = Array.from(new Set(next))
+
+      // If removing Other, clear otherTool text for consistency
+      if (!next.includes("Other")) {
+        setOtherTool("")
+      }
+
+      return { ...prev, daily_tools: next }
+    })
   }
 
   const handleLearningToggle = (method: string) => {
@@ -697,15 +707,7 @@ export default function ProductSurvey() {
                 {surveyData.daily_tools.length} selected
             </div>
 
-            <Button
-                onClick={handleFinalNext}
-                disabled={
-                surveyData.daily_tools.includes("Other") && !otherTool.trim()
-                }
-                className="w-full mt-4"
-            >
-                Continue <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            {/* Use global Continue; no local button here */}
             </motion.div>
         )
 
