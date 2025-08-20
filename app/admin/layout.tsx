@@ -21,10 +21,16 @@ interface AdminUser {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { user, profile, signOut, loading } = useAuth()
   const { settings } = useSettings()
   const router = useRouter()
   const pathname = usePathname()
+
+  // Ensure component is mounted to prevent hydration issues
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -59,8 +65,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/auth/login")
   }
 
-  // Show loading while checking authentication
-  if (loading) {
+  // Show loading while checking authentication or not mounted
+  if (loading || !mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
