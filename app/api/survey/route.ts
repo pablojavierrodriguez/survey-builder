@@ -19,8 +19,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Database connection failed" }, { status: 503 })
     }
 
-    // Parse request body - expecting normalized data now
-    const body = await request.json()
+    // Parse and validate request body
+    let body
+    try {
+      body = await request.json()
+    } catch (parseError) {
+      console.error("❌ Invalid JSON in request body:", parseError)
+      return NextResponse.json({ success: false, error: "Invalid JSON in request body" }, { status: 400 })
+    }
+
     const { response_data, session_id, user_agent, ip_address } = body
 
     console.log("📊 Received data:", {
@@ -29,30 +36,83 @@ export async function POST(request: NextRequest) {
       userAgent: user_agent?.substring(0, 50) + "...",
     })
 
+    // Validate required fields
     if (!response_data) {
       return NextResponse.json({ success: false, error: "Response data is required" }, { status: 400 })
     }
 
+    // Validate required survey fields
+    const requiredFields = ['role', 'seniority', 'company_type', 'company_size', 'industry', 'product_type', 'customer_segment', 'main_challenge']
+    const missingFields = requiredFields.filter(field => !response_data[field])
+    
+    if (missingFields.length > 0) {
+      console.error("❌ Missing required fields:", missingFields)
+      return NextResponse.json({ 
+        success: false, 
+        error: `Missing required fields: ${missingFields.join(', ')}` 
+      }, { status: 400 })
+    }
+
+    // Validate arrays
+    if (!Array.isArray(response_data.daily_tools)) {
+      return NextResponse.json({ success: false, error: "daily_tools must be an array" }, { status: 400 })
+    }
+
+    if (!Array.isArray(response_data.learning_methods)) {
+      return NextResponse.json({ success: false, error: "learning_methods must be an array" }, { status: 400 })
+    }
+
+    // Validate email format if provided
+    if (response_data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(response_data.email)) {
+      return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 })
+    }
+
+    // Validate salary values if provided
+    const validateSalary = (value: any, fieldName: string) => {
+      if (value !== null && value !== undefined && value !== '') {
+        const num = Number.parseInt(value)
+        if (isNaN(num) || num < 0) {
+          throw new Error(`Invalid ${fieldName}: must be a positive number`)
+        }
+        return num
+      }
+      return null
+    }
+
+    let salary_min, salary_max, salary_average
+    try {
+      salary_min = validateSalary(response_data.salary_min, 'salary_min')
+      salary_max = validateSalary(response_data.salary_max, 'salary_max')
+      salary_average = validateSalary(response_data.salary_average, 'salary_average')
+    } catch (salaryError: any) {
+      return NextResponse.json({ success: false, error: salaryError.message }, { status: 400 })
+    }
+
+    // Validate salary range logic
+    if (salary_min && salary_max && salary_min > salary_max) {
+      return NextResponse.json({ success: false, error: "salary_min cannot be greater than salary_max" }, { status: 400 })
+    }
+
     const normalizedData = {
       session_id: session_id || `session-${Date.now()}`,
-      user_agent,
-      ip_address,
-      role: response_data.role || "other",
+      user_agent: user_agent || null,
+      ip_address: ip_address || null,
+      role: response_data.role,
       other_role: response_data.other_role || null,
-      seniority: response_data.seniority || "mid",
-      company_type: response_data.company_type || null,
-      company_size: response_data.company_size || "medium",
-      industry: response_data.industry || "technology",
-      product_type: response_data.product_type || null,
-      customer_segment: response_data.customer_segment || null,
-      main_challenge: response_data.main_challenge || null,
-      daily_tools: response_data.daily_tools || [],
+      seniority: response_data.seniority,
+      company_type: response_data.company_type,
+      company_size: response_data.company_size,
+      industry: response_data.industry,
+      product_type: response_data.product_type,
+      customer_segment: response_data.customer_segment,
+      main_challenge: response_data.main_challenge,
+      daily_tools: response_data.daily_tools,
       other_tool: response_data.other_tool || null,
-      learning_methods: response_data.learning_methods || [],
+      learning_methods: response_data.learning_methods,
       salary_currency: response_data.salary_currency || null,
-      salary_min: response_data.salary_min ? Number.parseInt(response_data.salary_min) : null,
-      salary_max: response_data.salary_max ? Number.parseInt(response_data.salary_max) : null,
-      salary_average: response_data.salary_average ? Number.parseInt(response_data.salary_average) : null,
+      salary_min,
+      salary_max,
+      salary_average,
       email: response_data.email || null,
     }
 

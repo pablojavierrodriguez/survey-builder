@@ -199,15 +199,50 @@ export default function ProductSurvey() {
   useEffect(() => {
     setIsMounted(true)
 
-    // If user already completed, mark as submitted (single source of truth)
+    // Load persisted survey data and completion status
     try {
-      if (typeof window !== "undefined" && window.sessionStorage) {
+      if (typeof window !== "undefined") {
+        // Check if survey was completed
         const surveyCompleted = window.sessionStorage.getItem("survey_completed")
         if (surveyCompleted === "true") {
           setSubmitted(true)
         }
+
+        // Load persisted survey data
+        const persistedData = localStorage.getItem("survey_data")
+        if (persistedData) {
+          try {
+            const parsedData = JSON.parse(persistedData)
+            setSurveyData(parsedData)
+            
+            // Restore conditional inputs
+            if (parsedData.other_role) {
+              setOtherRole(parsedData.other_role)
+            }
+            if (parsedData.other_tool) {
+              setOtherTool(parsedData.other_tool)
+            }
+            
+            console.log("📊 Survey data restored from localStorage")
+          } catch (parseError) {
+            console.warn("Failed to parse persisted survey data:", parseError)
+            localStorage.removeItem("survey_data")
+          }
+        }
+
+        // Load persisted step
+        const persistedStep = localStorage.getItem("survey_step")
+        if (persistedStep) {
+          const step = parseInt(persistedStep, 10)
+          if (step >= 1 && step <= totalSteps) {
+            setCurrentStep(step)
+            console.log("📊 Survey step restored:", step)
+          }
+        }
       }
-    } catch {}
+    } catch (storageError) {
+      console.warn("Failed to access localStorage/sessionStorage:", storageError)
+    }
 
     // Check configuration status
     const checkConfig = async () => {
@@ -229,49 +264,106 @@ export default function ProductSurvey() {
     }
 
     checkConfig()
-  }, [])
+  }, [totalSteps])
 
   // Removed duplicate effect that changed step based on alternate key
 
   // Settings loading removed - not needed for basic functionality
 
+  // Persistence helper function
+  const persistSurveyData = (data: SurveyData) => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("survey_data", JSON.stringify(data))
+      }
+    } catch (error) {
+      console.warn("Failed to persist survey data:", error)
+    }
+  }
+
+  const persistStep = (step: number) => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("survey_step", step.toString())
+      }
+    } catch (error) {
+      console.warn("Failed to persist survey step:", error)
+    }
+  }
+
   // Handlers for single choice questions (no auto-advance)
   const handleRoleSelect = (role: string) => {
-    setSurveyData((prev) => ({ ...prev, role }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, role }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleSenioritySelect = (seniority: string) => {
-    setSurveyData((prev) => ({ ...prev, seniority }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, seniority }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleCompanyTypeSelect = (company_type: string) => {
-    setSurveyData((prev) => ({ ...prev, company_type }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, company_type }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleCompanySizeSelect = (company_size: string) => {
-    setSurveyData((prev) => ({ ...prev, company_size }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, company_size }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleIndustrySelect = (industry: string) => {
-    setSurveyData((prev) => ({ ...prev, industry }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, industry }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleProductTypeSelect = (product_type: string) => {
-    setSurveyData((prev) => ({ ...prev, product_type }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, product_type }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleCustomerSegmentSelect = (customer_segment: string) => {
-    setSurveyData((prev) => ({ ...prev, customer_segment }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, customer_segment }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleOtherRoleChange = (other_role: string) => {
     // Keep role as "Other" until user continues; store typed value separately
     setOtherRole(other_role)
-    setSurveyData((prev) => ({ ...prev, other_role }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, other_role }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleChallengeChange = (main_challenge: string) => {
-    setSurveyData((prev) => ({ ...prev, main_challenge }))
+    setSurveyData((prev) => {
+      const newData = { ...prev, main_challenge }
+      persistSurveyData(newData)
+      return newData
+    })
   }
 
   const handleToolToggle = (tool: string) => {

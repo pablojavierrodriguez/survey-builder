@@ -64,22 +64,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setSession(session)
               setUser(session.user)
 
-              // Fetch user profile
-              try {
-                const { data: profileData } = await client
-                  .from("profiles")
-                  .select("*")
-                  .eq("id", session.user.id)
-                  .limit(1)
-                console.log("🔐 [Auth] Profile loaded:", profileData?.[0])
-                const loadedProfile = profileData?.[0] || null
-                const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
-                console.log("🔐 [Auth] User role determined:", userRole, "for email:", session.user.email)
-                if (mounted) setProfile(loadedProfile)
-              } catch (profileError) {
-                console.warn("Could not fetch profile:", profileError)
-                if (mounted) setProfile(null)
+              // Fetch user profile with retry logic
+              let profileData = null
+              let retryCount = 0
+              const maxRetries = 3
+              
+              while (retryCount < maxRetries) {
+                try {
+                  const { data, error } = await Promise.race([
+                    client
+                      .from("profiles")
+                      .select("*")
+                      .eq("id", session.user.id)
+                      .limit(1),
+                    new Promise((_, reject) => 
+                      setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
+                    )
+                  ]) as any
+                  
+                  if (error) {
+                    console.warn(`🔐 [Auth] Profile fetch error (attempt ${retryCount + 1}):`, error)
+                    retryCount++
+                    if (retryCount < maxRetries) {
+                      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+                      continue
+                    }
+                    throw error
+                  }
+                  
+                  profileData = data
+                  break
+                } catch (profileError) {
+                  console.warn(`🔐 [Auth] Profile fetch failed (attempt ${retryCount + 1}):`, profileError)
+                  retryCount++
+                  if (retryCount < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+                    continue
+                  }
+                  console.error("🔐 [Auth] Could not fetch profile after all retries:", profileError)
+                  if (mounted) setProfile(null)
+                  return
+                }
               }
+              
+              console.log("🔐 [Auth] Profile loaded:", profileData?.[0])
+              const loadedProfile = profileData?.[0] || null
+              const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
+              console.log("🔐 [Auth] User role determined:", userRole, "for email:", session.user.email)
+              if (mounted) setProfile(loadedProfile)
             }
           } else {
             console.log("🔐 [Auth] No valid session found")
@@ -114,18 +146,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session)
             setUser(session.user)
 
-            // Fetch user profile
-            try {
-              const { data: profileData } = await client.from("profiles").select("*").eq("id", session.user.id).limit(1)
-              console.log("🔐 [Auth] Initial profile loaded:", profileData?.[0])
-              const loadedProfile = profileData?.[0] || null
-              const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
-              console.log("🔐 [Auth] Initial user role determined:", userRole, "for email:", session.user.email)
-              if (mounted) setProfile(loadedProfile)
-            } catch (profileError) {
-              console.warn("Could not fetch profile:", profileError)
-              if (mounted) setProfile(null)
+            // Fetch user profile with retry logic
+            let profileData = null
+            let retryCount = 0
+            const maxRetries = 3
+            
+            while (retryCount < maxRetries) {
+              try {
+                const { data, error } = await Promise.race([
+                  client.from("profiles").select("*").eq("id", session.user.id).limit(1),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("Initial profile fetch timeout")), 5000)
+                  )
+                ]) as any
+                
+                if (error) {
+                  console.warn(`🔐 [Auth] Initial profile fetch error (attempt ${retryCount + 1}):`, error)
+                  retryCount++
+                  if (retryCount < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+                    continue
+                  }
+                  throw error
+                }
+                
+                profileData = data
+                break
+              } catch (profileError) {
+                console.warn(`🔐 [Auth] Initial profile fetch failed (attempt ${retryCount + 1}):`, profileError)
+                retryCount++
+                if (retryCount < maxRetries) {
+                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+                  continue
+                }
+                console.error("🔐 [Auth] Could not fetch initial profile after all retries:", profileError)
+                if (mounted) setProfile(null)
+                break
+              }
             }
+            
+            console.log("🔐 [Auth] Initial profile loaded:", profileData?.[0])
+            const loadedProfile = profileData?.[0] || null
+            const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
+            console.log("🔐 [Auth] Initial user role determined:", userRole, "for email:", session.user.email)
+            if (mounted) setProfile(loadedProfile)
           }
         } else {
           console.log("🔐 [Auth] No valid session found")
