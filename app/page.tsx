@@ -208,25 +208,45 @@ export default function ProductSurvey() {
           setSubmitted(true)
         }
 
-        // Load persisted survey data
+        // Load persisted survey data with safety checks
         const persistedData = localStorage.getItem("survey_data")
         if (persistedData) {
           try {
             const parsedData = JSON.parse(persistedData)
-            setSurveyData(parsedData)
             
-            // Restore conditional inputs
-            if (parsedData.other_role) {
-              setOtherRole(parsedData.other_role)
-            }
-            if (parsedData.other_tool) {
-              setOtherTool(parsedData.other_tool)
-            }
+            // Check if data is stale (older than 24 hours)
+            const isStale = parsedData._lastModified && (Date.now() - parsedData._lastModified > 24 * 60 * 60 * 1000)
             
-            console.log("📊 Survey data restored from localStorage")
+            // Check if data is marked as draft
+            const isDraft = parsedData._isDraft === true
+            
+            if (isStale) {
+              console.log("📊 Persisted data is stale, clearing...")
+              localStorage.removeItem("survey_data")
+              localStorage.removeItem("survey_step")
+            } else if (isDraft) {
+              // Remove metadata before setting state
+              const { _lastModified, _isDraft, ...cleanData } = parsedData
+              setSurveyData(cleanData)
+              
+              // Restore conditional inputs
+              if (cleanData.other_role) {
+                setOtherRole(cleanData.other_role)
+              }
+              if (cleanData.other_tool) {
+                setOtherTool(cleanData.other_tool)
+              }
+              
+              console.log("📊 Survey data restored from localStorage (draft)")
+            } else {
+              console.log("📊 Persisted data is not a draft, clearing...")
+              localStorage.removeItem("survey_data")
+              localStorage.removeItem("survey_step")
+            }
           } catch (parseError) {
             console.warn("Failed to parse persisted survey data:", parseError)
             localStorage.removeItem("survey_data")
+            localStorage.removeItem("survey_step")
           }
         }
 
@@ -270,11 +290,18 @@ export default function ProductSurvey() {
 
   // Settings loading removed - not needed for basic functionality
 
-  // Persistence helper function
+  // Smart persistence helper function - only persist draft data, not submitted data
   const persistSurveyData = (data: SurveyData) => {
     try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("survey_data", JSON.stringify(data))
+      if (typeof window !== "undefined" && !submitted) {
+        // Only persist if survey is not submitted
+        const draftData = {
+          ...data,
+          // Add timestamp to detect stale data
+          _lastModified: Date.now(),
+          _isDraft: true
+        }
+        localStorage.setItem("survey_data", JSON.stringify(draftData))
       }
     } catch (error) {
       console.warn("Failed to persist survey data:", error)
@@ -283,11 +310,24 @@ export default function ProductSurvey() {
 
   const persistStep = (step: number) => {
     try {
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !submitted) {
+        // Only persist step if survey is not submitted
         localStorage.setItem("survey_step", step.toString())
       }
     } catch (error) {
       console.warn("Failed to persist survey step:", error)
+    }
+  }
+
+  const clearPersistedData = () => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("survey_data")
+        localStorage.removeItem("survey_step")
+        console.log("📊 Cleared persisted survey data")
+      }
+    } catch (error) {
+      console.warn("Failed to clear persisted data:", error)
     }
   }
 
@@ -490,6 +530,10 @@ export default function ProductSurvey() {
       if (response.ok && result.success) {
         console.log("✅ Survey submitted successfully!")
         setSubmitted(true)
+        
+        // Clear persisted draft data since survey is now submitted
+        clearPersistedData()
+        
         // Store success state for better UX
         if (typeof window !== "undefined" && window.sessionStorage) {
           window.sessionStorage.setItem("survey_completed", "true")
@@ -510,11 +554,16 @@ export default function ProductSurvey() {
   }
 
   const restartSurvey = () => {
+    // Clear all persisted data
     if (typeof window !== "undefined" && window.sessionStorage) {
       window.sessionStorage.removeItem("survey_completed")
       window.sessionStorage.removeItem("survey-completed")
       window.sessionStorage.removeItem("survey_session_id")
     }
+    
+    // Clear localStorage data
+    clearPersistedData()
+    
     setSubmitted(false)
     setOtherRole("")
     setOtherTool("")
@@ -551,15 +600,21 @@ export default function ProductSurvey() {
       const normalized = surveyData.daily_tools.map((t) => (t === "Other" ? otherTool : t))
       setSurveyData((prev) => ({ ...prev, daily_tools: normalized }))
     }
-    setCurrentStep(currentStep + 1)
+    const nextStep = currentStep + 1
+    setCurrentStep(nextStep)
+    persistStep(nextStep)
   }
 
   const handleAutoNext = () => {
-    setCurrentStep(currentStep + 1)
+    const nextStep = currentStep + 1
+    setCurrentStep(nextStep)
+    persistStep(nextStep)
   }
 
   const handlePrevious = () => {
-    setCurrentStep(currentStep - 1)
+    const prevStep = currentStep - 1
+    setCurrentStep(prevStep)
+    persistStep(prevStep)
   }
 
   // Centralized navigation logic
