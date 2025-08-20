@@ -192,10 +192,10 @@ export default function SetupPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-blue-950 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-gray-800">🚀 Configuración de Survey App</CardTitle>
+          <CardTitle className="text-3xl font-bold text-foreground">🚀 Configuración de Survey App</CardTitle>
           <CardDescription className="text-lg">
             {envVarsConfigured
               ? "Tu aplicación ya está configurada y lista para usar"
@@ -206,16 +206,16 @@ export default function SetupPage() {
         <CardContent className="space-y-6">
           {checkingEnvVars && (
             <div className="text-center space-y-4">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
-              <p className="text-gray-600">Verificando configuración existente...</p>
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground">Verificando configuración existente...</p>
             </div>
           )}
 
           {!checkingEnvVars && envVarsConfigured && step === 3 && (
             <div className="text-center space-y-4">
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-              <h3 className="text-xl font-semibold text-gray-800">¡Aplicación Ya Configurada!</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-foreground">¡Aplicación Ya Configurada!</h3>
+              <p className="text-muted-foreground">
                 Las variables de entorno están configuradas correctamente. Tu aplicación está lista para usar.
               </p>
               <Alert>
@@ -241,7 +241,7 @@ export default function SetupPage() {
                     setStep(1)
                     setSuccess(null)
                   }}
-                  className="text-sm text-gray-500"
+                  className="text-sm text-muted-foreground"
                 >
                   ¿Necesitas reconfigurar? Haz clic aquí
                 </Button>
@@ -253,25 +253,25 @@ export default function SetupPage() {
             <>
               {/* Step Indicator */}
               <div className="flex justify-center space-x-4 mb-6">
-                <div className={`flex items-center space-x-2 ${step >= 1 ? "text-blue-600" : "text-gray-400"}`}>
+                <div className={`flex items-center space-x-2 ${step >= 1 ? "text-primary" : "text-muted-foreground"}`}>
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
                   >
                     1
                   </div>
                   <span className="hidden sm:inline">Conexión</span>
                 </div>
-                <div className={`flex items-center space-x-2 ${step >= 2 ? "text-blue-600" : "text-gray-400"}`}>
+                <div className={`flex items-center space-x-2 ${step >= 2 ? "text-primary" : "text-muted-foreground"}`}>
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
                   >
                     2
                   </div>
                   <span className="hidden sm:inline">Configuración</span>
                 </div>
-                <div className={`flex items-center space-x-2 ${step >= 3 ? "text-blue-600" : "text-gray-400"}`}>
+                <div className={`flex items-center space-x-2 ${step >= 3 ? "text-primary" : "text-muted-foreground"}`}>
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
                   >
                     3
                   </div>
@@ -312,7 +312,7 @@ export default function SetupPage() {
                           value={formData.supabaseUrl}
                           onChange={(e) => handleInputChange("supabaseUrl", e.target.value)}
                         />
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           Encuentra esto en Supabase → Settings → API → Project URL
                         </p>
                       </div>
@@ -326,7 +326,7 @@ export default function SetupPage() {
                           value={formData.supabaseKey}
                           onChange={(e) => handleInputChange("supabaseKey", e.target.value)}
                         />
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           Encuentra esto en Supabase → Settings → API → anon public
                         </p>
                       </div>
@@ -340,7 +340,7 @@ export default function SetupPage() {
                           value={formData.serviceRoleKey}
                           onChange={(e) => handleInputChange("serviceRoleKey", e.target.value)}
                         />
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           Encuentra esto en Supabase → Settings → API → service_role secret
                         </p>
                       </div>
@@ -356,7 +356,7 @@ export default function SetupPage() {
                           value={formData.adminEmail}
                           onChange={(e) => handleInputChange("adminEmail", e.target.value)}
                         />
-                        <p className="text-sm text-gray-600 mt-1">Email del usuario administrador en Supabase</p>
+                        <p className="text-sm text-muted-foreground mt-1">Email del usuario administrador en Supabase</p>
                       </div>
 
                       <div>
@@ -368,7 +368,7 @@ export default function SetupPage() {
                           value={formData.adminPassword}
                           onChange={(e) => handleInputChange("adminPassword", e.target.value)}
                         />
-                        <p className="text-sm text-gray-600 mt-1">Contraseña del usuario administrador</p>
+                        <p className="text-sm text-muted-foreground mt-1">Contraseña del usuario administrador</p>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -411,7 +411,7 @@ export default function SetupPage() {
                       value={formData.publicUrl}
                       onChange={(e) => handleInputChange("publicUrl", e.target.value)}
                     />
-                    <p className="text-sm text-gray-600 mt-1">URL donde estará desplegada tu aplicación</p>
+                    <p className="text-sm text-muted-foreground mt-1">URL donde estará desplegada tu aplicación</p>
                   </div>
 
                   <div className="flex space-x-2">
@@ -443,8 +443,8 @@ export default function SetupPage() {
               {step === 3 && (
                 <div className="text-center space-y-4">
                   <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-                  <h3 className="text-xl font-semibold text-gray-800">¡Configuración Completada!</h3>
-                  <p className="text-gray-600">
+                  <h3 className="text-xl font-semibold text-foreground">¡Configuración Completada!</h3>
+                  <p className="text-muted-foreground">
                     Tu aplicación está lista para usar. Puedes acceder al dashboard de administración.
                   </p>
                   <div className="flex space-x-2">

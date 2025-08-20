@@ -15,19 +15,19 @@ body {
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 218 12% 15%;
+    --foreground: 222 84% 5%;
     --card: 0 0% 100%;
-    --card-foreground: 218 12% 15%;
+    --card-foreground: 222 84% 5%;
     --popover: 0 0% 100%;
-    --popover-foreground: 218 12% 15%;
+    --popover-foreground: 222 84% 5%;
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 98%;
     --secondary: 210 40% 96%;
-    --secondary-foreground: 218 12% 15%;
+    --secondary-foreground: 222 84% 5%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
     --accent: 210 40% 94%;
-    --accent-foreground: 218 12% 15%;
+    --accent-foreground: 222 84% 5%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 220 13% 91%;
@@ -40,11 +40,11 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 218 12% 15%;
+    --sidebar-foreground: 222 84% 5%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 218 12% 15%;
+    --sidebar-accent-foreground: 222 84% 5%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217 91% 60%;
   }
@@ -124,4 +124,53 @@ html {
 body {
   overflow-x: hidden;
   width: 100%;
+}
+
+/* Dark mode transition improvements */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Improved focus states for better accessibility */
+.focus-visible:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Better contrast for form elements in dark mode */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: hsl(var(--input));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Improved button states in dark mode */
+.dark .btn-primary {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.dark .btn-primary:hover {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+/* Better card shadows in dark mode */
+.dark .card {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+}
+
+/* Improved text contrast in dark mode */
+.dark .text-muted {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .text-foreground {
+  color: hsl(var(--foreground));
 }
