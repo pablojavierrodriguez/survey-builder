@@ -328,8 +328,13 @@ export default function ProductSurvey() {
         return surveyData.customer_segment !== ""
       case 8:
         return surveyData.main_challenge.trim().length > 10
-      case 9:
-        return surveyData.daily_tools.length > 0
+      case 9: {
+        if (surveyData.daily_tools.length === 0) return false
+        if (surveyData.daily_tools.includes("Other")) {
+          return otherTool.trim().length > 0
+        }
+        return true
+      }
       case 10:
         return surveyData.learning_methods.length > 0
       case 11:
@@ -408,6 +413,7 @@ export default function ProductSurvey() {
       window.sessionStorage.removeItem("survey-completed")
       window.sessionStorage.removeItem("survey_session_id")
     }
+    setSubmitted(false)
     setOtherRole("")
     setOtherTool("")
     setCurrentStep(1)
@@ -437,6 +443,11 @@ export default function ProductSurvey() {
     // Normalize role on step 1 when custom role is provided
     if (currentStep === 1 && surveyData.role === "Other" && otherRole.trim().length > 0) {
       setSurveyData((prev) => ({ ...prev, role: otherRole }))
+    }
+    // Normalize tools on step 9 when "Other" is selected
+    if (currentStep === 9 && surveyData.daily_tools.includes("Other") && otherTool.trim().length > 0) {
+      const normalized = surveyData.daily_tools.map((t) => (t === "Other" ? otherTool : t))
+      setSurveyData((prev) => ({ ...prev, daily_tools: normalized }))
     }
     setCurrentStep(currentStep + 1)
   }
