@@ -265,9 +265,9 @@ export default function ProductSurvey() {
   }
 
   const handleOtherRoleChange = (other_role: string) => {
-    // Store in both other_role and role so the single field is used downstream
+    // Keep role as "Other" until user continues; store typed value separately
     setOtherRole(other_role)
-    setSurveyData((prev) => ({ ...prev, other_role, role: other_role }))
+    setSurveyData((prev) => ({ ...prev, other_role }))
   }
 
   const handleChallengeChange = (main_challenge: string) => {
