@@ -83,7 +83,13 @@ export default function SettingsPage() {
   const canManageUsers = userRole === "admin"
   const canViewUsers = true
 
-  console.log("[v0] Settings page - User role determined:", userRole, "Profile:", profile, "User email:", user?.email)
+  try {
+    const local = typeof window !== 'undefined' ? localStorage.getItem('app_settings') : null
+    const debug = local ? (JSON.parse(local)?.general?.debugMode === true) : false
+    if (debug) {
+      console.debug("[v0] Settings role:", userRole)
+    }
+  } catch {}
 
   useEffect(() => {
     loadSettings()
