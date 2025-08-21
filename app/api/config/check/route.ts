@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { configManager } from "@/lib/config-manager"
-import { getSafeEnvironmentConfig } from "@/lib/env"
+import { getSafeEnvironmentConfig } from "@/lib/env.server"
 
 export async function GET(request: NextRequest) {
   try {

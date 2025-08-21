@@ -2,7 +2,7 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { cache } from "react"
 import type { Database } from "../supabase"
-import { getSafeEnvironmentConfig } from "../env"
+import { getSafeEnvironmentConfig } from "../env.server"
 
 // Check if Supabase environment variables are available
 const envConfig = getSafeEnvironmentConfig()

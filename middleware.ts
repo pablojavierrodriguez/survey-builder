@@ -1,7 +1,7 @@
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "./lib/supabase"
-import { getSafeEnvironmentConfig } from "./lib/env"
+import { getSafeEnvironmentConfig } from "./lib/env.server"
 
 // Check if Supabase environment variables are available
 const envConfig = getSafeEnvironmentConfig()

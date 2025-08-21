@@ -1,5 +1,5 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { getSafeEnvironmentConfig } from "./env"
+import { getSafeEnvironmentConfig } from "./env.client"
 
 // Get environment configuration
 const envConfig = getSafeEnvironmentConfig()

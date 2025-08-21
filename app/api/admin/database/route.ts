@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/lib/supabase"
 import { getUserRoleFromProfile } from "@/lib/permissions"
-import { getSafeEnvironmentConfig } from "@/lib/env"
+import { getSafeEnvironmentConfig } from "@/lib/env.server"
 
 export async function GET(request: NextRequest) {
   try {

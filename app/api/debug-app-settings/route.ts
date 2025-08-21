@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { getSafeEnvironmentConfig } from "@/lib/env"
+import { getSafeEnvironmentConfig } from "@/lib/env.server"
 
 export async function GET() {
   try {
