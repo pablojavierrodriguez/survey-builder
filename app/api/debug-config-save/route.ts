@@ -5,6 +5,13 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Debug: Starting config save test")
 
+    if (!supabase) {
+      return NextResponse.json({
+        success: false,
+        error: "Supabase not configured",
+      })
+    }
+
     // Test 1: Verificar conexión básica
     const { data: testData, error: testError } = await supabase.from("app_settings").select("*").limit(1)
 
@@ -24,7 +31,7 @@ export async function POST(request: NextRequest) {
       value: { test: true, timestamp: new Date().toISOString() },
     }
 
-    const { data: upsertData, error: upsertError } = await supabase
+    const { data: upsertData, error: upsertError } = await supabase!
       .from("app_settings")
       .upsert(testConfig, { onConflict: "key" })
       .select()

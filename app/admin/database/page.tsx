@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Database, RefreshCw, Download, Trash2, Eye, Search, Filter, CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { getSupabaseConfig, ensureDevTableExists, ensureTableExists } from "@/lib/database-config"
+import { ErrorHandler, useErrorHandler } from "@/components/ui/error-handler"
 
 interface SurveyResponse {
   id: string
@@ -31,6 +32,7 @@ interface SurveyResponse {
 }
 
 export default function DatabasePage() {
+  const { error, showError, clearError } = useErrorHandler()
   const [responses, setResponses] = useState<SurveyResponse[]>([])
   const [filteredResponses, setFilteredResponses] = useState<SurveyResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -39,7 +41,7 @@ export default function DatabasePage() {
   const [connectionStatus, setConnectionStatus] = useState<"connected" | "disconnected" | "testing">("testing")
   const [setupLoading, setSetupLoading] = useState(false)
   const [devTableExists, setDevTableExists] = useState(false)
-  const [config, setConfig] = useState<any>(null)
+  const [config, setConfig] = useState<{ supabaseUrl: string; anonKey: string; tableName: string; environment: string } | null>(null)
   const [hasConfig, setHasConfig] = useState(false)
 
   useEffect(() => {
@@ -125,10 +127,11 @@ export default function DatabasePage() {
       } else {
         setConnectionStatus("disconnected")
       }
-    } catch (error) {
-      console.error('Connection test failed:', error)
-      setConnectionStatus("disconnected")
-    }
+          } catch (error) {
+        console.error('Connection test failed:', error)
+        setConnectionStatus("disconnected")
+        showError('Connection test failed. Please check your configuration.')
+      }
   }
 
   const fetchResponses = async () => {
@@ -152,6 +155,7 @@ export default function DatabasePage() {
       console.error("Error fetching responses:", error)
       setResponses([])
       setConnectionStatus("disconnected")
+      showError('Failed to fetch survey responses. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -207,12 +211,17 @@ export default function DatabasePage() {
     if (!confirm("Are you sure you want to delete this response?")) return
     try {
       const response = await fetch(`/api/admin/database?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-      if (response.ok) { fetchResponses(); alert("✅ Response deleted") }
-      else {
-        const err = await response.json().catch(() => ({} as any))
-        alert(`❌ Failed to delete: ${err.error || response.statusText}`)
+      if (response.ok) { 
+        fetchResponses(); 
+        showError("✅ Response deleted") 
+      } else {
+        const err = await response.json().catch(() => ({} as { error?: string }))
+        showError(`❌ Failed to delete: ${err.error || response.statusText}`)
       }
-    } catch (error) { console.error(error); alert("❌ Network error") }
+    } catch (error) { 
+      console.error(error); 
+      showError("❌ Network error") 
+    }
   }
 
   const handleAutoSetup = async () => {
@@ -235,8 +244,11 @@ Steps:
 🔗 Link: ${config.supabaseUrl}/project/default/sql
 
 Note: Auto-setup is not available.`
-      alert(manualInstructions)
-    } catch (error) { console.error(error); alert('Error during setup.') }
+      showError(manualInstructions)
+    } catch (error) { 
+      console.error(error); 
+      showError('Error during setup.') 
+    }
     finally { setSetupLoading(false) }
   }
 
@@ -407,6 +419,9 @@ Note: Auto-setup is not available.`
           )}
         </CardContent>
       </Card>
+      
+      {/* Error Handler */}
+      <ErrorHandler error={error} onDismiss={clearError} />
     </div>
   )
 }

@@ -6,23 +6,11 @@ import type { User, Session } from "@supabase/supabase-js"
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase"
 import type { Database } from "./supabase"
 import { getUserRoleFromProfile } from "./permissions"
+import type { AuthContextType, SupabaseClient } from "./types"
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 
-interface AuthContextType {
-  user: User | null
-  profile: Profile | null
-  session: Session | null
-  loading: boolean
-  userIsAdmin: boolean
-  signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>
-  signInWithGoogle: () => Promise<{ error: Error | null }>
-  signOut: () => Promise<{ error: Error | null }>
-  clearCorruptedSession: () => Promise<void>
-  updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>
-  getAccessToken: () => string | null
-}
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -31,7 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [supabase, setSupabase] = useState<any>(null)
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -52,11 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        if (mounted) setSupabase(client)
+        if (mounted) setSupabase(client as unknown as SupabaseClient)
 
         const {
           data: { subscription },
-        } = client.auth.onAuthStateChange(async (event: any, session: any) => {
+        } = client.auth.onAuthStateChange(async (event: string, session: Session | null) => {
           console.log("🔐 [Auth] State change:", event, session?.user?.email)
 
           if (session?.user?.id) {
@@ -77,10 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                       .select("*")
                       .eq("id", session.user.id)
                       .limit(1),
-                    new Promise((_, reject) => 
+                    new Promise<{ data: Profile[] | null; error: any }>((_, reject) => 
                       setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
                     )
-                  ]) as any
+                  ])
                   
                   if (error) {
                     console.warn(`🔐 [Auth] Profile fetch error (attempt ${retryCount + 1}):`, error)
@@ -94,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   
                   profileData = data
                   break
-                } catch (profileError) {
+                } catch (profileError: unknown) {
                   console.warn(`🔐 [Auth] Profile fetch failed (attempt ${retryCount + 1}):`, profileError)
                   retryCount++
                   if (retryCount < maxRetries) {
@@ -172,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 
                 profileData = data
                 break
-              } catch (profileError) {
+              } catch (profileError: unknown) {
                 console.warn(`🔐 [Auth] Initial profile fetch failed (attempt ${retryCount + 1}):`, profileError)
                 retryCount++
                 if (retryCount < maxRetries) {
@@ -206,11 +194,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             subscription.unsubscribe()
           } catch (e) {}
         }
-      } catch (authError: any) {
-        console.warn("🔐 [Auth] Auth error - clearing session:", authError.message)
+      } catch (authError: unknown) {
+        console.warn("🔐 [Auth] Auth error - clearing session:", authError instanceof Error ? authError.message : "Unknown error")
         const client = supabase
         try {
-          await client.auth.signOut()
+          if (client) {
+            await client.auth.signOut()
+          }
           localStorage.removeItem("supabase.auth.token")
           localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
         } catch (clearError) {
@@ -263,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
-      })
+      } as any)
       return { error }
     } catch (error) {
       return { error: error instanceof Error ? error : new Error("Google sign in failed") }

@@ -12,34 +12,9 @@ import { SurveyProgress } from "@/components/ui/survey-progress"
 import { SingleChoiceQuestion } from "@/components/ui/single-choice-question"
 import { SurveySkeleton, ProgressIndicator, ErrorDisplay, LoadingOverlay } from "@/components/ui/loading-states"
 import { motion, AnimatePresence } from "framer-motion"
+import type { SurveyData, AppSettings } from "@/lib/types"
 
-interface SurveyData {
-  role: string
-  other_role: string
-  seniority: string
-  company_type: string
-  company_size: string
-  industry: string
-  product_type: string
-  customer_segment: string
-  main_challenge: string
-  daily_tools: string[]
-  other_tool: string
-  learning_methods: string[]
-  salary_currency: string
-  salary_min: string
-  salary_max: string
-  salary_average: string
-  email: string
-}
 
-interface AppSettings {
-  general: {
-    maintenanceMode: boolean
-    [key: string]: any
-  }
-  [key: string]: any
-}
 
 const roleOptions = [
   "Product Manager",

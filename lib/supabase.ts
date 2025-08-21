@@ -13,20 +13,8 @@ export const supabase = (() => {
 
   if (!url || !key) {
     console.warn("⚠️ Supabase environment variables are not set. Please configure Supabase variables")
-    // Return a dummy client to prevent errors
-    return {
-      from: () => ({
-        select: () => Promise.resolve({ data: [], error: null }),
-        insert: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
-        upsert: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
-        update: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
-        delete: () => Promise.resolve({ data: null, error: { message: "Supabase not configured" } }),
-      }),
-      auth: {
-        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      },
-    } as any
+    // Return null instead of dummy client to prevent misleading success responses
+    return null
   }
 
   return createClientComponentClient({

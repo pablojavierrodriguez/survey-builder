@@ -3,6 +3,15 @@ import { supabase } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          error: "Supabase not configured",
+        },
+        { status: 500 },
+      )
+    }
+
     // Get current user
     const {
       data: { user },
@@ -31,7 +40,7 @@ export async function GET(request: NextRequest) {
     console.log("[v0] Debug - Current user:", user.email)
 
     // Query profiles table for current user
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabase!
       .from("profiles")
       .select("*")
       .eq("email", user.email)
@@ -40,7 +49,7 @@ export async function GET(request: NextRequest) {
     console.log("[v0] Debug - Profile query result:", { profile, profileError })
 
     // Also query all profiles to see what's in the table
-    const { data: allProfiles, error: allProfilesError } = await supabase
+    const { data: allProfiles, error: allProfilesError } = await supabase!
       .from("profiles")
       .select("email, role, full_name")
 
