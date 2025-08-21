@@ -1,34 +1,35 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { getSafeEnvironmentConfig } from "./env"
 
-export const isSupabaseConfigured = (() => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Get environment configuration
+const envConfig = getSafeEnvironmentConfig()
 
-  return typeof url === "string" && url.length > 0 && typeof key === "string" && key.length > 0
-})()
+export const isSupabaseConfigured = envConfig.supabase.isConfigured
 
 export const supabase = (() => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!url || !key) {
-    console.warn("⚠️ Supabase environment variables are not set. Please configure Supabase variables")
-    // Return null instead of dummy client to prevent misleading success responses
+  if (!envConfig.supabase.isConfigured) {
+    if (envConfig.validation.errors.length > 0) {
+      console.warn("⚠️ Supabase not configured due to environment errors:")
+      envConfig.validation.errors.forEach(error => console.warn(`  - ${error}`))
+    }
     return null
   }
 
-  return createClientComponentClient({
-    supabaseUrl: url,
-    supabaseKey: key,
-  })
+  try {
+    return createClientComponentClient({
+      supabaseUrl: envConfig.supabase.url!,
+      supabaseKey: envConfig.supabase.anonKey!,
+    })
+  } catch (error) {
+    console.error("❌ Failed to create Supabase client:", error)
+    return null
+  }
 })()
 
 // Legacy function for backward compatibility
 export async function getSupabaseClient() {
   if (!isSupabaseConfigured) {
-    console.warn(
-      "⚠️ Supabase environment variables are not set. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    )
+    console.warn("⚠️ Supabase not configured. Please check environment variables.")
     return null
   }
   return supabase

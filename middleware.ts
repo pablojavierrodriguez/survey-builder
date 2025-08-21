@@ -1,13 +1,11 @@
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "./lib/supabase"
+import { getSafeEnvironmentConfig } from "./lib/env"
 
 // Check if Supabase environment variables are available
-const isSupabaseConfigured =
-  typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
-  typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
+const envConfig = getSafeEnvironmentConfig()
+const isSupabaseConfigured = envConfig.supabase.isConfigured
 
 export async function middleware(request: NextRequest) {
   // If Supabase is not configured, just continue without auth
