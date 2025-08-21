@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { User, Session } from "@supabase/supabase-js"
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase"
 import type { Database } from "./supabase"
@@ -20,12 +20,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
+  const initializedRef = useRef(false)
+  const profileLoadInFlightRef = useRef<Promise<Profile | null> | null>(null)
+
+  const loadProfile = async (client: any, userId: string, label: string): Promise<Profile | null> => {
+    // De-duplicate concurrent loads
+    if (profileLoadInFlightRef.current) return profileLoadInFlightRef.current
+
+    const task = (async (): Promise<Profile | null> => {
+      let retryCount = 0
+      const maxRetries = 3
+      const timeoutMs = 12000
+      while (retryCount < maxRetries) {
+        try {
+          const { data, error } = await Promise.race([
+            client.from("profiles").select("*").eq("id", userId).limit(1),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), timeoutMs)),
+          ]) as any
+          if (error) throw error
+          const loaded = (data?.[0] as Profile) || null
+          return loaded
+        } catch (e) {
+          retryCount++
+          if (retryCount >= maxRetries) {
+            console.warn(`🔐 [Auth] Profile fetch gave up after ${retryCount} attempts (${label})`)
+            return null
+          }
+          await new Promise((r) => setTimeout(r, 1000 * retryCount))
+        }
+      }
+      return null
+    })()
+
+    profileLoadInFlightRef.current = task
+    const result = await task
+    profileLoadInFlightRef.current = null
+    return result
+  }
 
   useEffect(() => {
     let mounted = true
 
     const initializeAuth = async () => {
       try {
+        if (initializedRef.current) return
+        initializedRef.current = true
         if (!isSupabaseConfigured) {
           console.warn("Supabase not configured - auth features disabled")
           if (mounted) setLoading(false)
@@ -42,78 +81,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (mounted) setSupabase(client as unknown as SupabaseClient)
 
-        const {
-          data: { subscription },
-        } = client.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-          console.log("🔐 [Auth] State change:", event, session?.user?.email)
-
-          if (session?.user?.id) {
-            if (mounted) {
-              setSession(session)
-              setUser(session.user)
-
-              // Fetch user profile with retry logic
-              let profileData = null
-              let retryCount = 0
-              const maxRetries = 3
-              
-              while (retryCount < maxRetries) {
-                try {
-                  const { data, error } = await Promise.race([
-                    client
-                      .from("profiles")
-                      .select("*")
-                      .eq("id", session.user.id)
-                      .limit(1),
-                    new Promise<{ data: Profile[] | null; error: any }>((_, reject) => 
-                      setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
-                    )
-                  ])
-                  
-                  if (error) {
-                    console.warn(`🔐 [Auth] Profile fetch error (attempt ${retryCount + 1}):`, error)
-                    retryCount++
-                    if (retryCount < maxRetries) {
-                      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-                      continue
-                    }
-                    throw error
-                  }
-                  
-                  profileData = data
-                  break
-                } catch (profileError: unknown) {
-                  console.warn(`🔐 [Auth] Profile fetch failed (attempt ${retryCount + 1}):`, profileError)
-                  retryCount++
-                  if (retryCount < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-                    continue
-                  }
-                  console.error("🔐 [Auth] Could not fetch profile after all retries:", profileError)
-                  if (mounted) setProfile(null)
-                  return
-                }
-              }
-              
-              console.log("🔐 [Auth] Profile loaded:", profileData?.[0])
-              const loadedProfile = profileData?.[0] || null
-              const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
-              console.log("🔐 [Auth] User role determined:", userRole, "for email:", session.user.email)
-              if (mounted) setProfile(loadedProfile)
-            }
-          } else {
-            console.log("🔐 [Auth] No valid session found")
-            if (mounted) {
-              setSession(null)
-              setUser(null)
-              setProfile(null)
-            }
+        const { data: { subscription } } = client.auth.onAuthStateChange(async (event: string, session: Session | null) => {
+          if (!mounted) return
+          if (event !== 'TOKEN_REFRESHED' && event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION') return
+          if (!session?.user?.id) {
+            setSession(null); setUser(null); setProfile(null)
+            return
           }
+          setSession(session)
+          setUser(session.user)
+          const loadedProfile = await loadProfile(client, session.user.id, 'onAuthStateChange')
+          const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
+          if (mounted) setProfile(loadedProfile)
         })
 
-        // Clear potentially corrupted tokens
-        localStorage.removeItem("supabase.auth.token")
-        localStorage.removeItem(`sb-${window.location.hostname}-auth-token`)
+        // Do not clear tokens on init to avoid churn
 
         // Get initial session
         const {
@@ -133,50 +115,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (mounted) {
             setSession(session)
             setUser(session.user)
-
-            // Fetch user profile with retry logic
-            let profileData = null
-            let retryCount = 0
-            const maxRetries = 3
-            
-            while (retryCount < maxRetries) {
-              try {
-                const { data, error } = await Promise.race([
-                  client.from("profiles").select("*").eq("id", session.user.id).limit(1),
-                  new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("Initial profile fetch timeout")), 5000)
-                  )
-                ]) as any
-                
-                if (error) {
-                  console.warn(`🔐 [Auth] Initial profile fetch error (attempt ${retryCount + 1}):`, error)
-                  retryCount++
-                  if (retryCount < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-                    continue
-                  }
-                  throw error
-                }
-                
-                profileData = data
-                break
-              } catch (profileError: unknown) {
-                console.warn(`🔐 [Auth] Initial profile fetch failed (attempt ${retryCount + 1}):`, profileError)
-                retryCount++
-                if (retryCount < maxRetries) {
-                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-                  continue
-                }
-                console.error("🔐 [Auth] Could not fetch initial profile after all retries:", profileError)
-                if (mounted) setProfile(null)
-                break
-              }
-            }
-            
-            console.log("🔐 [Auth] Initial profile loaded:", profileData?.[0])
-            const loadedProfile = profileData?.[0] || null
+            const loadedProfile = await loadProfile(client, session.user.id, 'initialSession')
             const userRole = getUserRoleFromProfile(loadedProfile, session.user.email)
-            console.log("🔐 [Auth] Initial user role determined:", userRole, "for email:", session.user.email)
             if (mounted) setProfile(loadedProfile)
           }
         } else {
