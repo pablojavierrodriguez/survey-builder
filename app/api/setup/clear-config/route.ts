@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getSafeEnvironmentConfig } from '@/lib/env'
 
 export async function POST(request: NextRequest) {
   try {
     // Get current Supabase client to access the database
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const envConfig = getSafeEnvironmentConfig()
+    const supabaseUrl = envConfig.supabase.url
+    const supabaseKey = envConfig.supabase.anonKey
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(

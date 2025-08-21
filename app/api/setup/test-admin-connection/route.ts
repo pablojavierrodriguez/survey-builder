@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getSafeEnvironmentConfig } from '@/lib/env'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,8 +13,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create Supabase client with admin credentials
-    const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
+    // Create Supabase client with anon key from environment
+    const envConfig = getSafeEnvironmentConfig()
+    const anonKey = envConfig.supabase.anonKey || ''
+    if (!anonKey) {
+      return NextResponse.json(
+        { success: false, error: 'Falta NEXT_PUBLIC_SUPABASE_ANON_KEY en el entorno' },
+        { status: 400 }
+      )
+    }
+    const supabase = createClient(supabaseUrl, anonKey)
     
     // Sign in with admin credentials
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({

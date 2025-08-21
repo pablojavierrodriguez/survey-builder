@@ -1,10 +1,12 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
+import { getSafeEnvironmentConfig } from "@/lib/env"
 
 export async function GET() {
   try {
-    const supabaseUrl = process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.POSTGRES_SUPABASE_SERVICE_ROLE_KEY
+    const envConfig = getSafeEnvironmentConfig()
+    const supabaseUrl = envConfig.supabase.url
+    const serviceRoleKey = envConfig.supabase.serviceRoleKey
 
     if (!supabaseUrl || !serviceRoleKey) {
       return NextResponse.json({

@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/lib/supabase"
 import { getUserRoleFromProfile } from "@/lib/permissions"
+import { getSafeEnvironmentConfig } from "@/lib/env"
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,8 +38,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-          environment: process.env.NODE_ENV || "development",
+          url: getSafeEnvironmentConfig().supabase.url,
+          environment: getSafeEnvironmentConfig().app.environment,
           tableName: tableName,
           records: [],
           error: `Error fetching data: ${surveyError.message}`,
@@ -55,8 +56,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-        environment: process.env.NODE_ENV || "development",
+        url: getSafeEnvironmentConfig().supabase.url,
+        environment: getSafeEnvironmentConfig().app.environment,
         tableName: tableName,
         tables,
         records: transformedRecords,

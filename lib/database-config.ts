@@ -1,15 +1,7 @@
 import { getSupabaseClient } from "./supabase"
+import { getSafeEnvironmentConfig } from "./env"
 
-// Simple environment variable getter (server-side only)
-function getEnvVar(key: string): string {
-  if (typeof window !== "undefined") {
-    // Client-side: only use process.env for public variables
-    return process.env[key] || ""
-  } else {
-    // Server-side: use process.env
-    return process.env[key] || ""
-  }
-}
+// Note: environment variables are accessed via centralized env config
 
 export interface DatabaseConfig {
   supabaseUrl: string
@@ -20,18 +12,9 @@ export interface DatabaseConfig {
 
 // Get Supabase configuration from environment variables
 export function getSupabaseConfig(): DatabaseConfig {
-  // Try multiple possible variable names
-  const supabaseUrl =
-    getEnvVar("NEXT_PUBLIC_SUPABASE_URL") ||
-    getEnvVar("POSTGRES_NEXT_PUBLIC_SUPABASE_URL") ||
-    getEnvVar("POSTGRES_SUPABASE_URL") ||
-    ""
-
-  const anonKey =
-    getEnvVar("NEXT_PUBLIC_SUPABASE_ANON_KEY") ||
-    getEnvVar("POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY") ||
-    getEnvVar("POSTGRES_SUPABASE_ANON_KEY") ||
-    ""
+  const envConfig = getSafeEnvironmentConfig()
+  const supabaseUrl = envConfig.supabase.url || ""
+  const anonKey = envConfig.supabase.anonKey || ""
 
   console.log("🔧 Database Config - Supabase Config:", {
     supabaseUrl: supabaseUrl ? "SET" : "EMPTY",
@@ -41,8 +24,8 @@ export function getSupabaseConfig(): DatabaseConfig {
   return {
     supabaseUrl,
     anonKey,
-    tableName: getEnvVar("NEXT_PUBLIC_DB_TABLE") || "pc_survey_data_dev",
-    environment: getEnvVar("NEXT_PUBLIC_NODE_ENV") || "production",
+    tableName: (typeof process !== 'undefined' ? (process.env.NEXT_PUBLIC_DB_TABLE || "pc_survey_data_dev") : "pc_survey_data_dev"),
+    environment: envConfig.app.environment || "production",
   }
 }
 

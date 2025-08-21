@@ -1,13 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { configManager } from "@/lib/config-manager"
+import { getSafeEnvironmentConfig } from "@/lib/env"
 
 export async function GET(request: NextRequest) {
   try {
-    const hasEnvUrl = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL)
-    const hasEnvKey = !!(
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
-    const hasServiceRole = !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.POSTGRES_SUPABASE_SERVICE_ROLE_KEY)
+    const envConfig = getSafeEnvironmentConfig()
+    const hasEnvUrl = !!envConfig.supabase.url
+    const hasEnvKey = !!envConfig.supabase.anonKey
+    const hasServiceRole = !!envConfig.supabase.serviceRoleKey
 
     // Check if configuration is available
     const configured = await configManager.isConfigured()

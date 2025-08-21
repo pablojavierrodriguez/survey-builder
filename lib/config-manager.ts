@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { getSupabaseClient } from "./supabase"
+import { getSafeEnvironmentConfig } from "./env"
 
 // Configuration interface
 export interface AppConfig {
@@ -33,11 +34,8 @@ export class ConfigManager {
   }
 
   private hasEnvironmentConfig(): boolean {
-    const hasStandardVars = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-    const hasPostgresVars = !!(
-      process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL && process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
-    return hasStandardVars || hasPostgresVars
+    const envConfig = getSafeEnvironmentConfig()
+    return envConfig.supabase.isConfigured
   }
 
   async isConfigured(): Promise<boolean> {
@@ -67,25 +65,22 @@ export class ConfigManager {
   }
 
   private loadFromEnvironment(): AppConfig | null {
-    if (!this.hasEnvironmentConfig()) return null
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.POSTGRES_NEXT_PUBLIC_SUPABASE_ANON_KEY
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.POSTGRES_SUPABASE_SERVICE_ROLE_KEY
+    const envConfig = getSafeEnvironmentConfig()
+    if (!envConfig.supabase.isConfigured) return null
 
     return {
       database: {
-        url: supabaseUrl!,
-        apiKey: supabaseKey!,
-        serviceRoleKey,
+        url: envConfig.supabase.url!,
+        apiKey: envConfig.supabase.anonKey!,
+        serviceRoleKey: envConfig.supabase.serviceRoleKey ?? undefined,
         tableName: "survey_responses",
-        environment: process.env.NODE_ENV || "development",
+        environment: envConfig.app.environment,
       },
       general: {
-        appName: process.env.NEXT_PUBLIC_APP_NAME || "",
-        publicUrl: process.env.NEXT_PUBLIC_APP_URL || "",
-        maintenanceMode: process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true",
-        analyticsEnabled: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED !== "false",
+        appName: envConfig.app.name,
+        publicUrl: envConfig.app.url,
+        maintenanceMode: envConfig.app.maintenanceMode,
+        analyticsEnabled: envConfig.app.analyticsEnabled,
       },
     }
   }
@@ -155,8 +150,9 @@ export class ConfigManager {
 
   private async loadFromDatabase(bootstrapUrl?: string, bootstrapKey?: string): Promise<AppConfig | null> {
     try {
-      const url = bootstrapUrl || process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = bootstrapKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const envConfig = getSafeEnvironmentConfig()
+      const url = bootstrapUrl || envConfig.supabase.url
+      const key = bootstrapKey || envConfig.supabase.anonKey
 
       if (!url || !key) return null
 
