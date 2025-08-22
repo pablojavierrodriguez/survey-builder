@@ -276,10 +276,24 @@ export default function ProductSurvey() {
           _lastModified: Date.now(),
           _isDraft: true
         }
-        localStorage.setItem("survey_data", JSON.stringify(draftData))
+        const dataString = JSON.stringify(draftData)
+        
+        // Check if data is too large (localStorage limit is ~5-10MB)
+        if (dataString.length > 5000000) { // 5MB limit
+          console.warn("Survey data too large, skipping persistence")
+          return
+        }
+        
+        localStorage.setItem("survey_data", dataString)
       }
     } catch (error) {
       console.warn("Failed to persist survey data:", error)
+      // Clear corrupted data
+      try {
+        localStorage.removeItem("survey_data")
+      } catch (clearError) {
+        console.warn("Failed to clear corrupted data:", clearError)
+      }
     }
   }
 
