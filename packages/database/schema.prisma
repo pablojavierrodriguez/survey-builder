@@ -1,0 +1,225 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =================================================================
+// ORGANIZATIONS & USERS
+// =================================================================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  settings    Json     @default("{}")
+  planType    PlanType @default(FREE)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       OrganizationUser[]
+  surveys     Survey[]
+  apiKeys     ApiKey[]
+
+  @@map("organizations")
+}
+
+model OrganizationUser {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           UserRole         @default(MEMBER)
+  permissions    Json             @default("[]")
+  joinedAt       DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("organization_users")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organizations OrganizationUser[]
+  surveys       Survey[]
+  responses     SurveyResponse[]
+
+  @@map("users")
+}
+
+// =================================================================
+// SURVEYS & QUESTIONS
+// =================================================================
+
+model Survey {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  slug           String
+  isActive       Boolean  @default(true)
+  settings       Json     @default("{}")
+  theme          Json     @default("{}")
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation(fields: [createdById], references: [id])
+  questions      SurveyQuestion[]
+  responses      SurveyResponse[]
+
+  @@unique([organizationId, slug])
+  @@map("surveys")
+}
+
+model SurveyQuestion {
+  id             String        @id @default(cuid())
+  surveyId       String
+  questionText   String
+  questionType   QuestionType
+  isRequired     Boolean       @default(true)
+  orderIndex     Int
+  validationRules Json          @default("{}")
+  conditionalLogic Json         @default("{}")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  survey         Survey        @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  options        SurveyOption[]
+  responses      QuestionResponse[]
+
+  @@unique([surveyId, orderIndex])
+  @@map("survey_questions")
+}
+
+model SurveyOption {
+  id           String   @id @default(cuid())
+  questionId   String
+  optionText   String
+  optionValue  String
+  orderIndex   Int
+  isOther      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  question     SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, orderIndex])
+  @@map("survey_options")
+}
+
+// =================================================================
+// RESPONSES & ANALYTICS
+// =================================================================
+
+model SurveyResponse {
+  id           String   @id @default(cuid())
+  surveyId     String
+  sessionId    String
+  userId       String?
+  userAgent    String?
+  ipAddress    String?
+  responseData Json
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  survey       Survey            @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user         User?             @relation(fields: [userId], references: [id])
+  questions    QuestionResponse[]
+
+  @@map("survey_responses")
+}
+
+model QuestionResponse {
+  id           String   @id @default(cuid())
+  responseId   String
+  questionId   String
+  answer       Json
+  createdAt    DateTime @default(now())
+
+  // Relations
+  response     SurveyResponse   @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question     SurveyQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([responseId, questionId])
+  @@map("question_responses")
+}
+
+// =================================================================
+// API & INTEGRATIONS
+// =================================================================
+
+model ApiKey {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  key            String   @unique
+  permissions    Json     @default("[]")
+  isActive       Boolean  @default(true)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+// =================================================================
+// ENUMS
+// =================================================================
+
+enum PlanType {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTI_CHOICE
+  TEXT
+  TEXTAREA
+  EMAIL
+  NUMBER
+  DATE
+  FILE_UPLOAD
+  RATING
+  SCALE
+}
